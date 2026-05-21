@@ -103,5 +103,394 @@
     "reusable_lesson": "Anchor the request on actual arrival delay, route eligibility, and whether extraordinary circumstances apply.",
     "confidence": "medium",
     "notes": "Synthetic example for the first demo."
+  },
+  {
+    "case_id": "uscf_southwest_gate_check_baggage_delay_2025_03",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary",
+    "source_url": "https://www.uscardforum.com/t/topic/362877",
+    "provider_type": "airline",
+    "provider": "Southwest",
+    "brand_or_airline": "Southwest",
+    "issue_type": "baggage_delay",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "Unknown",
+    "reservation_type": "unknown",
+    "facts": "Passenger was required to gate-check a bag on a Southwest itinerary with a connection through MDW. Staff said the bag would continue to SEA, but it remained at MDW and was expected the next day. The passenger had important keys in the bag and was offered either airport pickup credit or home delivery without compensation.",
+    "requested_compensation": [
+      "Baggage delay claim review",
+      "Reimbursement for necessary replacement items",
+      "Credit or compensation for pickup inconvenience"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. Other users suggested filing with Southwest claims and keeping receipts for necessary purchases.",
+    "evidence_used": [
+      "Handwritten baggage tag",
+      "Airport baggage report",
+      "Customer service notes",
+      "Receipts for necessary replacement items"
+    ],
+    "escalation_path": [
+      "Airport baggage office",
+      "Southwest claims department",
+      "Credit card travel protection if eligible"
+    ],
+    "reusable_lesson": "For gate-checked baggage that does not arrive, file the baggage report immediately, keep the claim number, and document necessary expenses instead of relying only on verbal airport offers.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum '怎么撕？' tagged thread. Verify source details before public launch."
+  },
+  {
+    "case_id": "uscf_iberia_checked_baggage_delay_2025_04",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary",
+    "source_url": "https://www.uscardforum.com/t/topic/379591",
+    "provider_type": "airline",
+    "provider": "Iberia",
+    "brand_or_airline": "Iberia",
+    "issue_type": "baggage_delay",
+    "location_country": "EU",
+    "booking_channel": "unknown",
+    "loyalty_status": "Oneworld Emerald",
+    "reservation_type": "award",
+    "facts": "Passenger flew from Paris Orly to Madrid on Iberia business class with six checked bags. After arrival, staff said the aircraft's checked baggage had not been loaded and the passenger filed a standard delayed baggage report.",
+    "requested_compensation": [
+      "Reimbursement for reasonable emergency purchases",
+      "Clarification of Montreal Convention baggage liability",
+      "Coordination with credit card baggage delay coverage"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. Forum advice emphasized claiming with the final operating carrier first and using card insurance only for eligible remaining expenses.",
+    "evidence_used": [
+      "Baggage delay report",
+      "Bag tags",
+      "Boarding pass",
+      "Receipts for emergency purchases",
+      "Credit card benefits guide"
+    ],
+    "escalation_path": [
+      "Iberia baggage claim",
+      "Credit card benefits administrator"
+    ],
+    "reusable_lesson": "Delayed baggage claims usually reimburse reasonable necessary purchases rather than paying an automatic lump sum; keep receipts and clarify whether airline reimbursement affects card coverage.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum '怎么撕？' tagged thread. Verify legal limits and current carrier rules before public launch."
+  },
+  {
+    "case_id": "uscf_aa_weather_delay_amex_trip_delay_2024_06",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary",
+    "source_url": "https://www.uscardforum.com/t/topic/269310",
+    "provider_type": "airline",
+    "provider": "American Airlines",
+    "brand_or_airline": "American Airlines",
+    "issue_type": "airline_delay_trip_insurance",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "AAdvantage Platinum Pro",
+    "reservation_type": "paid",
+    "facts": "A weather-related first-segment delay made a same-day connection impractical. The passenger proactively searched alternate routing, requested rebooking, incurred hotel, food, rental car, and fuel expenses, then pursued both airline goodwill and Amex Platinum trip delay insurance.",
+    "requested_compensation": [
+      "Rebooking on workable alternate routing",
+      "Airline goodwill miles or voucher",
+      "Trip delay insurance reimbursement"
+    ],
+    "actual_outcome": "Passenger reported airline goodwill of miles and a voucher, plus a $500 trip delay insurance reimbursement after submitting supporting documents.",
+    "evidence_used": [
+      "Delay emails and app screenshots",
+      "Written airline statement mentioning weather",
+      "Expense receipts",
+      "Updated ticket number",
+      "Insurance claim documents"
+    ],
+    "escalation_path": [
+      "Airport agent",
+      "Airline customer relations",
+      "Amex benefits administrator"
+    ],
+    "reusable_lesson": "Search alternate routes before contacting the airline, ask for the new ticket number after rebooking, and obtain a written delay reason early for trip insurance.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum travel DP. This is a travel insurance and goodwill case, not a controllable-delay rights case."
+  },
+  {
+    "case_id": "uscf_holiday_inn_security_deposit_charge_2025_04",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary",
+    "source_url": "https://www.uscardforum.com/t/topic/383542",
+    "provider_type": "hotel",
+    "provider": "IHG",
+    "brand_or_airline": "Holiday Inn",
+    "issue_type": "hotel_billing_dispute",
+    "location_country": "US",
+    "booking_channel": "portal",
+    "loyalty_status": "Unknown",
+    "reservation_type": "paid",
+    "facts": "Guest booked a Holiday Inn in Boston through Chase Sapphire Preferred and later noticed a security deposit charge that appeared incorrect. The guest considered a card dispute before contacting the hotel.",
+    "requested_compensation": [
+      "Refund of incorrect security deposit charge",
+      "Written folio or explanation of the charge"
+    ],
+    "actual_outcome": "Outcome not reported beyond forum advice. Other users recommended contacting or emailing the hotel first because the charge might be a billing error or pending adjustment.",
+    "evidence_used": [
+      "Credit card transaction",
+      "Hotel folio",
+      "Booking confirmation"
+    ],
+    "escalation_path": [
+      "Hotel billing department",
+      "Card issuer dispute if unresolved"
+    ],
+    "reusable_lesson": "For unexplained hotel charges, request the folio and a written billing correction from the property before escalating to a card dispute.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum '怎么撕？' tagged thread."
+  },
+  {
+    "case_id": "uscf_hampton_in_hotel_qr_restaurant_closed_2023_12",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary",
+    "source_url": "https://www.uscardforum.com/t/topic/217818",
+    "provider_type": "hotel",
+    "provider": "Hilton",
+    "brand_or_airline": "Hampton",
+    "issue_type": "hotel_service_issue",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "Unknown",
+    "reservation_type": "paid",
+    "facts": "Guest at a Hampton property ordered food through a QR code promoted in the hotel area, paid including tip, then learned the restaurant was closed and the order did not arrive. The front desk said it was unrelated to the hotel.",
+    "requested_compensation": [
+      "Refund from restaurant or payment processor",
+      "Hotel goodwill points for poor on-property communication",
+      "Clarification whether the restaurant was hotel-affiliated"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. Forum advice leaned toward disputing the undelivered food charge with the merchant/payment card and treating hotel compensation as goodwill only.",
+    "evidence_used": [
+      "Order receipt",
+      "Photo of QR code placement",
+      "Front desk interaction notes",
+      "Card transaction"
+    ],
+    "escalation_path": [
+      "Restaurant or ordering platform",
+      "Hotel manager",
+      "Hilton customer care",
+      "Card dispute if no refund"
+    ],
+    "reusable_lesson": "Separate the refund claim against the food merchant from any goodwill request to the hotel, and document whether the restaurant was clearly presented as a hotel amenity.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum '怎么撕？' tagged thread."
+  },
+  {
+    "case_id": "uscf_hyatt_personal_towel_removed_2023_10",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary",
+    "source_url": "https://www.uscardforum.com/t/topic/194599",
+    "provider_type": "hotel",
+    "provider": "Hyatt",
+    "brand_or_airline": "Hyatt",
+    "issue_type": "hotel_property_loss",
+    "location_country": "US",
+    "booking_channel": "unknown",
+    "loyalty_status": "Unknown",
+    "reservation_type": "paid",
+    "facts": "Guest brought personal towels to a Hyatt stay and housekeeping appears to have removed them with hotel linens. The front desk initially offered a hotel towel rather than finding or reimbursing the personal item.",
+    "requested_compensation": [
+      "Return of personal item if recoverable",
+      "Reimbursement based on item value",
+      "Goodwill points"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. Forum advice suggested deciding the desired remedy first, then asking the manager or Hyatt customer care for item replacement or points.",
+    "evidence_used": [
+      "Description or receipt for personal item",
+      "Housekeeping timeline",
+      "Front desk notes"
+    ],
+    "escalation_path": [
+      "Front desk",
+      "Hotel manager",
+      "Hyatt customer care",
+      "Credit card purchase protection if eligible"
+    ],
+    "reusable_lesson": "For minor personal-property loss at a hotel, anchor the request on replacement value and documentation, while treating points or fee adjustment as goodwill.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum '怎么撕？' tagged thread."
+  },
+  {
+    "case_id": "nitan_uscf_aa_bag_not_checked_due_visa_system_2026_05",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan MCP",
+    "source_url": "https://www.uscardforum.com/t/topic/504904",
+    "provider_type": "airline",
+    "provider": "American Airlines",
+    "brand_or_airline": "American Airlines",
+    "issue_type": "airline_baggage_not_checked",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "Unknown",
+    "reservation_type": "paid",
+    "facts": "Passenger on an American Airlines connecting itinerary to Paris said check-in was delayed because the airline system did not recognize a Schengen visa. Manual verification was completed very close to departure, leaving no time to check a bag. The passenger boarded without the checked bag and expected to buy personal items after arrival.",
+    "requested_compensation": [
+      "Written explanation that check-in delay was caused by airline document-verification issue",
+      "Reimbursement or goodwill for necessary replacement items",
+      "Customer relations review"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. Forum replies noted that because the bag was never accepted and no baggage report existed, normal delayed-baggage rules would be hard to invoke, though a goodwill request could still be attempted.",
+    "evidence_used": [
+      "Boarding pass",
+      "Timeline of document verification delay",
+      "Names or notes from check-in staff if available",
+      "Receipts for necessary purchases at destination"
+    ],
+    "escalation_path": [
+      "Airport check-in counter if still on site",
+      "American Airlines customer relations",
+      "Employer travel reimbursement if business travel"
+    ],
+    "reusable_lesson": "If airline check-in processing prevents baggage acceptance, ask for written documentation immediately; without a bag tag or property irregularity report, the claim is weaker and should be framed as a customer-service failure rather than a standard baggage-delay claim.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum topic read via Nitan MCP. Verify details before public launch."
+  },
+  {
+    "case_id": "nitan_uscf_cx_cancel_rebook_ua_delay_2026_05",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan MCP",
+    "source_url": "https://www.uscardforum.com/t/topic/504658",
+    "provider_type": "airline",
+    "provider": "Cathay Pacific / United",
+    "brand_or_airline": "Cathay Pacific / United",
+    "issue_type": "airline_rebooking_mixed_carrier_delay",
+    "location_country": "US",
+    "booking_channel": "portal",
+    "loyalty_status": "Unknown",
+    "reservation_type": "paid",
+    "facts": "Passenger booked a Cathay Pacific itinerary through Chase Travel. The original Cathay flight was delayed for mechanical reasons and then cancelled overnight. Cathay rebooked the passenger onto a United flight, which was also delayed for mechanical reasons after boarding, creating uncertainty over which carrier should handle support.",
+    "requested_compensation": [
+      "Clear operating-carrier responsibility for current delay support",
+      "Rebooking or rerouting if delay becomes extended",
+      "Meal or hotel support if overnight",
+      "Written delay and cancellation reasons from each carrier"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. Forum replies were split, with several suggesting the passenger continue with Cathay for the original disruption while also asking United for support on the operating flight it controlled.",
+    "evidence_used": [
+      "Original Chase Travel itinerary",
+      "Cathay cancellation notice",
+      "United delay notification",
+      "Boarding passes",
+      "Written reason for each disruption"
+    ],
+    "escalation_path": [
+      "Operating carrier airport desk for immediate care",
+      "Cathay customer service for original cancellation handling",
+      "Chase Travel if ticket control or reissue problems arise",
+      "DOT complaint only after documenting denied commitments"
+    ],
+    "reusable_lesson": "For mixed-carrier irregular operations, separate the original carrier's cancellation responsibility from the operating carrier's current delay support, and collect written reasons from both before making reimbursement or goodwill requests.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum topic read via Nitan MCP."
+  },
+  {
+    "case_id": "nitan_uscf_hyatt_rome_relocation_to_hgi_2026_04",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan MCP",
+    "source_url": "https://www.uscardforum.com/t/topic/500900",
+    "provider_type": "hotel",
+    "provider": "Hyatt",
+    "brand_or_airline": "Hyatt Regency Rome Central",
+    "issue_type": "hotel_relocation_before_opening",
+    "location_country": "Italy",
+    "booking_channel": "direct",
+    "loyalty_status": "Unknown",
+    "reservation_type": "points",
+    "facts": "A new Hyatt Regency property in Rome repeatedly pushed back its opening date and began relocating some guests to a Hilton Garden Inn during peak-season dates. Forum discussion focused on whether the substitute property was comparable and whether guests should proactively contact Hyatt or wait for formal relocation instructions.",
+    "requested_compensation": [
+      "Comparable replacement hotel",
+      "Written confirmation of relocated booking",
+      "Return of points or certificates if the substitute is lower value",
+      "Goodwill points if relocation is materially worse"
+    ],
+    "actual_outcome": "Outcome varied or was not fully reported in the captured thread. One discussion point was that Hyatt might only notify guests after a relocation arrangement was ready.",
+    "evidence_used": [
+      "Original Hyatt confirmation",
+      "Opening delay notices",
+      "Replacement hotel confirmation",
+      "Screenshots of cash rates and category/value differences"
+    ],
+    "escalation_path": [
+      "Hyatt concierge",
+      "Property reservations team",
+      "World of Hyatt customer care"
+    ],
+    "reusable_lesson": "For pre-arrival hotel relocation caused by delayed opening, ask for a written comparable-accommodation plan and preserve evidence of the original booking value before accepting a lower-tier substitute.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum topic read via Nitan MCP."
+  },
+  {
+    "case_id": "nitan_uscf_andaz_5th_suite_amenity_mismatch_2026_05",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan MCP",
+    "source_url": "https://www.uscardforum.com/t/topic/504861",
+    "provider_type": "hotel",
+    "provider": "Hyatt",
+    "brand_or_airline": "Andaz 5th Avenue",
+    "issue_type": "hotel_room_feature_mismatch",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "Unknown",
+    "reservation_type": "points",
+    "facts": "Guest used points and suite upgrade benefits at Andaz 5th Avenue, then paid a nightly upgrade charge for a Wellness Suite mainly for the bathtub. The room allegedly lacked or had broken advertised amenities such as certain in-room equipment. Engineering could not fix one feature, and a promised points adjustment reportedly appeared incorrectly later.",
+    "requested_compensation": [
+      "Refund or partial refund of paid upgrade charge",
+      "Points compensation for broken or missing advertised amenities",
+      "Correction of incorrect points adjustment",
+      "Manager review"
+    ],
+    "actual_outcome": "Partial outcome was discussed but not fully resolved in the captured thread. The thread reported an initial points promise and later confusion over the posted amount.",
+    "evidence_used": [
+      "Upgrade charge receipt",
+      "Room type description or website screenshots",
+      "Photos of missing or broken amenities",
+      "Engineer or front desk notes",
+      "Points activity screenshot"
+    ],
+    "escalation_path": [
+      "Front desk manager",
+      "Property director or rooms manager",
+      "Hyatt customer care"
+    ],
+    "reusable_lesson": "When paying for a specific room feature, document the advertised feature, the paid upgrade amount, and the defect while still on property; if points are promised, ask for the amount and case note in writing.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum topic read via Nitan MCP."
+  },
+  {
+    "case_id": "nitan_uscf_hyatt_maui_regency_club_closed_2026_02",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan MCP",
+    "source_url": "https://www.uscardforum.com/t/topic/485621",
+    "provider_type": "hotel",
+    "provider": "Hyatt",
+    "brand_or_airline": "Hyatt Regency Maui",
+    "issue_type": "hotel_elite_benefit_closure",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "Globalist",
+    "reservation_type": "points",
+    "facts": "Hyatt Regency Maui notified guests that the Regency Club would be closed during a renovation period. The property offered daily breakfast at another restaurant for Globalists and options for guests using club-related awards, such as keeping breakfast access or having an award returned.",
+    "requested_compensation": [
+      "Daily breakfast for registered guests",
+      "Return of club access or guest of honor award if preferred",
+      "Possible goodwill if evening club value was important"
+    ],
+    "actual_outcome": "Forum consensus in the captured replies was that restaurant breakfast was a reasonable or even favorable substitute for this property, while additional compensation beyond the stated options was uncertain.",
+    "evidence_used": [
+      "Hotel pre-arrival notice",
+      "Reservation showing club access or elite status",
+      "Terms of the award or elite benefit"
+    ],
+    "escalation_path": [
+      "Property front desk or reservations",
+      "Hyatt concierge",
+      "World of Hyatt customer care"
+    ],
+    "reusable_lesson": "For temporary club lounge closures, compare the substitute breakfast and award-return options against the lost benefit; stronger asks need evidence that the closure materially reduced the booked benefit.",
+    "confidence": "medium",
+    "notes": "Summarized and rewritten from a USCardForum topic read via Nitan MCP."
   }
 ]
