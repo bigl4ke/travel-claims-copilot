@@ -1,0 +1,477 @@
+[
+  {
+    "case_id": "uscf_fairmont_banff_sprin_room_feature_mi_2026_06",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/512211",
+    "provider_type": "hotel",
+    "provider": "Fairmont (Accor)",
+    "brand_or_airline": "Fairmont Banff Springs",
+    "issue_type": "hotel_room_feature_mismatch",
+    "location_country": "CA",
+    "booking_channel": "ota",
+    "loyalty_status": "None",
+    "reservation_type": "paid",
+    "facts": "Guest booked a Fairmont Room (180 sqft) at Fairmont Banff Springs via Amex FHR. The front desk claimed they were upgraded to a Gatehouse Queen (advertised 350 sqft), but the actual room was approximately 150 sqft — smaller than their original booking and lacking a desk. The front desk insisted it was an upgrade even after the guest pointed out the size discrepancy. When the guest called Amex Travel to intervene, the hotel told Amex the room was 'very large' despite the guest being physically in the room. The hotel initially offered to waive extra charges (dining, valet parking) but refused to acknowledge misrepresenting the upgrade.",
+    "requested_compensation": [
+      "Full refund of one night stay",
+      "Admission of misrepresentation"
+    ],
+    "actual_outcome": "After escalating to the front desk manager and explaining that the hotel lied to Amex Travel on a recorded line (risk of FHR de-listing), the manager agreed to a full refund of the night. The refund was pending at time of posting.",
+    "evidence_used": [
+      "Room size discrepancy observation",
+      "Amex Travel agent call (recorded line)",
+      "Hotel's own admission to Amex"
+    ],
+    "escalation_path": [
+      "Front desk → Amex Travel phone intervention → Front desk manager"
+    ],
+    "reusable_lesson": "Document everything in writing (not just phone calls). When a hotel misrepresents a room, escalate to a manager and involve the booking portal (Amex Travel). Mentioning that misrepresentations on recorded calls could lead to partner de-listing is a powerful negotiation tactic.",
+    "confidence": "high",
+    "notes": "Guest was traveling with spouse. Hotel was at peak season (Saturday in summer). Room was in a separate building 5 minutes walk away."
+  },
+  {
+    "case_id": "uscf_hyatt_airport_service_issue_2026_06",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/511434",
+    "provider_type": "hotel",
+    "provider": "Hyatt",
+    "brand_or_airline": "Hyatt Place (airport C2 property)",
+    "issue_type": "hotel_service_issue",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "Globalist",
+    "reservation_type": "paid",
+    "facts": "A Hyatt Globalist guest checked into an airport Hyatt Place. The guest left the room while their partner was still in bed (not using the physical lock). A housekeeper entered the room around late morning without knocking and encountered the partner in bed. The late checkout request made by phone at 10am may not have been communicated to housekeeping. The partner was not physically seen by the housekeeper who left immediately upon hearing a voice. The guest was seeking advice on how to complain and what compensation to request.",
+    "requested_compensation": [
+      "Not specified — guest was seeking advice on what to request"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. Commenters suggested contacting the hotel manager and/or Hyatt corporate for a points compensation, but the OP did not follow up with a result.",
+    "evidence_used": [
+      "None — no physical lock used, no video evidence"
+    ],
+    "escalation_path": [
+      "Front desk (advised) → Hyatt corporate customer service (advised)"
+    ],
+    "reusable_lesson": "Always use the physical deadbolt or latch when in the room. Late checkout requests should be confirmed via the app and verified with a Do Not Disturb sign on the door. Globalist members have access to a dedicated concierge email channel for complaints.",
+    "confidence": "medium",
+    "notes": "Mixed advice in thread — some commenters said this was a common occurrence due to housekeeping schedules, others supported a complaint."
+  },
+  {
+    "case_id": "uscf_marriott_autograph_n_service_issue_2026_06",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/509711",
+    "provider_type": "hotel",
+    "provider": "Marriott",
+    "brand_or_airline": "Autograph Collection (Nanjing, China)",
+    "issue_type": "hotel_service_issue",
+    "location_country": "CN",
+    "booking_channel": "direct",
+    "loyalty_status": "None (status challenge in progress via Feizhu/Alibaba)",
+    "reservation_type": "paid",
+    "facts": "During a 3-night stay at a Marriott Autograph Collection property near Nanjing (booked during a flash sale, ~400 RMB/night with 4k bonus points), the guest found evidence of pests. On night one, an unopened ketchup packet was mysteriously torn open. The hotel performed pest control but no room change was requested. On night two, scratching sounds were heard and soap had gnaw marks. An AI analysis suggested mice. The hotel changed rooms and the manager offered 5,000 Marriott points plus a bottle of wine as compensation. The guest felt 5k points was insufficient given the severity.",
+    "requested_compensation": [
+      "Guest did not specify a counter-offer; was seeking advice"
+    ],
+    "actual_outcome": "Hotel manager offered 5,000 Marriott points and a bottle of wine. Guest did not accept and was seeking advice on how to negotiate a better outcome. The hotel argued that a full refund would forfeit the flash sale bonus points.",
+    "evidence_used": [
+      "Photos of torn ketchup packet",
+      "Photos of gnawed soap"
+    ],
+    "escalation_path": [
+      "Front desk → Hotel manager"
+    ],
+    "reusable_lesson": "Document all evidence (photos) immediately. For pest issues, request a room change first, then negotiate compensation. When booking flash sale/points-promo rates, consider that refunds may forfeit promotional bonuses — factor that into your negotiation strategy.",
+    "confidence": "medium",
+    "notes": "Guest was doing Marriott status challenge via Alibaba/Feizhu. Location was a mountain resort near Nanjing."
+  },
+  {
+    "case_id": "uscf_lyf_georgetown_service_issue_2026_03",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/489590",
+    "provider_type": "hotel",
+    "provider": "Ascott (The Ascott Limited)",
+    "brand_or_airline": "Lyf Georgetown Penang",
+    "issue_type": "hotel_service_issue",
+    "location_country": "MY",
+    "booking_channel": "ota",
+    "loyalty_status": "None (not an Ascott elite member)",
+    "reservation_type": "paid",
+    "facts": "Guest booked 3 rooms for 3 nights at Lyf Georgetown Penang via Agoda. On the last night (with a 5am flight the next morning), the fire alarm went off at 1am due to a bug triggering a sensor. The alarm lasted ~30 seconds but the guest's elderly mother was terrified and unable to sleep afterwards. The guest did not sleep well either due to fear of the alarm recurring. At checkout, the hotel was dismissive. The hotel claimed they 'handled it well' and refused a refund of the last night. Agoda relayed the hotel's refusal.",
+    "requested_compensation": [
+      "Refund of the last night's stay (one of three nights)"
+    ],
+    "actual_outcome": "Hotel refused the refund via Agoda. The guest was considering a credit card chargeback but was unlikely to succeed given it was a false alarm that lasted only 30 seconds.",
+    "evidence_used": [
+      "None — the alarm was brief and the hotel acknowledged it was a false alarm"
+    ],
+    "escalation_path": [
+      "Hotel front desk → Agoda customer service"
+    ],
+    "reusable_lesson": "For minor disruptions lasting under a minute, hotels rarely offer compensation. Booking directly (not via OTA) gives more leverage for complaints. Multiple room issues (also complained about AC water leaks and bathroom geckos) can be bundled into one stronger complaint.",
+    "confidence": "high",
+    "notes": "Guest was traveling with elderly mother and other relatives. The room also had AC water leakage issues and bathroom geckos which the guest did not formally complain about."
+  },
+  {
+    "case_id": "uscf_hgv_hawaii_service_issue_2026_01",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/471321",
+    "provider_type": "hotel",
+    "provider": "Hilton Grand Vacations (HGV)",
+    "brand_or_airline": "HGV Hawaii (Big Island)",
+    "issue_type": "hotel_service_issue",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "unknown",
+    "reservation_type": "paid",
+    "facts": "Guest checked into an HGV property in Hawaii (Big Island) and found the wifi was completely non-functional in their double-bed room. An engineer tried to fix it without success. The manager said it was the only double-bed room available and could not upgrade to a 1BR/2BR suite, but offered a king room with a rollaway bed — which also had no working wifi. The guest returned to the original room. The manager offered compensation (points, resort fee waiver, or parking) but the guest felt it was trivial compared to the room cost. The next morning, the wifi was intermittent. The guest negotiated successfully.",
+    "requested_compensation": [
+      "Compensation for unusable wifi (points / resort fee /)"
+    ],
+    "actual_outcome": "After speaking to the manager the next morning, the hotel waived two nights of parking and resort fees plus applicable taxes, totaling approximately $190 USD. The guest considered this fair and did not pursue further compensation.",
+    "evidence_used": [
+      "Demonstration of non-functional wifi to engineer and manager"
+    ],
+    "escalation_path": [
+      "Front desk engineer → Front desk manager"
+    ],
+    "reusable_lesson": "For amenity failures (wifi), hotels rarely offer full room refunds but will waive fees and resort charges. If the issue is time-sensitive (after-hours), wait until a manager is available during business hours for better negotiation leverage.",
+    "confidence": "high",
+    "notes": "Located in Hawaii (Big Island). The $190 in waived fees roughly matched the guest's on-property spending for the day."
+  },
+  {
+    "case_id": "uscf_conrad_shampoo_property_loss_2026_01",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/473306",
+    "provider_type": "hotel",
+    "provider": "Hilton",
+    "brand_or_airline": "Conrad (Hangzhou/Tonglu area, China)",
+    "issue_type": "hotel_property_loss",
+    "location_country": "CN",
+    "booking_channel": "direct",
+    "loyalty_status": "Diamond (via Aspire credit card)",
+    "reservation_type": "paid",
+    "facts": "Guest staying at a Conrad property in China (Hangzhou/Tonglu area) using Hilton Aspire credits. At checkout, the guest took a 'water bottle' from the minibar area and drank from it — it was filled with dishwashing liquid (possibly a housekeeper's refill bottle that was mistakenly left). The guest immediately spat it out, rinsed for an hour, and felt nauseated all day. The hotel denied responsibility, claiming an 'internal investigation' found nothing. The guest also had a prior bad experience at the same hotel (denied a double-bed suite without upgrade). The guest initially demanded 100k points / 1 free night / 1 night refund from the hotel, then escalated to Hilton Diamond desk demanding 200k points / 2 free nights / 2 night refund.",
+    "requested_compensation": [
+      "100,000 Hilton points OR 1 free night certificate OR 1 night refund (to hotel)",
+      "Then escalated to 200,000 Hilton points OR 2 free nights OR 2 night refund (to Hilton Diamond desk)"
+    ],
+    "actual_outcome": "Hotel refused compensation after a perfunctory internal investigation. Guest escalated to Hilton Diamond customer service desk but outcome was not reported in the captured thread.",
+    "evidence_used": [
+      "Photo of the water bottle filled with dishwashing liquid showing pink/foamy residue",
+      "Written complaint to hotel",
+      "Escalation to diamond@hrcc-hilton.com"
+    ],
+    "escalation_path": [
+      "Hotel management → Hilton Diamond customer service (diamond@hrcc-hilton.com)"
+    ],
+    "reusable_lesson": "Always check bottled water seals in hotel rooms — if the seal is broken, do not consume. Document contamination immediately with photos. If hotel denies responsibility, escalate to brand-level customer service. In China, local media (like 1818 Gold Eye) and food safety laws (1,000 RMB minimum) can be effective leverage.",
+    "confidence": "high",
+    "notes": "Guest also had a prior Hilton Shanghai Hongqiao cockroach incident mentioned in the same escalation but not detailed here. The water bottle appeared to be a housekeeper's refill container mistakenly left in the room."
+  },
+  {
+    "case_id": "uscf_hyatt_place_reno_service_issue_2025_12",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/469248",
+    "provider_type": "hotel",
+    "provider": "Hyatt",
+    "brand_or_airline": "Hyatt Place Reno",
+    "issue_type": "hotel_service_issue",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "Explorist (水球 - low-tier status)",
+    "reservation_type": "paid",
+    "facts": "Guest arrived at a Reno Hyatt Place at 2am after highway delays (I-80). They had checked in via the app with a room number assigned, but the front desk gave a different room — a suite. The suite was actually intended for another guest with a similar name (mix-up). After correcting the error, the guest was given their actual room where the pillows had hair, the duvet had dog hair, and there was an eyelash on the sheets. The front desk phone was unreachable, so the guest had to go downstairs to request a room change. The hotel offered no upgrade or compensation — just a casual apology. The guest suspected the hotel had suites available but declined to upgrade them despite their Explorist status and explicit request.",
+    "requested_compensation": [
+      "Compensation in points (guest was seeking advice)"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. The guest was advised by ChatGPT and commenters to email management requesting points compensation.",
+    "evidence_used": [
+      "Observations of dirty bedding (hair, dog hair, eyelash)"
+    ],
+    "escalation_path": [
+      "Front desk (in-person room change) → Hotel management email (advised)"
+    ],
+    "reusable_lesson": "Hyatt Place properties are excluded from Globalist suite upgrade benefits. Document cleanliness issues with photos and contact hotel management directly rather than the front desk. Use AI to draft complaint emails.",
+    "confidence": "medium",
+    "notes": "Guest was an Explorist (水球 - low-tier). Hotel was full (peak season for Reno Air Races). The hotel mix-up revealed that suites were available but not offered."
+  },
+  {
+    "case_id": "uscf_hyatt_centric_ny_service_issue_2026_06",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/511272",
+    "provider_type": "hotel",
+    "provider": "Hyatt",
+    "brand_or_airline": "Hyatt Centric (New York)",
+    "issue_type": "hotel_service_issue",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "unknown",
+    "reservation_type": "paid",
+    "facts": "Guest staying at a Hyatt Centric in New York (40+ floors up). The fire alarm sounded — the first time, the hotel broadcasted that it was a false alarm from the rooftop bar and no evacuation was needed. The alarm stopped. Five minutes later, the alarm sounded again for 2-3 minutes with no further announcement. The guest decided to evacuate via the stairs (40+ floors down), encountering other confused guests doing the same. At the lobby, fire trucks had arrived, and the fire department was investigating. A hotel employee confirmed the alarm was cleared but only offered a casual apology. The guest felt the hotel's communication during a safety incident was dangerously inadequate.",
+    "requested_compensation": [
+      "Compensation for stress and safety concern (guest was asking if it was worth pursuing)"
+    ],
+    "actual_outcome": "Outcome not reported in the captured thread. Commenters advised writing a complaint to Hyatt corporate citing safety concerns, with one reporting a prior successful claim of 25,000 points for a similar issue at another hotel.",
+    "evidence_used": [
+      "Personal recollection of events and timing"
+    ],
+    "escalation_path": [
+      "Hotel front desk → Hyatt corporate customer service (advised)"
+    ],
+    "reusable_lesson": "Safety-related complaints (fire alarm mismanagement) carry more weight than amenity complaints. Write to corporate customer service rather than the hotel directly for safety issues. Multiple consecutive alarms without communication is a genuine safety hazard worth escalating.",
+    "confidence": "medium",
+    "notes": "Guest was on a high floor (40+). Elevators were disabled during the alarm. The alarm was triggered by the rooftop bar."
+  },
+  {
+    "case_id": "uscf_ua_schedule_change_controllable_de_unknown",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/513323",
+    "provider_type": "airline",
+    "provider": "United Airlines",
+    "brand_or_airline": "United Airlines",
+    "issue_type": "controllable_airline_delay",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "unknown",
+    "reservation_type": "paid",
+    "facts": "United Airlines moved the departure time of a flight 1.5 hours earlier, notifying passengers 3 hours before the original departure time. The passenger was asleep at a transit hotel and only saw the message 1.25 hours before the new departure time, requiring a frantic rush to the airport. The passenger made the flight but was upset about the short notice and unnecessary hotel booking. Another commenter reported a similar experience where United initially delayed a flight 2-3 hours then shortened the delay to 1 hour, causing rushed travel.",
+    "requested_compensation": [
+      "Travel certificate or miles (guest was seeking advice on what to ask)"
+    ],
+    "actual_outcome": "Outcome not reported — the passenger ultimately made the flight. Thread contributors noted that schedule changes of this nature rarely result in compensation if the passenger still travels.",
+    "evidence_used": [
+      "Text message from United showing the schedule change"
+    ],
+    "escalation_path": [
+      "United Airlines customer service"
+    ],
+    "reusable_lesson": "If a schedule change would cause hardship, call the airline to request re-accommodation before accepting the change. If you still travel, compensation is unlikely. One commenter reported receiving $50-200 travel certificates plus mileage for delays of 2.5-4 hours.",
+    "confidence": "low",
+    "notes": "Weak case — the passenger made the flight and no compensation was formally requested."
+  },
+  {
+    "case_id": "uscf_jal_cdg_lounge_unknown_unknown",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/508950",
+    "provider_type": "airline",
+    "provider": "Japan Airlines",
+    "brand_or_airline": "Japan Airlines / British Airways / Air France",
+    "issue_type": "unknown",
+    "location_country": "FR",
+    "booking_channel": "direct",
+    "loyalty_status": "unknown",
+    "reservation_type": "award",
+    "facts": "Passenger traveling LHR-CDG-HND on a British Airways to Japan Airlines (First Class) itinerary. At CDG, the passenger tried to access the Air France lounge (used by JAL). The lounge front desk staff refused entry, claiming JAL flights can only enter 3 hours before departure, contradicting JAL's published policy (which allows entry from 7am onward regardless of flight time). The staff said they 'didn't recognize BA' and only accept SkyTeam partners. The passenger called JAL customer service who tried to call the lounge but the lounge staff refused to accept the phone call. JAL had no ground agent at CDG to assist. The passenger was denied lounge access despite holding a JAL First Class ticket.",
+    "requested_compensation": [
+      "Compensation for denied lounge access (guest was seeking advice)"
+    ],
+    "actual_outcome": "JAL customer service apologized but had no ground staff at CDG to resolve the issue. The passenger was unable to access the lounge. The thread suggested filing complaints with both Air France and Japan Airlines.",
+    "evidence_used": [
+      "Screenshot of JAL lounge access policy showing entry permitted from 7am",
+      "Staff name/employee number",
+      "JAL customer service call records"
+    ],
+    "escalation_path": [
+      "Lounge front desk → JAL phone customer service → Written complaint to JAL and AF (advised)"
+    ],
+    "reusable_lesson": "Save screenshots of airline lounge access policies before travel. If denied, record the employee's name and badge number. Pursue written complaints with both the operating lounge airline and the ticketing airline afterward. JAL has no ground presence at CDG so phone support cannot resolve on-site lounge disputes.",
+    "confidence": "high",
+    "notes": "Passenger was holding a JAL First Class ticket issued via BA Avios. Air France lounge at CDG Terminal 2."
+  },
+  {
+    "case_id": "uscf_cathay_business_seat_unknown_unknown",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/470340",
+    "provider_type": "airline",
+    "provider": "Cathay Pacific",
+    "brand_or_airline": "Cathay Pacific (CX870, HKG-SFO)",
+    "issue_type": "unknown",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "unknown",
+    "reservation_type": "paid",
+    "facts": "Passenger flying Cathay Pacific business class (CX870, HKG-SFO). The business class seat was completely non-functional — it would not move, recline, or adjust in any way. The flight attendants offered to manually adjust the seat on request but the passenger had to call them every time they wanted to change positions. The flight was full with no available seat changes. The crew logged the issue in the aircraft maintenance log. After the flight, the passenger filed a complaint with Cathay Pacific.",
+    "requested_compensation": [
+      "30,000 Asia Miles (initial offer)",
+      "Passenger initially aimed higher"
+    ],
+    "actual_outcome": "Cathay Pacific offered 30,000 Asia Miles as compensation, stating this was the maximum according to their compensation schedule based on flight mileage (HKG-SFO). The passenger accepted this amount after being told it was the policy maximum for this route.",
+    "evidence_used": [
+      "Crew logged the seat malfunction in aircraft maintenance log",
+      "Written complaint filed with Cathay Pacific"
+    ],
+    "escalation_path": [
+      "In-flight crew → Cathay Pacific customer service (written complaint)"
+    ],
+    "reusable_lesson": "Always ask the crew to log equipment malfunctions in the aircraft maintenance log (with no reference number needed). Cathay Pacific has a standardized compensation table based on flight distance — knowing the maximum for your route helps set expectations. One commenter suggested Delta gave ~100k miles for similar issues, but non-US carriers tend to have stricter caps.",
+    "confidence": "high",
+    "notes": "CX870 is HKG-SFO. The initial Gemini AI estimate was 15k-30k miles; CX offered the top of that range on first response."
+  },
+  {
+    "case_id": "uscf_ana_ua_baggage_baggage_delay_unknown",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/491624",
+    "provider_type": "airline",
+    "provider": "ANA / United Airlines",
+    "brand_or_airline": "ANA (domestic US leg by United)",
+    "issue_type": "baggage_delay",
+    "location_country": "JP",
+    "booking_channel": "direct",
+    "loyalty_status": "unknown",
+    "reservation_type": "award",
+    "facts": "Passenger traveling on an ANA mileage award ticket (ORD-NRT-ITM) paid with Amex Platinum for taxes. Due to weather, the US domestic leg (United-operated) was canceled and delayed by 2 hours, and the transpacific leg was also delayed by 2 hours, causing the passenger to miss the only NRT-ITM connection that day. Of three checked bags, two were left in ORD and one arrived. At NRT, the passenger filed a delayed baggage report with ANA and accepted 10,000 JPY per person in cash compensation (told it was the maximum). For the missed connection (NRT-ITM), the airline provided 18,000 JPY cash per person for alternate transport (Narita Express + Shinkansen), described as the maximum payout.",
+    "requested_compensation": [
+      "10,000 JPY per person for baggage delay (accepted)",
+      "18,000 JPY per person for missed connection transport (accepted)",
+      "Guest wondered if more could be obtained"
+    ],
+    "actual_outcome": "Baggage delay: 10,000 JPY per person cash (accepted). Missed connection compensation: 18,000 JPY per person for ground transport (accepted). The passenger wondered if additional compensation was possible but the thread indicated the cash offers were likely the maximum.",
+    "evidence_used": [
+      "Baggage delay report filed at NRT",
+      "Ticket and itinerary records"
+    ],
+    "escalation_path": [
+      "ANA baggage services at NRT airport"
+    ],
+    "reusable_lesson": "For delayed bags on international itineraries, airlines often offer immediate cash compensation at the airport — this is usually the maximum they will give on the spot without a formal claim. Amex Platinum's trip delay insurance only covers round-trip tickets (not one-way award tickets), so check your card's specific terms. Accepting an immediate cash offer does not necessarily prevent a future claim for additional expenses.",
+    "confidence": "high",
+    "notes": "Amex Platinum paid taxes on an ANA mileage award. The thread noted that Amex's trip delay insurance does not cover one-way tickets. This was a multi-segment itinerary with mixed carriers (UA domestic + ANA international)."
+  },
+  {
+    "case_id": "uscf_cx_ua_rebooking_rebooking_mixed_unknown",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/504658",
+    "provider_type": "airline",
+    "provider": "Cathay Pacific",
+    "brand_or_airline": "Cathay Pacific → United Airlines",
+    "issue_type": "airline_rebooking_mixed_carrier_delay",
+    "location_country": "US",
+    "booking_channel": "ota",
+    "loyalty_status": "unknown",
+    "reservation_type": "paid",
+    "facts": "Passenger booked CX837/CX340 (SFO-HKG-PEK) via Chase Travel, paid with Chase Freedom Flex (CFF). At the gate, mechanical issues delayed the flight repeatedly until 3:30am when it was canceled. Cathay Pacific auto-rebooked the passenger onto UA888 (SFO-PEK) departing at 10:20am. After the overnight ordeal, UA888 also had mechanical delays that kept passengers on the plane before being deplaned. UA ground staff said it was not a cancellation so they could not rebook. The passenger was stuck between CX (original carrier) and UA (rebooked carrier) both pointing at each other.",
+    "requested_compensation": [
+      "10,000 Asia Miles"
+    ],
+    "actual_outcome": "The passenger requested and received 10,000 Asia Miles from Cathay Pacific as compensation for the cancellation and rebooking ordeal. Another passenger on the same CX873 flight (different date) was rebooked to a next-day flight and was also seeking compensation.",
+    "evidence_used": [
+      "Flight cancellation notice",
+      "Rebooking confirmation",
+      "UA delay documentation"
+    ],
+    "escalation_path": [
+      "Cathay Pacific customer service (original carrier)"
+    ],
+    "reusable_lesson": "In IRROPS (irregular operations) situations with mixed carriers, the original ticketing/operating carrier is responsible for the first disruption. The rebooked carrier is responsible for their own subsequent delays. File claims with the airline that caused each disruption. Chase Travel bookings (CFF) may not have trip delay insurance — use cards with built-in travel protection for better outcomes.",
+    "confidence": "high",
+    "notes": "CX837 (SFO-HKG, not CX837 to YVR as one commenter confused). Chase Freedom Flex has limited travel insurance. CX873 was another flight from the same night with similar issues."
+  },
+  {
+    "case_id": "uscf_amex_trip_delay_delay_trip_insu_unknown",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/474067",
+    "provider_type": "credit_card",
+    "provider": "American Express",
+    "brand_or_airline": "Amex Platinum (Trip Delay Insurance via AIG/Travel Guard)",
+    "issue_type": "airline_delay_trip_insurance",
+    "location_country": "US",
+    "booking_channel": "ota",
+    "loyalty_status": "unknown",
+    "reservation_type": "paid",
+    "facts": "Passenger booked a multi-segment international itinerary (ATL-IAD-PEK-SHE) via an OTA, paid with Amex Platinum. The first segment was delayed due to operational disruption/weather, causing all subsequent connections to be missed, resulting in an arrival over one day late. The passenger claimed Amex Platinum's Trip Delay insurance (up to $500 per ticket for delays over 6 hours). Amex created a case and referred the claim to AIG (Travel Guard). AIG required: Trip Delay Claim Form, New Claim Form, Disclosure Form, original and revised itinerary, a Flight Disruption Verification Letter from the airline, and Amex billing statements. The airline's delay letter did not mention the cause (weather), so AIG initially rejected the claim. The passenger supplemented with weather reports (FAA reports, news articles).",
+    "requested_compensation": [
+      "Hotel reimbursement (~$430)",
+      "Meals",
+      "Transportation - covered under Amex Trip Delay ($500 max)"
+    ],
+    "actual_outcome": "The claim was processed by AIG/Travel Guard after the passenger provided additional weather documentation when the airline's delay letter lacked weather cause language. Specific payout amount not detailed but the process was described as requiring persistence.",
+    "evidence_used": [
+      "Flight Disruption Verification Letter from UA",
+      "Weather reports / FAA reports / news articles (as supplement)",
+      "Original and revised itineraries",
+      "Amex billing statement",
+      "Receipts for hotel (~$430), meals, transport",
+      "Trip Delay Claim Form, New Claim Form, Disclosure Form"
+    ],
+    "escalation_path": [
+      "Amex customer service (case creation) → AIG/Travel Guard (claim processing)"
+    ],
+    "reusable_lesson": "When filing a trip delay claim, ensure the airline's delay letter explicitly mentions the cause (weather, mechanical, etc.). If it doesn't, supplement with FAA reports and weather news. Keep all receipts during the delay period. AIG processes claims via email and may request additional documentation — responses may take several rounds. Book hotels and expenses during the delay period within reason.",
+    "confidence": "high",
+    "notes": "The passenger stayed at Beijing Wangjing Hyatt Regency. Total hotel cost was approximately $430. This is a comprehensive datapoint for the Amex Platinum Trip Delay claim process."
+  },
+  {
+    "case_id": "uscf_ua_explorer_delay_delay_trip_insu_unknown",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/478937",
+    "provider_type": "airline",
+    "provider": "United Airlines",
+    "brand_or_airline": "United Airlines",
+    "issue_type": "airline_delay_trip_insurance",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "unknown",
+    "reservation_type": "award",
+    "facts": "Passenger and travel companion flying on a United mileage award ticket with taxes paid using the United Explorer card. The first segment was delayed 4 hours due to a mechanical issue (later claimed by United to be weather-related), causing the passenger to miss the connection. They were rebooked to the next morning. United gave no hotel or food vouchers at the connection airport. The passenger sought compensation through both United customer service and the United Explorer card's trip delay insurance. The mechanical issue (fluid leak needing de-icing) was confirmed by the pilot. Expenses during the delay included hotel, meals (including a $200 post-landing meal), transportation, and electronics (AirPods).",
+    "requested_compensation": [
+      "Hotel reimbursement",
+      "Meal reimbursement (including ~$200 post-landing meal)",
+      "Transportation costs",
+      "AirPods purchase (~$179)"
+    ],
+    "actual_outcome": "United did not provide compensation (claimed weather as cause). However, the United Explorer card's trip delay insurance reimbursed nearly all expenses including hotel, meals, transportation, and even AirPods. The $200 meal eaten after landing was also reimbursed. Another commenter confirmed AirPods were reimbursed as a 'necessary electronics' item.",
+    "evidence_used": [
+      "Flight delay documentation",
+      "Receipts for hotel, meals, AirPods, transportation"
+    ],
+    "escalation_path": [
+      "United Airlines customer service (denied) → United Explorer card trip delay insurance (approved)"
+    ],
+    "reusable_lesson": "Even if the airline claims weather and provides no compensation, credit card trip delay insurance can still cover expenses if the real cause was mechanical. The United Explorer card covers up to $500 per ticket for delays over 12 hours (or overnight). Keep ALL receipts during the delay. Electronics purchased during delays (like headphones) can be justified as 'necessary for travel' and are often reimbursed. Travel companion coverage requires a close relationship (family or registered companion).",
+    "confidence": "high",
+    "notes": "The passenger acknowledged their companion was a non-spouse partner which might complicate the insurance claim. United claimed weather but the pilot confirmed a mechanical issue (fluid leak requiring de-icing). Another commenter noted that accepting airline-provided hotel/food vouchers may reduce insurance claims."
+  },
+  {
+    "case_id": "uscf_delta_oversold_denied_boarding_unknown",
+    "source_type": "community_dp",
+    "source_name": "USCardForum thread summary via Nitan",
+    "source_url": "https://www.uscardforum.com/t/topic/476427",
+    "provider_type": "airline",
+    "provider": "Delta Air Lines",
+    "brand_or_airline": "Delta Air Lines",
+    "issue_type": "denied_boarding",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "unknown",
+    "reservation_type": "award",
+    "facts": "Delta Air Lines called a passenger to volunteer for denied boarding on an oversold flight from Florida to the Northeast US. The initial offer was 400 credits or 40,000 miles. The passenger negotiated to 50,000 miles per person and took the offer for themselves and a companion, totaling 100,000 Delta miles. They were rebooked on a next-morning flight via Atlanta. The original ticket was a low-value award booking (3,000 miles). The miles posted to the account as expected.",
+    "requested_compensation": [
+      "100,000 Delta SkyMiles total (50k per person for 2 travelers)"
+    ],
+    "actual_outcome": "Delta offered 400 credits / 40k miles initially, negotiated up to 50k miles per person. The 100,000 miles were received. The passenger was satisfied with the outcome.",
+    "evidence_used": [
+      "Phone call recording (if applicable) or notes of the offer conversation"
+    ],
+    "escalation_path": [
+      "Delta phone call (volunteer solicitation) → Offer negotiation"
+    ],
+    "reusable_lesson": "When an airline calls to solicit volunteers before the airport, the initial offer is negotiable. 50,000 miles per person for a short-haul route with an overnight delay is a good outcome. Compare the value of miles vs travel credits — miles are often more valuable than fixed-value certificates. Having a flexible schedule and no urgent commitments makes volunteering more worthwhile. If the rebooked itinerary requires an overnight, check if credit card trip delay insurance can also be claimed (though voluntary changes may not qualify).",
+    "confidence": "high",
+    "notes": "Original ticket was ~3,000 miles (basic economy). Rebooked next morning via ATL with an overnight stay. The passenger noted they would use Hilton points for the hotel."
+  }
+]
