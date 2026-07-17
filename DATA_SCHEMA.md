@@ -17,7 +17,7 @@
 - applicable_providers: string[]
 - required_controllability: "controllable" | "uncontrollable" | "unknown" | "any"
 - source_url: string
-- source_type: "official_policy" | "government_regulation" | "official_dashboard" | "terms"
+- source_type: "official_policy" | "government_regulation" | "regulator_guidance" | "official_dashboard" | "terms"
 - authority_level: "high" | "medium" | "low"
 - applicable_conditions: string[]
 - compensation_or_rights: string[]

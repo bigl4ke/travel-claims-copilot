@@ -187,6 +187,15 @@ for (const policy of policies) {
   requireEnum(policy.legal_regime, legalRegimes, label);
   requireEnum(policy.applicability_rule, policyApplicabilityRules, label);
   requireEnum(
+    policy.source_type,
+    ["official_policy", "government_regulation", "regulator_guidance", "official_dashboard", "terms"],
+    label
+  );
+  requireEnum(policy.authority_level, ["high", "medium", "low"], label);
+  if (!policy.source_url.startsWith("https://")) {
+    throw new Error(`${label}.source_url must be an HTTPS URL.`);
+  }
+  requireEnum(
     policy.required_controllability,
     ["controllable", "uncontrollable", "unknown", "any"],
     label

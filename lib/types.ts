@@ -70,6 +70,7 @@ export type Policy = {
   source_type:
     | "official_policy"
     | "government_regulation"
+    | "regulator_guidance"
     | "official_dashboard"
     | "terms";
   authority_level: "high" | "medium" | "low";
