@@ -26,7 +26,7 @@ The app currently uses:
 - Tailwind CSS
 - local JSON seed data
 - optional multi-turn LLM fact extraction through OpenAI Responses or DeepSeek Chat Completions
-- strict `ClaimFacts` JSON Schema validation and deterministic jurisdiction rules
+- strict `ClaimFacts` JSON Schema validation with incident and jurisdiction kept separate
 - deterministic local extraction when no API key is configured or a model call fails
 - explainable weighted retrieval with deterministic Top-K results
 - approved-case filtering and deterministic response generation
@@ -36,13 +36,15 @@ There is no database, login, payment, scraping, email sending, or claim submissi
 state currently stays in the browser and is not persisted.
 
 The current knowledge base contains 5 policies, 55 reviewed case records (35 approved for
-retrieval), and 8 reusable scripts. The first demo only publishes these five issue types:
+retrieval), and 8 reusable scripts. The first demo publishes four incident types:
 
 - `hotel_walk`
-- `controllable_airline_delay`
-- `controllable_airline_cancellation`
+- `airline_delay`
+- `airline_cancellation`
 - `denied_boarding`
-- `eu261_delay_or_cancellation`
+
+EU261, US DOT, and provider commitments are policy scopes selected from route region, provider,
+and controllability. They are not incident types.
 
 ## How To Run
 
@@ -108,13 +110,13 @@ Hotel walk:
 I had a confirmed Marriott Sheraton reservation booked directly, but when I arrived the front desk said the hotel was oversold and had no room. They moved me to a cheaper nearby hotel and did not offer compensation.
 ```
 
-Airline controllable cancellation:
+Airline cancellation with a controllable reason:
 
 ```text
 United cancelled my flight because of a crew issue and rebooked me for tomorrow morning. The airport agent said they would not provide a hotel or meal voucher.
 ```
 
-Airline controllable delay:
+Airline delay with a controllable reason:
 
 ```text
 My American Airlines flight was delayed overnight because of a mechanical problem.
@@ -126,7 +128,7 @@ Denied boarding / voluntary bump:
 Delta oversold my flight and the gate agent asked for volunteers to take a flight the next day.
 ```
 
-EU261 disruption:
+EU-region cancellation:
 
 ```text
 My Air France flight from Paris was cancelled and I arrived at my final destination four hours late.
@@ -151,6 +153,7 @@ data/
 lib/
   claimFacts.ts           ClaimFacts types, JSON Schema, validation, and missing fields
   jurisdiction.ts         Location enrichment and EU261 candidate rules
+  policyScope.ts          Policy region and controllability derivation
   intake.ts               Multi-turn extraction, fact merging, questions, and fallback
   llm.ts                  OpenAI and DeepSeek structured-output adapters
   analyze.ts              Structured-facts and legacy-description orchestration
@@ -180,23 +183,25 @@ natural user message + prior ClaimFacts
   -> server validation + jurisdiction enrichment + missing-field calculation
   -> targeted follow-up question until ready
   -> POST /api/analyze with validated ClaimFacts
-  -> structured RetrievalQuery
-  -> explainable policy / case / script scoring
+  -> incident type + derived policy regions + controllability
+  -> scope-aware policy / case / script scoring
   -> Top-K retrieval (3 policies / 3 cases / 2 scripts)
   -> generateAnalysis()
   -> AnalysisResult
 ```
 
-Ranking considers issue type, provider, provider type, country, booking channel, loyalty
-status, disruption reason, denied-boarding kind, text overlap, source authority, and case
-confidence. Equal scores use stable IDs as a deterministic tie-breaker. Only cases with
-`review_status: "approved"` can be returned.
+Policy filtering first checks incident type, route jurisdiction, provider scope, and required
+controllability. Case ranking then considers incident, region, provider, country, booking channel,
+loyalty status, disruption reason, text overlap, source authority, and confidence. Equal scores
+use stable IDs as a deterministic tie-breaker. Only cases with `review_status: "approved"` can
+be returned.
 
 ### LLM boundaries
 
 The LLM is an interviewer and semantic parser, not the policy engine or retrieval database.
 It receives prior structured facts plus the latest user message and must return the strict
-five-type `ClaimFacts` schema. The server recomputes missing fields and geographic regions.
+four-incident `ClaimFacts` schema. The server recomputes missing fields, geographic regions,
+policy scope, and controllability.
 
 The OpenAI adapter requests strict JSON Schema output with `store: false`. The DeepSeek adapter
 uses Chat Completions JSON Output and includes the same schema in its system prompt. Both use a
@@ -289,6 +294,8 @@ Returns:
 ```ts
 {
   issueType: string;
+  policyRegions: Array<"EU_EEA_CH" | "UK" | "US" | "other" | "global">;
+  controllability: "controllable" | "uncontrollable" | "unknown";
   strength: "low" | "medium" | "high";
   summary: string;
   officialBasis: Policy[];

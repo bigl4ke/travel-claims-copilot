@@ -1,7 +1,9 @@
 [
   {
     "script_id": "marriott_walk_frontdesk_en",
-    "issue_type": "hotel_walk",
+    "incident_types": ["hotel_walk"],
+    "applicable_regions": ["global"],
+    "required_controllability": "any",
     "provider": "Marriott",
     "channel": "front_desk",
     "tone": "polite_firm",
@@ -11,7 +13,9 @@
   },
   {
     "script_id": "airline_controllable_delay_hotel_en",
-    "issue_type": "airline_delay",
+    "incident_types": ["airline_delay", "airline_cancellation"],
+    "applicable_regions": ["global"],
+    "required_controllability": "controllable",
     "provider": "generic_airline",
     "channel": "airport_counter",
     "tone": "polite_firm",
@@ -21,7 +25,9 @@
   },
   {
     "script_id": "hotel_walk_escalation_email_en",
-    "issue_type": "hotel_walk",
+    "incident_types": ["hotel_walk"],
+    "applicable_regions": ["global"],
+    "required_controllability": "any",
     "provider": "generic_hotel",
     "channel": "corporate_escalation",
     "tone": "polite_firm",
@@ -31,7 +37,9 @@
   },
   {
     "script_id": "airline_controllable_cancellation_email_en",
-    "issue_type": "airline_cancellation",
+    "incident_types": ["airline_cancellation"],
+    "applicable_regions": ["global"],
+    "required_controllability": "controllable",
     "provider": "generic_airline",
     "channel": "email",
     "tone": "polite_firm",
@@ -41,7 +49,9 @@
   },
   {
     "script_id": "denied_boarding_volunteer_gate_en",
-    "issue_type": "denied_boarding",
+    "incident_types": ["denied_boarding"],
+    "applicable_regions": ["global"],
+    "required_controllability": "any",
     "provider": "generic_airline",
     "channel": "airport_counter",
     "tone": "polite_firm",
@@ -51,7 +61,9 @@
   },
   {
     "script_id": "denied_boarding_involuntary_email_en",
-    "issue_type": "denied_boarding",
+    "incident_types": ["denied_boarding"],
+    "applicable_regions": ["US"],
+    "required_controllability": "any",
     "provider": "generic_airline",
     "channel": "email",
     "tone": "firm",
@@ -61,7 +73,9 @@
   },
   {
     "script_id": "eu261_claim_email_en",
-    "issue_type": "eu261_delay_or_cancellation",
+    "incident_types": ["airline_delay", "airline_cancellation"],
+    "applicable_regions": ["EU_EEA_CH"],
+    "required_controllability": "any",
     "provider": "generic_airline",
     "channel": "email",
     "tone": "polite_firm",
@@ -71,7 +85,9 @@
   },
   {
     "script_id": "eu261_authority_escalation_en",
-    "issue_type": "eu261_delay_or_cancellation",
+    "incident_types": ["airline_delay", "airline_cancellation"],
+    "applicable_regions": ["EU_EEA_CH"],
+    "required_controllability": "any",
     "provider": "generic_airline",
     "channel": "regulator_complaint",
     "tone": "firm",

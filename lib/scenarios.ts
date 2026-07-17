@@ -29,7 +29,9 @@ export function buildScenarioSummaries(
       const matchingPolicies = policies.filter((policy) =>
         policy.incident_types.some((incidentType) => incidentType === issueType)
       );
-      const matchingScripts = scripts.filter((script) => aliases.has(script.issue_type));
+      const matchingScripts = scripts.filter((script) =>
+        script.incident_types.some((incidentType) => incidentType === issueType)
+      );
       const providers = Array.from(new Set(matchingCases.map((item) => item.provider))).sort();
       const sampleCase = matchingCases[0];
 

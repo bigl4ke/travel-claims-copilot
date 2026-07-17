@@ -10,7 +10,10 @@
 - provider_type: "hotel" | "airline" | "credit_card" | "ota" | "government"
 - provider: string
 - policy_name: string
-- issue_type: string
+- incident_types: ("hotel_walk" | "airline_delay" | "airline_cancellation" | "denied_boarding")[]
+- applicable_regions: ("EU_EEA_CH" | "UK" | "US" | "other" | "global")[]
+- applicable_providers: string[]
+- required_controllability: "controllable" | "uncontrollable" | "unknown" | "any"
 - source_url: string
 - source_type: "official_policy" | "government_regulation" | "official_dashboard" | "terms"
 - authority_level: "high" | "medium" | "low"
@@ -50,6 +53,8 @@
 
 `review_status` controls product retrieval. Only `approved` cases may appear as similar cases. Records marked `needs_review` or `excluded` remain in the consolidated file for provenance and future cleanup, but must not be presented to users.
 
+`issue_type` describes the incident itself. Legal regimes such as EU261 must not be stored as a case issue type.
+
 ## Script
 
 沟通话术模板。
@@ -57,7 +62,9 @@
 字段：
 
 - script_id: string
-- issue_type: string
+- incident_types: ("hotel_walk" | "airline_delay" | "airline_cancellation" | "denied_boarding")[]
+- applicable_regions: ("EU_EEA_CH" | "UK" | "US" | "other" | "global")[]
+- required_controllability: "controllable" | "uncontrollable" | "unknown" | "any"
 - provider: string
 - channel: "front_desk" | "airport_counter" | "phone" | "chat" | "email" | "corporate_escalation" | "regulator_complaint"
 - tone: "polite" | "polite_firm" | "firm"
@@ -73,7 +80,8 @@
 
 - outcome_id: string
 - user_case_summary: string
-- issue_type: string
+- incident_type: string
+- policy_regions: ("EU_EEA_CH" | "UK" | "US" | "other")[]
 - provider: string
 - suggested_ask: string[]
 - actual_result: string

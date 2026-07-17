@@ -376,6 +376,22 @@ function SummaryPanel({ result }: { result: AnalysisResult | null }) {
               {result.strength}
             </span>
           </div>
+          <div className="grid gap-2 border-t border-ink/5 pt-3 text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-ink/60">Policy region</span>
+              <span className="text-right font-medium text-ink">
+                {result.policyRegions.length > 0
+                  ? result.policyRegions.join(", ").replaceAll("_", " ")
+                  : "Unresolved"}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-ink/60">Controllability</span>
+              <span className="font-medium capitalize text-ink">
+                {result.controllability}
+              </span>
+            </div>
+          </div>
         </div>
       ) : (
         <p className="mt-4 text-sm leading-6 text-ink/65">

@@ -195,9 +195,20 @@ describe("retrieval quality controls", () => {
       "eu261_air_passenger_rights",
       "eu261_regulation_261_2004"
     ]);
+    expect(euCancellation.scripts[0]?.script_id).toBe("eu261_claim_email_en");
+    expect(
+      euCancellation.scripts.some((script) =>
+        script.applicable_regions.includes("EU_EEA_CH")
+      )
+    ).toBe(true);
     expect(
       usControllableCancellation.officialBasis.map((policy) => policy.policy_id)
     ).toContain("dot_airline_cancellation_delay_dashboard");
+    expect(
+      usControllableCancellation.scripts.every((script) =>
+        script.applicable_regions.includes("global")
+      )
+    ).toBe(true);
     expect(usWeatherCancellation.officialBasis).toEqual([]);
   });
 

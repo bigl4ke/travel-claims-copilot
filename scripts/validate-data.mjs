@@ -41,6 +41,18 @@ function requireEnum(value, allowed, label) {
   }
 }
 
+const mvpIncidentTypes = [
+  "hotel_walk",
+  "airline_delay",
+  "airline_cancellation",
+  "denied_boarding"
+];
+const legacyLegalIssueTypes = [
+  "controllable_airline_delay",
+  "controllable_airline_cancellation",
+  "eu261_delay_or_cancellation"
+];
+
 const [cases, policies, scripts] = await Promise.all([
   readJson("data/cases.json"),
   readJson("data/policies.json"),
@@ -84,6 +96,9 @@ for (const item of cases) {
   requireEnum(item.reservation_type, ["paid", "points", "award", "unknown"], label);
   requireEnum(item.confidence, ["high", "medium", "low"], label);
   requireEnum(item.review_status, ["approved", "needs_review", "excluded"], label);
+  if (legacyLegalIssueTypes.includes(item.issue_type)) {
+    throw new Error(`${label}.issue_type must describe the incident, not a legal regime.`);
+  }
 
   for (const field of ["requested_compensation", "evidence_used", "escalation_path", "review_notes"]) {
     if (!Array.isArray(item[field])) {
@@ -139,6 +154,9 @@ for (const policy of policies) {
       throw new Error(`${label}.${field} must be an array.`);
     }
   }
+  for (const incidentType of policy.incident_types) {
+    requireEnum(incidentType, mvpIncidentTypes, label);
+  }
   for (const region of policy.applicable_regions) {
     requireEnum(region, ["EU_EEA_CH", "UK", "US", "other", "global"], label);
   }
@@ -154,7 +172,34 @@ for (const script of scripts) {
   const label = `script ${script.script_id ?? "<unknown>"}`;
   requireFields(
     script,
-    ["script_id", "issue_type", "provider", "channel", "tone", "language", "template", "when_to_use"],
+    [
+      "script_id",
+      "incident_types",
+      "applicable_regions",
+      "required_controllability",
+      "provider",
+      "channel",
+      "tone",
+      "language",
+      "template",
+      "when_to_use"
+    ],
+    label
+  );
+  for (const field of ["incident_types", "applicable_regions"]) {
+    if (!Array.isArray(script[field])) {
+      throw new Error(`${label}.${field} must be an array.`);
+    }
+  }
+  for (const incidentType of script.incident_types) {
+    requireEnum(incidentType, mvpIncidentTypes, label);
+  }
+  for (const region of script.applicable_regions) {
+    requireEnum(region, ["EU_EEA_CH", "UK", "US", "other", "global"], label);
+  }
+  requireEnum(
+    script.required_controllability,
+    ["controllable", "uncontrollable", "unknown", "any"],
     label
   );
   requireEnum(

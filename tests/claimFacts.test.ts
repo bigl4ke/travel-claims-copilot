@@ -126,7 +126,12 @@ describe("structured analyze API", () => {
 
     expect(response.status).toBe(200);
     expect(result.issueType).toBe("airline_cancellation");
+    expect(result.policyRegions).toEqual(["EU_EEA_CH"]);
+    expect(result.controllability).toBe("controllable");
     expect(result.officialBasis[0]?.policy_id).toBe("eu261_air_passenger_rights");
+    expect(result.suggestedAsks.aggressive).toContain(
+      "Fixed EU261 compensation if eligibility is met"
+    );
   });
 
   it("returns both the EU261 guide and regulation for a Paris departure", async () => {
@@ -166,8 +171,15 @@ describe("structured analyze API", () => {
 
     expect(response.status).toBe(200);
     expect(result.issueType).toBe("airline_cancellation");
+    expect(result.policyRegions).toEqual(["EU_EEA_CH"]);
+    expect(result.controllability).toBe("unknown");
+    expect(result.strength).toBe("medium");
     expect(policyIds).toContain("eu261_air_passenger_rights");
     expect(policyIds).toContain("eu261_regulation_261_2004");
+    expect(result.scripts.map((script: { script_id: string }) => script.script_id)).toEqual([
+      "eu261_claim_email_en",
+      "eu261_authority_escalation_en"
+    ]);
   });
 
   it("rejects incomplete facts with actionable missing fields", async () => {

@@ -1,4 +1,5 @@
 import { getIssueAliases } from "./issueTaxonomy";
+import { policyRegionsFromCountry } from "./policyScope";
 import type {
   Case,
   Policy,
@@ -231,9 +232,17 @@ export function rankCases(
   cases: Case[]
 ): ScoredRetrievalItem<Case>[] {
   const aliases = new Set<string>(getIssueAliases(query.issueType));
-  const candidates = cases.filter(
-    (item) => item.review_status === "approved" && aliases.has(item.issue_type)
-  );
+  const candidates = cases.filter((item) => {
+    if (item.review_status !== "approved" || !aliases.has(item.issue_type)) {
+      return false;
+    }
+    if (item.provider_type !== "airline" || query.policyRegions.length === 0) {
+      return true;
+    }
+
+    const caseRegions = policyRegionsFromCountry(item.location_country);
+    return caseRegions.some((region) => query.policyRegions.includes(region));
+  });
 
   const scored = candidates.map((item) => {
     const result: ScoredRetrievalItem<Case> = { item, score: 0, reasons: [] };
@@ -254,6 +263,13 @@ export function rankCases(
     }
     if (query.country && locationsMatch(query.country, item.location_country)) {
       addScore(result, 8, "country_match");
+    }
+    if (
+      policyRegionsFromCountry(item.location_country).some((region) =>
+        query.policyRegions.includes(region)
+      )
+    ) {
+      addScore(result, 15, "jurisdiction_match");
     }
     if (query.bookingChannel && query.bookingChannel === item.booking_channel) {
       addScore(result, 5, "booking_channel_match");
@@ -355,18 +371,38 @@ export function rankScripts(
   query: RetrievalQuery,
   scripts: Script[]
 ): ScoredRetrievalItem<Script>[] {
-  const aliases = new Set<string>(getIssueAliases(query.issueType));
-  const candidates = scripts.filter((script) => aliases.has(script.issue_type));
+  const candidates = scripts.filter((script) => {
+    const incidentMatches = script.incident_types.some(
+      (incidentType) => incidentType === query.issueType
+    );
+    const regionMatches =
+      script.applicable_regions.includes("global") ||
+      script.applicable_regions.some((region) => query.policyRegions.includes(region));
+    const controllabilityMatches =
+      script.required_controllability === "any" ||
+      script.required_controllability === query.controllability;
+
+    return incidentMatches && regionMatches && controllabilityMatches;
+  });
   const scored = candidates.map((script) => {
     const result: ScoredRetrievalItem<Script> = { item: script, score: 0, reasons: [] };
 
-    addIssueScore(result, query, script.issue_type);
+    addIssueScore(result, query, query.issueType);
     addProviderScore(result, query.provider, script.provider);
     addDescriptionOverlap(
       result,
       query.description,
       [script.provider, script.template, script.when_to_use].join(" ")
     );
+
+    if (
+      script.applicable_regions.some((region) => query.policyRegions.includes(region))
+    ) {
+      addScore(result, 15, "jurisdiction_match");
+    }
+    if (script.required_controllability !== "any") {
+      addScore(result, 10, "controllability_match");
+    }
 
     return result;
   });

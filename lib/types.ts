@@ -77,7 +77,9 @@ export type Case = {
 
 export type Script = {
   script_id: string;
-  issue_type: string;
+  incident_types: MvpIssueType[];
+  applicable_regions: PolicyRegion[];
+  required_controllability: PolicyControllability;
   provider: string;
   channel:
     | "front_desk"
@@ -188,6 +190,8 @@ export type SuggestedAsks = {
 
 export type AnalysisResult = {
   issueType: IssueType;
+  policyRegions: PolicyRegion[];
+  controllability: Controllability;
   strength: "low" | "medium" | "high";
   summary: string;
   officialBasis: Policy[];

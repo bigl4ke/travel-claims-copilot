@@ -13,6 +13,33 @@ const fallbackSuggestedAsks: SuggestedAsks = {
   ]
 };
 
+const eu261SuggestedAsks: SuggestedAsks = {
+  conservative: ["Care expenses such as meals and hotel if applicable"],
+  standard: [
+    "Refund or rerouting if applicable",
+    "Care expenses",
+    "Written delay or cancellation reason"
+  ],
+  aggressive: [
+    "Fixed EU261 compensation if eligibility is met",
+    "Care expense reimbursement",
+    "Escalation to the relevant national enforcement body"
+  ]
+};
+
+const eu261Evidence = [
+  "Full itinerary and ticket receipt",
+  "Scheduled and actual arrival times",
+  "Departure and arrival airport details",
+  "Airline's written delay or cancellation reason",
+  "Receipts for care expenses"
+];
+
+const eu261Cautions = [
+  "EU261 eligibility depends on route, carrier, delay length at arrival, and extraordinary-circumstance defenses.",
+  "Fixed compensation is separate from care, refund, or rerouting rights."
+];
+
 const suggestedAsksByIssue: Partial<Record<IssueType, SuggestedAsks>> = {
   hotel_walk: {
     conservative: [
@@ -40,7 +67,7 @@ const suggestedAsksByIssue: Partial<Record<IssueType, SuggestedAsks>> = {
     aggressive: [
       "Reimbursement for reasonable hotel, meal, and transport costs",
       "Travel credit or miles for the service failure",
-      "DOT complaint review if commitments were denied"
+      "Escalation through an applicable airline or regulator channel"
     ]
   },
   airline_delay: {
@@ -333,7 +360,7 @@ const cautionsByIssue: Partial<Record<IssueType, string[]>> = {
     "Ask for written confirmation before leaving the property if possible."
   ],
   airline_cancellation: [
-    "DOT dashboard commitments generally turn on whether the airline treats the disruption as controllable.",
+    "Airline commitments and legal remedies depend on route, carrier, cause, and timing.",
     "Keep receipts if the airline cannot issue vouchers immediately."
   ],
   airline_delay: [
@@ -390,15 +417,47 @@ const cautionsByIssue: Partial<Record<IssueType, string[]>> = {
   ]
 };
 
-function getSuggestedAsks(issueType: IssueType): SuggestedAsks {
+function hasPolicy(retrieval: RetrievalResult, policyId: string): boolean {
+  return retrieval.officialBasis.some((policy) => policy.policy_id === policyId);
+}
+
+function usesEu261(retrieval: RetrievalResult): boolean {
+  return (
+    hasPolicy(retrieval, "eu261_air_passenger_rights") ||
+    hasPolicy(retrieval, "eu261_regulation_261_2004")
+  );
+}
+
+function getSuggestedAsks(
+  issueType: IssueType,
+  retrieval: RetrievalResult
+): SuggestedAsks {
+  if (
+    (issueType === "airline_delay" || issueType === "airline_cancellation") &&
+    usesEu261(retrieval)
+  ) {
+    return eu261SuggestedAsks;
+  }
   return suggestedAsksByIssue[issueType] ?? fallbackSuggestedAsks;
 }
 
-function getEvidence(issueType: IssueType): string[] {
+function getEvidence(issueType: IssueType, retrieval: RetrievalResult): string[] {
+  if (
+    (issueType === "airline_delay" || issueType === "airline_cancellation") &&
+    usesEu261(retrieval)
+  ) {
+    return eu261Evidence;
+  }
   return evidenceByIssue[issueType] ?? fallbackEvidence;
 }
 
-function getCautions(issueType: IssueType): string[] {
+function getCautions(issueType: IssueType, retrieval: RetrievalResult): string[] {
+  if (
+    (issueType === "airline_delay" || issueType === "airline_cancellation") &&
+    usesEu261(retrieval)
+  ) {
+    return eu261Cautions;
+  }
   return cautionsByIssue[issueType] ?? fallbackCautions;
 }
 
@@ -411,29 +470,35 @@ function buildSummary(facts: ExtractedFacts, retrieval: RetrievalResult): string
     return "The current demo could not confidently classify the description. Add provider, timing, route or property, reason, and expenses for a stronger result.";
   }
 
-  return `Matched scenario: ${issueLabels[facts.issueType]}. This result uses local demo policies, cases, and scripts only.`;
+  const regions = retrieval.query.policyRegions.join(", ") || "no resolved jurisdiction";
+  return `Matched incident: ${issueLabels[facts.issueType]}. Official sources were selected using ${regions}, provider scope, and controllability; results remain a first-pass assessment.`;
 }
 
 export function generateAnalysis(
   facts: ExtractedFacts,
   retrieval: RetrievalResult
 ): AnalysisResult {
+  const hasUnresolvedAirlineControl =
+    (facts.issueType === "airline_delay" || facts.issueType === "airline_cancellation") &&
+    retrieval.query.controllability !== "controllable";
   const strength =
     facts.issueType === "unknown"
       ? "low"
-      : retrieval.officialBasis.length > 0
+      : retrieval.officialBasis.length > 0 && !hasUnresolvedAirlineControl
         ? "high"
         : "medium";
 
   return {
     issueType: facts.issueType,
+    policyRegions: retrieval.query.policyRegions,
+    controllability: retrieval.query.controllability,
     strength,
     summary: buildSummary(facts, retrieval),
     officialBasis: retrieval.officialBasis,
     similarCases: retrieval.similarCases,
-    suggestedAsks: getSuggestedAsks(facts.issueType),
-    evidenceChecklist: getEvidence(facts.issueType),
+    suggestedAsks: getSuggestedAsks(facts.issueType, retrieval),
+    evidenceChecklist: getEvidence(facts.issueType, retrieval),
     scripts: retrieval.scripts,
-    cautions: getCautions(facts.issueType)
+    cautions: getCautions(facts.issueType, retrieval)
   };
 }
