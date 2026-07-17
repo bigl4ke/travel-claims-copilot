@@ -11,7 +11,7 @@ import { classifyInput } from "./classifier";
 import { isMvpIssueType } from "./issueTaxonomy";
 import { assessEu261Candidate, inferRouteLocations } from "./jurisdiction";
 import {
-  createOpenAIClientFromEnv,
+  createStructuredOutputClientFromEnv,
   type StructuredOutputClient
 } from "./llm";
 import { claimFactsJsonSchema } from "./claimFacts";
@@ -222,7 +222,7 @@ export async function processIntake(
   dependencies: IntakeDependencies = {}
 ): Promise<IntakeResult> {
   const configuredClient = dependencies.llmClient === undefined
-    ? createOpenAIClientFromEnv()
+    ? createStructuredOutputClientFromEnv()
     : dependencies.llmClient ?? undefined;
   let facts: ClaimFacts;
   let extractionMode: IntakeExtractionMode = "deterministic";

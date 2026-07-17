@@ -3,7 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { POST } from "../app/api/intake/route";
 import { emptyClaimFacts, normalizeClaimFacts } from "../lib/claimFacts";
 import { processIntake } from "../lib/intake";
-import { OpenAIResponsesClient, type StructuredOutputClient } from "../lib/llm";
+import {
+  createStructuredOutputClientFromEnv,
+  DeepSeekChatCompletionsClient,
+  OpenAIResponsesClient,
+  resolveLlmProvider,
+  type StructuredOutputClient
+} from "../lib/llm";
 
 describe("deterministic intake fallback", () => {
   it("understands a natural Paris cancellation without an explicit EU261 keyword", async () => {
@@ -116,6 +122,109 @@ describe("OpenAI Responses client", () => {
       name: "test_schema",
       strict: true
     });
+  });
+});
+
+describe("DeepSeek Chat Completions client", () => {
+  it("uses DeepSeek JSON mode and parses the assistant message", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: {
+                role: "assistant",
+                content: JSON.stringify(emptyClaimFacts())
+              }
+            }
+          ]
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+    const client = new DeepSeekChatCompletionsClient({
+      apiKey: "test-key",
+      model: "deepseek-v4",
+      baseUrl: "https://api.deepseek.com/",
+      fetcher
+    });
+
+    const result = await client.generate({
+      schemaName: "claim_facts",
+      schema: { type: "object", required: ["issueType"] },
+      instructions: "Extract facts.",
+      input: "Example"
+    });
+
+    expect(result).toEqual(emptyClaimFacts());
+    expect(fetcher.mock.calls[0][0]).toBe("https://api.deepseek.com/chat/completions");
+
+    const request = JSON.parse(fetcher.mock.calls[0][1].body as string);
+    expect(request.model).toBe("deepseek-v4-flash");
+    expect(request.messages).toEqual([
+      {
+        role: "system",
+        content: expect.stringContaining("valid JSON matching this JSON Schema")
+      },
+      { role: "user", content: "Example" }
+    ]);
+    expect(request.thinking).toEqual({ type: "disabled" });
+    expect(request.response_format).toEqual({ type: "json_object" });
+    expect(request).not.toHaveProperty("text");
+    expect(request).not.toHaveProperty("input");
+  });
+
+  it("rejects truncated structured output", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              finish_reason: "length",
+              message: { role: "assistant", content: "{}" }
+            }
+          ]
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+    const client = new DeepSeekChatCompletionsClient({ apiKey: "test-key", fetcher });
+
+    await expect(
+      client.generate({
+        schemaName: "claim_facts",
+        schema: { type: "object" },
+        instructions: "Extract facts.",
+        input: "Example"
+      })
+    ).rejects.toThrow("truncated");
+  });
+});
+
+describe("LLM provider configuration", () => {
+  it("recognizes the existing OpenAI-compatible DeepSeek environment", () => {
+    const env = {
+      OPENAI_API_KEY: "test-key",
+      OPENAI_INTAKE_MODEL: "deepseek-v4",
+      OPENAI_BASE_URL: "https://api.deepseek.com/"
+    };
+
+    expect(resolveLlmProvider(env)).toBe("deepseek");
+    expect(createStructuredOutputClientFromEnv(env)).toBeInstanceOf(
+      DeepSeekChatCompletionsClient
+    );
+  });
+
+  it("respects an explicit OpenAI provider", () => {
+    const env = {
+      LLM_PROVIDER: "openai",
+      OPENAI_API_KEY: "test-key",
+      OPENAI_INTAKE_MODEL: "test-model"
+    };
+
+    expect(resolveLlmProvider(env)).toBe("openai");
+    expect(createStructuredOutputClientFromEnv(env)).toBeInstanceOf(OpenAIResponsesClient);
   });
 });
 

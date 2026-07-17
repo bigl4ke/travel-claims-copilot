@@ -25,7 +25,7 @@ The app currently uses:
 - TypeScript
 - Tailwind CSS
 - local JSON seed data
-- optional multi-turn LLM fact extraction through the OpenAI Responses API
+- optional multi-turn LLM fact extraction through OpenAI Responses or DeepSeek Chat Completions
 - strict `ClaimFacts` JSON Schema validation and deterministic jurisdiction rules
 - deterministic local extraction when no API key is configured or a model call fails
 - explainable weighted retrieval with deterministic Top-K results
@@ -58,15 +58,28 @@ Start the local dev server:
 npm run dev
 ```
 
-To enable LLM-assisted intake, copy `.env.example` to `.env.local` and set the server-side key:
+To enable LLM-assisted intake, copy `.env.example` to `.env.local` and configure one provider.
+For OpenAI:
 
 ```bash
+LLM_PROVIDER=openai
 OPENAI_API_KEY=your_key_here
+OPENAI_INTAKE_MODEL=gpt-5.6-luna
 ```
 
-The default intake model is `gpt-5.6-luna` and can be changed with
-`OPENAI_INTAKE_MODEL`. Without a key, the same UI uses the deterministic fallback and labels it
-as `Local`.
+For DeepSeek:
+
+```bash
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=your_key_here
+DEEPSEEK_INTAKE_MODEL=deepseek-v4-flash
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+```
+
+For backward compatibility, a DeepSeek setup using `OPENAI_API_KEY`, a `deepseek-*` model, and
+`OPENAI_BASE_URL=https://api.deepseek.com/` is detected automatically. The obsolete bare model
+name `deepseek-v4` is normalized to `deepseek-v4-flash`. Without a configured key, the same UI
+uses the deterministic fallback and labels it as `Local`.
 
 Open:
 
@@ -139,7 +152,7 @@ lib/
   claimFacts.ts           ClaimFacts types, JSON Schema, validation, and missing fields
   jurisdiction.ts         Location enrichment and EU261 candidate rules
   intake.ts               Multi-turn extraction, fact merging, questions, and fallback
-  llm.ts                  OpenAI Responses API structured-output client
+  llm.ts                  OpenAI and DeepSeek structured-output adapters
   analyze.ts              Structured-facts and legacy-description orchestration
   classifier.ts           Structured fact extraction and issue classification
   retrieval.ts            Top-K local JSON policy/case/script retrieval
@@ -163,7 +176,7 @@ The current product flow separates semantic intake from deterministic analysis:
 ```text
 natural user message + prior ClaimFacts
   -> POST /api/intake
-  -> LLM strict structured output, or deterministic fallback
+  -> provider-specific LLM structured output, or deterministic fallback
   -> server validation + jurisdiction enrichment + missing-field calculation
   -> targeted follow-up question until ready
   -> POST /api/analyze with validated ClaimFacts
@@ -185,9 +198,10 @@ The LLM is an interviewer and semantic parser, not the policy engine or retrieva
 It receives prior structured facts plus the latest user message and must return the strict
 five-type `ClaimFacts` schema. The server recomputes missing fields and geographic regions.
 
-Model responses use `store: false`, a bounded timeout, strict JSON Schema output, runtime
-validation, and a deterministic fallback. `/api/analyze` never relies on model memory for
-policies, cases, compensation amounts, or sources.
+The OpenAI adapter requests strict JSON Schema output with `store: false`. The DeepSeek adapter
+uses Chat Completions JSON Output and includes the same schema in its system prompt. Both use a
+bounded timeout, runtime `ClaimFacts` validation, and a deterministic fallback. `/api/analyze`
+never relies on model memory for policies, cases, compensation amounts, or sources.
 
 The LLM should not invent policies, cases, compensation amounts, or sources.
 
