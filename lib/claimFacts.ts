@@ -1,9 +1,9 @@
 import { enrichClaimJurisdiction } from "./jurisdiction";
-import type { MvpIssueType, PolicyRegion } from "./types";
+import type { MvpIssueType, PolicyRouteRegion } from "./types";
 
 export type ClaimIssueType = MvpIssueType | "unknown";
 export type ClaimProviderType = "hotel" | "airline" | "unknown";
-export type ClaimRegion = Exclude<PolicyRegion, "global">;
+export type ClaimRegion = PolicyRouteRegion;
 export type ClaimDisruptionType =
   | "hotel_walk"
   | "delay"
@@ -33,6 +33,7 @@ export type ClaimFacts = {
   providerType: ClaimProviderType;
   provider: string | null;
   operatingCarrier: string | null;
+  operatingCarrierRegion: ClaimRegion | null;
   origin: ClaimLocation;
   destination: ClaimLocation;
   disruptionType: ClaimDisruptionType;
@@ -119,6 +120,9 @@ export const claimFactsJsonSchema = {
     providerType: { type: "string", enum: providerTypes },
     provider: nullableStringSchema,
     operatingCarrier: nullableStringSchema,
+    operatingCarrierRegion: {
+      anyOf: [{ type: "string", enum: regions }, { type: "null" }]
+    },
     origin: locationSchema,
     destination: locationSchema,
     disruptionType: { type: "string", enum: disruptionTypes },
@@ -138,6 +142,7 @@ export const claimFactsJsonSchema = {
     "providerType",
     "provider",
     "operatingCarrier",
+    "operatingCarrierRegion",
     "origin",
     "destination",
     "disruptionType",
@@ -164,6 +169,7 @@ export function emptyClaimFacts(): ClaimFacts {
     providerType: "unknown",
     provider: null,
     operatingCarrier: null,
+    operatingCarrierRegion: null,
     origin: emptyClaimLocation(),
     destination: emptyClaimLocation(),
     disruptionType: "unknown",
@@ -261,6 +267,15 @@ export function parseClaimFacts(value: unknown): ClaimFactsParseResult {
       parseEnum(value.providerType, providerTypes, "providerType", errors) ?? "unknown",
     provider: parseNullableString(value.provider, "provider", errors),
     operatingCarrier: parseNullableString(value.operatingCarrier, "operatingCarrier", errors),
+    operatingCarrierRegion:
+      value.operatingCarrierRegion === null
+        ? null
+        : parseEnum(
+            value.operatingCarrierRegion,
+            regions,
+            "operatingCarrierRegion",
+            errors
+          ) ?? null,
     origin: parseLocation(value.origin, "origin", errors),
     destination: parseLocation(value.destination, "destination", errors),
     disruptionType:

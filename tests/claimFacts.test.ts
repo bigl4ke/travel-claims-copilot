@@ -126,7 +126,8 @@ describe("structured analyze API", () => {
 
     expect(response.status).toBe(200);
     expect(result.issueType).toBe("airline_cancellation");
-    expect(result.policyRegions).toEqual(["EU_EEA_CH"]);
+    expect(result.policyRegions).toEqual(["EU_EEA_CH", "US"]);
+    expect(result.legalRegimes).toEqual(["EU261", "US_DOT_REFUND"]);
     expect(result.controllability).toBe("controllable");
     expect(result.officialBasis[0]?.policy_id).toBe("eu261_air_passenger_rights");
     expect(result.suggestedAsks.aggressive).toContain(
@@ -171,7 +172,8 @@ describe("structured analyze API", () => {
 
     expect(response.status).toBe(200);
     expect(result.issueType).toBe("airline_cancellation");
-    expect(result.policyRegions).toEqual(["EU_EEA_CH"]);
+    expect(result.policyRegions).toEqual(["EU_EEA_CH", "US"]);
+    expect(result.legalRegimes).toEqual(["EU261", "US_DOT_REFUND"]);
     expect(result.controllability).toBe("unknown");
     expect(result.strength).toBe("medium");
     expect(policyIds).toContain("eu261_air_passenger_rights");

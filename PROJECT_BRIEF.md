@@ -35,7 +35,8 @@
 用户 United 航班因为 crew issue 取消，被改到第二天，机场不给酒店。
 
 系统应输出：
-- 问题类型：controllable_cancellation / controllable_delay
+- 问题类型：airline_cancellation / airline_delay
+- 可控性：controllable，与事件类型分开记录
 - 官方依据：DOT Airline Cancellation and Delay Dashboard、航司 customer commitment
 - 建议诉求：rebooking、hotel、meal voucher、transportation
 - 话术：机场柜台话术、customer relations 邮件

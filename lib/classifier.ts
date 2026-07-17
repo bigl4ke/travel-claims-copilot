@@ -1,9 +1,11 @@
 import { normalizeIssueType } from "./issueTaxonomy";
+import { inferRouteLocations } from "./jurisdiction";
 import type {
   AnalyzeOptions,
   Case,
   ExtractedFacts,
   IssueType,
+  PolicyRouteRegion,
   ProviderType
 } from "./types";
 
@@ -17,6 +19,7 @@ type MatchResult = {
   disruptionReason?: ExtractedFacts["disruptionReason"];
   isOvernight?: boolean;
   deniedBoardingKind?: ExtractedFacts["deniedBoardingKind"];
+  operatingCarrierRegion?: PolicyRouteRegion;
   confidence: ExtractedFacts["confidence"];
   signals: string[];
 };
@@ -24,6 +27,7 @@ type MatchResult = {
 type ProviderDefinition = {
   provider: string;
   providerType: Exclude<ProviderType, "government">;
+  operatingCarrierRegion?: PolicyRouteRegion;
   terms: string[];
 };
 
@@ -31,37 +35,80 @@ const providerDefinitions: ProviderDefinition[] = [
   {
     provider: "American Airlines",
     providerType: "airline",
+    operatingCarrierRegion: "US",
     terms: ["american airlines", "american flight", "aa flight", "aa", "美国航空", "美航"]
   },
   {
     provider: "United",
     providerType: "airline",
+    operatingCarrierRegion: "US",
     terms: ["united airlines", "united flight", "united", "ua", "美联航"]
   },
   {
     provider: "Delta",
     providerType: "airline",
+    operatingCarrierRegion: "US",
     terms: ["delta air lines", "delta flight", "delta", "dl", "达美"]
   },
   {
     provider: "Alaska Airlines",
     providerType: "airline",
+    operatingCarrierRegion: "US",
     terms: ["alaska airlines", "alaska flight", "阿拉斯加航空"]
   },
   {
     provider: "Air France",
     providerType: "airline",
+    operatingCarrierRegion: "EU_EEA_CH",
     terms: ["air france", "af flight", "法航"]
   },
   {
     provider: "Lufthansa",
     providerType: "airline",
+    operatingCarrierRegion: "EU_EEA_CH",
     terms: ["lufthansa", "lh flight", "汉莎"]
+  },
+  {
+    provider: "British Airways",
+    providerType: "airline",
+    operatingCarrierRegion: "UK",
+    terms: ["british airways", "ba flight", "英国航空", "英航"]
+  },
+  {
+    provider: "Virgin Atlantic",
+    providerType: "airline",
+    operatingCarrierRegion: "UK",
+    terms: ["virgin atlantic", "维珍航空"]
+  },
+  {
+    provider: "Air Canada",
+    providerType: "airline",
+    operatingCarrierRegion: "CA",
+    terms: ["air canada", "加拿大航空", "加航"]
+  },
+  {
+    provider: "Qantas",
+    providerType: "airline",
+    operatingCarrierRegion: "AU",
+    terms: ["qantas", "澳洲航空"]
+  },
+  {
+    provider: "Air China",
+    providerType: "airline",
+    operatingCarrierRegion: "CN",
+    terms: ["air china", "中国国际航空", "国航"]
   },
   {
     provider: "China Eastern Airlines",
     providerType: "airline",
+    operatingCarrierRegion: "CN",
     terms: ["china eastern", "东航"]
+  },
+  {
+    provider: "China Southern Airlines",
+    providerType: "airline",
+    operatingCarrierRegion: "CN",
+    terms: ["china southern", "南航"]
   },
   {
     provider: "Marriott",
@@ -115,7 +162,9 @@ function hasAny(text: string, terms: string[]): string[] {
   return terms.filter((term) => hasTerm(text, term));
 }
 
-function findProvider(text: string): Pick<MatchResult, "provider" | "providerType"> {
+function findProvider(
+  text: string
+): Pick<MatchResult, "provider" | "providerType" | "operatingCarrierRegion"> {
   const providerText = text.replaceAll("united states", "");
   const match = providerDefinitions
     .flatMap((definition) =>
@@ -130,7 +179,11 @@ function findProvider(text: string): Pick<MatchResult, "provider" | "providerTyp
     ?.definition;
 
   return match
-    ? { provider: match.provider, providerType: match.providerType }
+    ? {
+        provider: match.provider,
+        providerType: match.providerType,
+        operatingCarrierRegion: match.operatingCarrierRegion
+      }
     : {};
 }
 
@@ -138,11 +191,13 @@ function findCountry(text: string): string | undefined {
   const countryTerms: Array<[string, string[]]> = [
     ["EU", ["eu261", "european union", "europe", "欧盟", "欧洲"]],
     ["US", ["united states", "u.s.", "usa", "美国"]],
+    ["United Kingdom", ["united kingdom", "uk", "london", "lhr", "英国", "伦敦"]],
     ["France", ["france", "paris", "cdg", "法国", "巴黎"]],
     ["Germany", ["germany", "frankfurt", "fra", "德国", "法兰克福"]],
     ["Italy", ["italy", "rome", "意大利", "罗马"]],
-    ["China", ["china", "中国"]],
-    ["Canada", ["canada", "加拿大"]],
+    ["China", ["china", "beijing", "shanghai", "中国", "北京", "上海"]],
+    ["Canada", ["canada", "toronto", "vancouver", "加拿大", "多伦多", "温哥华"]],
+    ["Australia", ["australia", "sydney", "melbourne", "澳大利亚", "澳洲", "悉尼", "墨尔本"]],
     ["Japan", ["japan", "日本"]]
   ];
 
@@ -261,6 +316,8 @@ function buildFacts(
   match: Partial<MatchResult>,
   confidence: ExtractedFacts["confidence"]
 ): ExtractedFacts {
+  const route = inferRouteLocations(description);
+
   return {
     description,
     issueType,
@@ -272,6 +329,10 @@ function buildFacts(
     disruptionReason: match.disruptionReason,
     isOvernight: match.isOvernight,
     deniedBoardingKind: match.deniedBoardingKind,
+    operatingCarrier: match.providerType === "airline" ? match.provider : undefined,
+    operatingCarrierRegion: match.operatingCarrierRegion,
+    originRegion: route.origin?.region ?? undefined,
+    destinationRegion: route.destination?.region ?? undefined,
     caseId: options.caseId,
     confidence,
     signals: Array.from(new Set(signals)),

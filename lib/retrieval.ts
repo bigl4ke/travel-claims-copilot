@@ -54,6 +54,10 @@ export function buildRetrievalQuery(facts: ExtractedFacts): RetrievalQuery {
     disruptionReason: facts.disruptionReason,
     isOvernight: facts.isOvernight,
     deniedBoardingKind: facts.deniedBoardingKind,
+    operatingCarrier: facts.operatingCarrier ?? facts.provider,
+    operatingCarrierRegion: facts.operatingCarrierRegion,
+    originRegion: facts.originRegion,
+    destinationRegion: facts.destinationRegion,
     policyRegions:
       facts.policyRegions && facts.policyRegions.length > 0
         ? Array.from(new Set(facts.policyRegions))

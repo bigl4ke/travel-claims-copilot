@@ -33,6 +33,7 @@ export type PolicyRegion =
   | "CN"
   | "other"
   | "global";
+export type PolicyRouteRegion = Exclude<PolicyRegion, "global">;
 export type LegalRegime =
   | "provider_policy"
   | "EU261"
@@ -109,6 +110,7 @@ export type Script = {
   script_id: string;
   incident_types: MvpIssueType[];
   applicable_regions: PolicyRegion[];
+  applicability_rule: PolicyApplicabilityRule;
   required_controllability: PolicyControllability;
   provider: string;
   channel:
@@ -148,6 +150,10 @@ export type ExtractedFacts = {
     | "unknown";
   isOvernight?: boolean;
   deniedBoardingKind?: "voluntary" | "involuntary" | "unknown";
+  operatingCarrier?: string;
+  operatingCarrierRegion?: PolicyRouteRegion;
+  originRegion?: PolicyRouteRegion;
+  destinationRegion?: PolicyRouteRegion;
   policyRegions?: PolicyRegion[];
   controllability?: Controllability;
   caseId?: string;
@@ -167,6 +173,10 @@ export type RetrievalQuery = {
   disruptionReason?: ExtractedFacts["disruptionReason"];
   isOvernight?: boolean;
   deniedBoardingKind?: ExtractedFacts["deniedBoardingKind"];
+  operatingCarrier?: string;
+  operatingCarrierRegion?: PolicyRouteRegion;
+  originRegion?: PolicyRouteRegion;
+  destinationRegion?: PolicyRouteRegion;
   policyRegions: PolicyRegion[];
   controllability: Controllability;
 };
@@ -221,6 +231,7 @@ export type SuggestedAsks = {
 export type AnalysisResult = {
   issueType: IssueType;
   policyRegions: PolicyRegion[];
+  legalRegimes: LegalRegime[];
   controllability: Controllability;
   strength: "low" | "medium" | "high";
   summary: string;

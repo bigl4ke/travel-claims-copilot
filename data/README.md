@@ -46,3 +46,13 @@ The 55 records contain 50 unique community source URLs and 5 explicitly labeled 
 - Removed personal executive email addresses and unsupported universal deadlines from the Delta baggage case.
 
 Run `npm run validate:data` after editing any JSON file.
+
+## Policy source rules
+
+- Use government legislation, regulator guidance, or a provider's own published terms.
+- Store geography in `applicable_regions` and the legal framework in `legal_regime`.
+- Encode route direction and operating-carrier requirements in `applicability_rule`.
+- Keep statutory rights separate from airline or hotel commitments.
+- State conditions and exclusions conservatively; do not convert a contextual remedy into a
+  universal fixed amount.
+- Record `last_checked` whenever the official source and current status are verified.

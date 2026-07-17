@@ -131,6 +131,9 @@ function mergeDeterministicFacts(message: string, current: ClaimFacts): ClaimFac
         ? extracted.providerType
         : current.providerType,
     provider: extracted.provider ?? current.provider,
+    operatingCarrier: extracted.operatingCarrier ?? current.operatingCarrier,
+    operatingCarrierRegion:
+      extracted.operatingCarrierRegion ?? current.operatingCarrierRegion,
     origin: mergeLocation(current.origin, route.origin),
     destination: mergeLocation(current.destination, route.destination),
     disruptionType: disruptionType === "unknown" ? current.disruptionType : disruptionType,
@@ -165,6 +168,8 @@ function mergeLlmFactsWithDeterministic(
         : llmFacts.providerType,
     provider: llmFacts.provider ?? deterministicFacts.provider,
     operatingCarrier: llmFacts.operatingCarrier ?? deterministicFacts.operatingCarrier,
+    operatingCarrierRegion:
+      llmFacts.operatingCarrierRegion ?? deterministicFacts.operatingCarrierRegion,
     origin: mergeLocation(deterministicFacts.origin, llmFacts.origin),
     destination: mergeLocation(deterministicFacts.destination, llmFacts.destination),
     disruptionType:

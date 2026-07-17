@@ -17,7 +17,10 @@ const knownPlaces: KnownPlace[] = [
   { country: "Iceland", region: "EU_EEA_CH", terms: ["iceland", "reykjavik", "kef", "冰岛", "雷克雅未克"] },
   { country: "Switzerland", region: "EU_EEA_CH", terms: ["switzerland", "zurich", "zrh", "geneva", "gva", "瑞士", "苏黎世", "日内瓦"] },
   { country: "United Kingdom", region: "UK", terms: ["united kingdom", "uk", "london", "lhr", "lgw", "英国", "伦敦"] },
-  { country: "United States", region: "US", terms: ["united states", "usa", "new york", "jfk", "ewr", "los angeles", "lax", "美国", "纽约", "洛杉矶"] }
+  { country: "United States", region: "US", terms: ["united states", "usa", "new york", "jfk", "ewr", "los angeles", "lax", "美国", "纽约", "洛杉矶"] },
+  { country: "Canada", region: "CA", terms: ["canada", "toronto", "yyz", "vancouver", "yvr", "montreal", "yul", "加拿大", "多伦多", "温哥华", "蒙特利尔"] },
+  { country: "Australia", region: "AU", terms: ["australia", "sydney", "syd", "melbourne", "mel", "brisbane", "bne", "澳大利亚", "澳洲", "悉尼", "墨尔本", "布里斯班"] },
+  { country: "China", region: "CN", terms: ["china", "beijing", "pek", "pkx", "shanghai", "pvg", "sha", "guangzhou", "can", "shenzhen", "szx", "中国", "北京", "上海", "广州", "深圳"] }
 ];
 
 const euOperatingCarriers = new Set([
@@ -34,6 +37,27 @@ const euOperatingCarriers = new Set([
   "swiss"
 ]);
 
+const ukOperatingCarriers = new Set([
+  "british airways",
+  "virgin atlantic",
+  "easyjet",
+  "jet2",
+  "tui airways",
+  "wizz air uk"
+]);
+
+const chineseOperatingCarriers = new Set([
+  "air china",
+  "china eastern airlines",
+  "china eastern",
+  "china southern airlines",
+  "china southern",
+  "hainan airlines",
+  "xiamenair",
+  "sichuan airlines",
+  "spring airlines"
+]);
+
 function locationFromKnownPlace(place: KnownPlace, matchedTerm: string): ClaimLocation {
   const airport = /^[a-z]{3}$/i.test(matchedTerm) ? matchedTerm.toUpperCase() : null;
   const city = airport || normalize(matchedTerm) === normalize(place.country) ? null : matchedTerm;
@@ -48,6 +72,19 @@ function locationFromKnownPlace(place: KnownPlace, matchedTerm: string): ClaimLo
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();
+}
+
+export function isEuOperatingCarrier(carrier: string | null | undefined): boolean {
+  return euOperatingCarriers.has(normalize(carrier ?? ""));
+}
+
+export function isUkOrEuOperatingCarrier(carrier: string | null | undefined): boolean {
+  const normalized = normalize(carrier ?? "");
+  return euOperatingCarriers.has(normalized) || ukOperatingCarriers.has(normalized);
+}
+
+export function isChineseOperatingCarrier(carrier: string | null | undefined): boolean {
+  return chineseOperatingCarriers.has(normalize(carrier ?? ""));
 }
 
 function findKnownPlace(location: ClaimLocation): KnownPlace | undefined {
@@ -129,8 +166,10 @@ export function assessEu261Candidate(facts: ClaimFacts): Eu261CandidateAssessmen
     return { isCandidate: false, needsOperatingCarrierCheck: false, reasons: [] };
   }
 
-  const carrier = normalize(enriched.operatingCarrier ?? enriched.provider ?? "");
-  if (euOperatingCarriers.has(carrier)) {
+  if (
+    enriched.operatingCarrierRegion === "EU_EEA_CH" ||
+    isEuOperatingCarrier(enriched.operatingCarrier ?? enriched.provider)
+  ) {
     return {
       isCandidate: true,
       needsOperatingCarrierCheck: false,
@@ -142,5 +181,44 @@ export function assessEu261Candidate(facts: ClaimFacts): Eu261CandidateAssessmen
     isCandidate: false,
     needsOperatingCarrierCheck: true,
     reasons: ["arrival_region_eu_eea_ch", "operating_carrier_unconfirmed"]
+  };
+}
+
+export type Uk261CandidateAssessment = {
+  isCandidate: boolean;
+  needsOperatingCarrierCheck: boolean;
+  reasons: string[];
+};
+
+export function assessUk261Candidate(facts: ClaimFacts): Uk261CandidateAssessment {
+  const enriched = enrichClaimJurisdiction(facts);
+  if (enriched.origin.region === "UK") {
+    return {
+      isCandidate: true,
+      needsOperatingCarrierCheck: false,
+      reasons: ["departure_region_uk"]
+    };
+  }
+
+  if (enriched.destination.region !== "UK") {
+    return { isCandidate: false, needsOperatingCarrierCheck: false, reasons: [] };
+  }
+
+  if (
+    enriched.operatingCarrierRegion === "UK" ||
+    enriched.operatingCarrierRegion === "EU_EEA_CH" ||
+    isUkOrEuOperatingCarrier(enriched.operatingCarrier ?? enriched.provider)
+  ) {
+    return {
+      isCandidate: true,
+      needsOperatingCarrierCheck: false,
+      reasons: ["arrival_region_uk", "uk_or_eu_operating_carrier"]
+    };
+  }
+
+  return {
+    isCandidate: false,
+    needsOperatingCarrierCheck: true,
+    reasons: ["arrival_region_uk", "operating_carrier_unconfirmed"]
   };
 }

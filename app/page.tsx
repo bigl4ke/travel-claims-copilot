@@ -378,10 +378,18 @@ function SummaryPanel({ result }: { result: AnalysisResult | null }) {
           </div>
           <div className="grid gap-2 border-t border-ink/5 pt-3 text-sm">
             <div className="flex items-start justify-between gap-3">
-              <span className="text-ink/60">Policy region</span>
+              <span className="text-ink/60">Route regions</span>
               <span className="text-right font-medium text-ink">
                 {result.policyRegions.length > 0
                   ? result.policyRegions.join(", ").replaceAll("_", " ")
+                  : "Unresolved"}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-ink/60">Legal regimes</span>
+              <span className="text-right font-medium text-ink">
+                {result.legalRegimes.length > 0
+                  ? result.legalRegimes.join(", ").replaceAll("_", " ")
                   : "Unresolved"}
               </span>
             </div>
@@ -448,7 +456,9 @@ function PolicySection({ policies }: { policies: Policy[] }) {
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-ink">{policy.policy_name}</h3>
-                  <p className="text-sm text-ink/60">{policy.provider}</p>
+                  <p className="text-sm text-ink/60">
+                    {policy.provider} · {policy.legal_regime.replaceAll("_", " ")}
+                  </p>
                 </div>
                 <a
                   className="text-sm font-semibold text-mint hover:text-coral"

@@ -70,6 +70,7 @@ where required, the operating carrier. It must not be inferred solely from the i
 - script_id: string
 - incident_types: ("hotel_walk" | "airline_delay" | "airline_cancellation" | "denied_boarding")[]
 - applicable_regions: ("EU_EEA_CH" | "UK" | "US" | "CA" | "AU" | "CN" | "other" | "global")[]
+- applicability_rule: same deterministic route rule vocabulary as `Policy`
 - required_controllability: "controllable" | "uncontrollable" | "unknown" | "any"
 - provider: string
 - channel: "front_desk" | "airport_counter" | "phone" | "chat" | "email" | "corporate_escalation" | "regulator_complaint"

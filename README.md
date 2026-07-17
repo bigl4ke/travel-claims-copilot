@@ -35,16 +35,17 @@ The app currently uses:
 There is no database, login, payment, scraping, email sending, or claim submission. Conversation
 state currently stays in the browser and is not persisted.
 
-The current knowledge base contains 5 policies, 55 reviewed case records (35 approved for
-retrieval), and 8 reusable scripts. The first demo publishes four incident types:
+The current knowledge base contains 11 policies, 55 reviewed case records (35 approved for
+retrieval), and 14 reusable scripts. The first demo publishes four incident types:
 
 - `hotel_walk`
 - `airline_delay`
 - `airline_cancellation`
 - `denied_boarding`
 
-EU261, US DOT, and provider commitments are policy scopes selected from route region, provider,
-and controllability. They are not incident types.
+EU261, UK261, Canada APPR, US DOT, Australian Consumer Law, Chinese civil-aviation regulations,
+and provider commitments are policy scopes selected from route direction, operating carrier,
+provider, and controllability. They are not incident types.
 
 ## How To Run
 
@@ -152,8 +153,8 @@ data/
 
 lib/
   claimFacts.ts           ClaimFacts types, JSON Schema, validation, and missing fields
-  jurisdiction.ts         Location enrichment and EU261 candidate rules
-  policyScope.ts          Policy region and controllability derivation
+  jurisdiction.ts         Location, carrier, EU261, and UK261 route enrichment
+  policyScope.ts          Route applicability and controllability rules
   intake.ts               Multi-turn extraction, fact merging, questions, and fallback
   llm.ts                  OpenAI and DeepSeek structured-output adapters
   analyze.ts              Structured-facts and legacy-description orchestration
@@ -183,15 +184,18 @@ natural user message + prior ClaimFacts
   -> server validation + jurisdiction enrichment + missing-field calculation
   -> targeted follow-up question until ready
   -> POST /api/analyze with validated ClaimFacts
-  -> incident type + derived policy regions + controllability
+  -> incident type + origin/destination regions + operating carrier + controllability
+  -> deterministic legal-regime applicability rules
   -> scope-aware policy / case / script scoring
   -> Top-K retrieval (3 policies / 3 cases / 2 scripts)
   -> generateAnalysis()
   -> AnalysisResult
 ```
 
-Policy filtering first checks incident type, route jurisdiction, provider scope, and required
-controllability. Case ranking then considers incident, region, provider, country, booking channel,
+Policy filtering first checks incident type, route direction, operating-carrier rules, provider
+scope, and required controllability. A policy's `legal_regime` is distinct from its geographic
+`applicable_regions`, and `applicability_rule` controls deterministic route matching. Case ranking
+then considers incident, region, provider, country, booking channel,
 loyalty status, disruption reason, text overlap, source authority, and confidence. Equal scores
 use stable IDs as a deterministic tie-breaker. Only cases with `review_status: "approved"` can
 be returned.
@@ -294,7 +298,18 @@ Returns:
 ```ts
 {
   issueType: string;
-  policyRegions: Array<"EU_EEA_CH" | "UK" | "US" | "other" | "global">;
+  policyRegions: Array<"EU_EEA_CH" | "UK" | "US" | "CA" | "AU" | "CN" | "other" | "global">;
+  legalRegimes: Array<
+    | "provider_policy"
+    | "EU261"
+    | "UK261"
+    | "US_DOT_REFUND"
+    | "US_DOT_DENIED_BOARDING"
+    | "US_AIRLINE_COMMITMENT"
+    | "CA_APPR"
+    | "AU_ACL"
+    | "CN_FLIGHT_REGULATION"
+  >;
   controllability: "controllable" | "uncontrollable" | "unknown";
   strength: "low" | "medium" | "high";
   summary: string;
@@ -321,7 +336,11 @@ Examples:
 
 - Marriott Ultimate Reservation Guarantee
 - DOT Airline Cancellation and Delay Dashboard
-- EU passenger rights
+- EU261 and UK261
+- Canada Air Passenger Protection Regulations
+- US DOT automatic refund rules
+- Australian Consumer Law travel guidance
+- Chinese flight-regularity and passenger-service regulations
 
 ### `data/cases.json`
 
@@ -367,7 +386,7 @@ The app should clearly separate:
 Completed:
 
 - consolidated, reviewed local JSON data
-- deterministic structured extraction for the five demo issue types
+- deterministic structured extraction for the four demo issue types
 - explainable structured filtering and Top-K ranking
 - approved-only case retrieval
 - replaceable async fact-extraction boundary
@@ -386,7 +405,7 @@ Recommended next work:
 Implemented foundation:
 
 - server-only OpenAI configuration
-- strict structured fact extraction within the five-type allowlist
+- strict structured fact extraction within the four-type allowlist
 - multi-turn fact merging and targeted clarification
 - deterministic fallback, schema validation, timeouts, and evidence-only retrieval
 

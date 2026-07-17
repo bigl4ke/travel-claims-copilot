@@ -1,6 +1,5 @@
 import { deterministicFactExtractor } from "./classifier";
 import { generateAnalysis } from "./generator";
-import { assessEu261Candidate } from "./jurisdiction";
 import { controllabilityFromReason } from "./policyScope";
 import { retrieveKnowledge } from "./retrieval";
 import type { ClaimFacts } from "./claimFacts";
@@ -41,12 +40,13 @@ export { rankCases, rankPolicies, rankScripts } from "./retrievalScoring";
 export { buildScenarioSummaries } from "./scenarios";
 
 function policyRegionsFromClaimFacts(facts: ClaimFacts): PolicyRegion[] {
-  if (assessEu261Candidate(facts).isCandidate) {
-    return ["EU_EEA_CH"];
-  }
-
-  const routeRegion = facts.origin.region ?? facts.destination.region;
-  return routeRegion ? [routeRegion] : [];
+  return Array.from(
+    new Set(
+      [facts.origin.region, facts.destination.region].filter(
+        (region): region is NonNullable<typeof region> => Boolean(region)
+      )
+    )
+  );
 }
 
 export function claimFactsToExtractedFacts(
@@ -64,6 +64,10 @@ export function claimFactsToExtractedFacts(
     disruptionReason: facts.disruptionReason,
     isOvernight: facts.isOvernight ?? undefined,
     deniedBoardingKind: facts.deniedBoardingKind,
+    operatingCarrier: facts.operatingCarrier ?? facts.provider ?? undefined,
+    operatingCarrierRegion: facts.operatingCarrierRegion ?? undefined,
+    originRegion: facts.origin.region ?? undefined,
+    destinationRegion: facts.destination.region ?? undefined,
     policyRegions: policyRegionsFromClaimFacts(facts),
     controllability: controllabilityFromReason(facts.disruptionReason),
     confidence: facts.confidence,

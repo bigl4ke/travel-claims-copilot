@@ -211,6 +211,7 @@ for (const script of scripts) {
       "script_id",
       "incident_types",
       "applicable_regions",
+      "applicability_rule",
       "required_controllability",
       "provider",
       "channel",
@@ -232,6 +233,7 @@ for (const script of scripts) {
   for (const region of script.applicable_regions) {
     requireEnum(region, policyRegions, label);
   }
+  requireEnum(script.applicability_rule, policyApplicabilityRules, label);
   requireEnum(
     script.required_controllability,
     ["controllable", "uncontrollable", "unknown", "any"],

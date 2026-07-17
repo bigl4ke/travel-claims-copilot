@@ -1,5 +1,9 @@
 import { getIssueAliases } from "./issueTaxonomy";
-import { policyRegionsFromCountry } from "./policyScope";
+import {
+  applicabilityRuleMatches,
+  policyAppliesToRoute,
+  policyRegionsFromCountry
+} from "./policyScope";
 import type {
   Case,
   Policy,
@@ -227,6 +231,19 @@ function sortScoredItems<T>(
   );
 }
 
+function jurisdictionScore(
+  applicableRegions: Policy["applicable_regions"],
+  query: RetrievalQuery
+): number {
+  if (query.originRegion && applicableRegions.includes(query.originRegion)) {
+    return 20;
+  }
+  if (query.destinationRegion && applicableRegions.includes(query.destinationRegion)) {
+    return 12;
+  }
+  return 15;
+}
+
 export function rankCases(
   query: RetrievalQuery,
   cases: Case[]
@@ -313,9 +330,7 @@ export function rankPolicies(
     const incidentMatches = policy.incident_types.some(
       (incidentType) => incidentType === query.issueType
     );
-    const regionMatches =
-      policy.applicable_regions.includes("global") ||
-      policy.applicable_regions.some((region) => query.policyRegions.includes(region));
+    const regionMatches = policyAppliesToRoute(policy, query);
     const providerMatches =
       policy.applicable_providers.length === 0 ||
       (query.provider
@@ -344,9 +359,14 @@ export function rankPolicies(
     addDescriptionOverlap(result, query.description, candidateText);
 
     if (
-      policy.applicable_regions.some((region) => query.policyRegions.includes(region))
+      policyAppliesToRoute(policy, query) &&
+      !policy.applicable_regions.includes("global")
     ) {
-      addScore(result, 15, "jurisdiction_match");
+      addScore(
+        result,
+        jurisdictionScore(policy.applicable_regions, query),
+        "jurisdiction_match"
+      );
     }
     if (policy.applicable_providers.length > 0) {
       addScore(result, 12, "provider_scope_match");
@@ -375,14 +395,22 @@ export function rankScripts(
     const incidentMatches = script.incident_types.some(
       (incidentType) => incidentType === query.issueType
     );
-    const regionMatches =
-      script.applicable_regions.includes("global") ||
-      script.applicable_regions.some((region) => query.policyRegions.includes(region));
+    const regionMatches = applicabilityRuleMatches(
+      script.applicability_rule,
+      script.applicable_regions,
+      query
+    );
+    const normalizedScriptProvider = normalizeProvider(script.provider);
+    const providerMatches =
+      normalizedScriptProvider.startsWith("generic") ||
+      (query.provider
+        ? normalizeProvider(query.provider) === normalizedScriptProvider
+        : false);
     const controllabilityMatches =
       script.required_controllability === "any" ||
       script.required_controllability === query.controllability;
 
-    return incidentMatches && regionMatches && controllabilityMatches;
+    return incidentMatches && regionMatches && providerMatches && controllabilityMatches;
   });
   const scored = candidates.map((script) => {
     const result: ScoredRetrievalItem<Script> = { item: script, score: 0, reasons: [] };
@@ -396,9 +424,17 @@ export function rankScripts(
     );
 
     if (
-      script.applicable_regions.some((region) => query.policyRegions.includes(region))
+      applicabilityRuleMatches(
+        script.applicability_rule,
+        script.applicable_regions,
+        query
+      ) && !script.applicable_regions.includes("global")
     ) {
-      addScore(result, 15, "jurisdiction_match");
+      addScore(
+        result,
+        jurisdictionScore(script.applicable_regions, query),
+        "jurisdiction_match"
+      );
     }
     if (script.required_controllability !== "any") {
       addScore(result, 10, "controllability_match");
