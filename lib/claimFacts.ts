@@ -15,6 +15,7 @@ export type ClaimDisruptionReason =
   | "mechanical"
   | "oversales"
   | "weather"
+  | "late_inbound_aircraft"
   | "other_controllable"
   | "unknown";
 export type ClaimDeniedBoardingKind = "voluntary" | "involuntary" | "unknown";
@@ -84,6 +85,7 @@ const disruptionReasons: ClaimDisruptionReason[] = [
   "mechanical",
   "oversales",
   "weather",
+  "late_inbound_aircraft",
   "other_controllable",
   "unknown"
 ];

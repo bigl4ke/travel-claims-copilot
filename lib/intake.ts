@@ -44,6 +44,7 @@ Rules:
 - A hotel with no room for a confirmed guest is hotel_walk.
 - Airline oversales or bumping is denied_boarding; distinguish voluntary from involuntary when stated.
 - Weather is not a controllable airline reason.
+- A late inbound aircraft is a reported reason, not by itself a finding that the circumstances were within airline control.
 - EU261 is a candidate issue for a disrupted flight departing the EU/EEA/Switzerland, or arriving there on a qualifying operating carrier. Do not promise compensation.
 - Return only the schema-defined structured output.`;
 
@@ -163,6 +164,49 @@ function mergeDeterministicFacts(message: string, current: ClaimFacts): ClaimFac
   return merged;
 }
 
+function mergeLlmFactsWithDeterministic(
+  llmFacts: ClaimFacts,
+  deterministicFacts: ClaimFacts
+): ClaimFacts {
+  return normalizeClaimFacts({
+    ...deterministicFacts,
+    issueType:
+      llmFacts.issueType === "unknown" ? deterministicFacts.issueType : llmFacts.issueType,
+    providerType:
+      llmFacts.providerType === "unknown"
+        ? deterministicFacts.providerType
+        : llmFacts.providerType,
+    provider: llmFacts.provider ?? deterministicFacts.provider,
+    operatingCarrier: llmFacts.operatingCarrier ?? deterministicFacts.operatingCarrier,
+    origin: mergeLocation(deterministicFacts.origin, llmFacts.origin),
+    destination: mergeLocation(deterministicFacts.destination, llmFacts.destination),
+    disruptionType:
+      llmFacts.disruptionType === "unknown"
+        ? deterministicFacts.disruptionType
+        : llmFacts.disruptionType,
+    disruptionReason:
+      llmFacts.disruptionReason === "unknown"
+        ? deterministicFacts.disruptionReason
+        : llmFacts.disruptionReason,
+    arrivalDelayMinutes:
+      llmFacts.arrivalDelayMinutes ?? deterministicFacts.arrivalDelayMinutes,
+    isOvernight: llmFacts.isOvernight ?? deterministicFacts.isOvernight,
+    deniedBoardingKind:
+      llmFacts.deniedBoardingKind === "unknown"
+        ? deterministicFacts.deniedBoardingKind
+        : llmFacts.deniedBoardingKind,
+    bookingChannel:
+      llmFacts.bookingChannel === "unknown"
+        ? deterministicFacts.bookingChannel
+        : llmFacts.bookingChannel,
+    loyaltyStatus: llmFacts.loyaltyStatus ?? deterministicFacts.loyaltyStatus,
+    expenses: Array.from(new Set([...deterministicFacts.expenses, ...llmFacts.expenses])),
+    evidence: Array.from(new Set([...deterministicFacts.evidence, ...llmFacts.evidence])),
+    userGoal: llmFacts.userGoal ?? deterministicFacts.userGoal,
+    confidence: llmFacts.confidence
+  });
+}
+
 function questionForMissingFields(fields: ClaimFactField[], chinese: boolean): string {
   const selected = fields.slice(0, 3);
   if (selected.includes("issueType")) {
@@ -185,10 +229,20 @@ function questionForMissingFields(fields: ClaimFactField[], chinese: boolean): s
       ? "你是自愿接受改签条件，还是在没有自愿的情况下被拒绝登机？"
       : "Did you volunteer to take another flight, or were you denied boarding involuntarily?";
   }
-  if (selected.includes("arrivalDelayMinutes") || selected.includes("disruptionReason")) {
+  const needsArrivalDelay = selected.includes("arrivalDelayMinutes");
+  const needsDisruptionReason = selected.includes("disruptionReason");
+  if (needsArrivalDelay && needsDisruptionReason) {
     return chinese
       ? "你最终晚到多久？航司给出的延误或取消原因是什么？"
       : "How late did you reach your destination, and what reason did the airline give?";
+  }
+  if (needsArrivalDelay) {
+    return chinese ? "你最终晚到多久？" : "How late did you reach your destination?";
+  }
+  if (needsDisruptionReason) {
+    return chinese
+      ? "航司给出的延误或取消原因是什么？"
+      : "What reason did the airline give?";
   }
   if (selected.includes("disruptionType")) {
     return chinese ? "航班是延误、取消，还是拒绝登机？" : "Was the flight delayed, cancelled, or denied boarding?";
@@ -224,20 +278,22 @@ export async function processIntake(
   const configuredClient = dependencies.llmClient === undefined
     ? createStructuredOutputClientFromEnv()
     : dependencies.llmClient ?? undefined;
+  const deterministicFacts = mergeDeterministicFacts(message, currentFacts);
   let facts: ClaimFacts;
   let extractionMode: IntakeExtractionMode = "deterministic";
   let warning: IntakeResult["warning"];
 
   if (configuredClient) {
     try {
-      facts = await extractWithLlm(configuredClient, message, currentFacts);
+      const llmFacts = await extractWithLlm(configuredClient, message, currentFacts);
+      facts = mergeLlmFactsWithDeterministic(llmFacts, deterministicFacts);
       extractionMode = "llm";
     } catch {
-      facts = mergeDeterministicFacts(message, currentFacts);
+      facts = deterministicFacts;
       warning = "llm_fallback_used";
     }
   } else {
-    facts = mergeDeterministicFacts(message, currentFacts);
+    facts = deterministicFacts;
     warning = "llm_not_configured";
   }
 

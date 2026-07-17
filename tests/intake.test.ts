@@ -42,6 +42,17 @@ describe("deterministic intake fallback", () => {
     expect(second.facts.destination.country).toBe("United States");
     expect(second.facts.disruptionReason).toBe("mechanical");
   });
+
+  it("records a late inbound aircraft without assuming it was controllable", async () => {
+    const result = await processIntake(
+      "United cancelled my flight because the plane arrived late.",
+      emptyClaimFacts(),
+      { llmClient: null }
+    );
+
+    expect(result.facts.disruptionReason).toBe("late_inbound_aircraft");
+    expect(result.facts.issueType).toBe("unknown");
+  });
 });
 
 describe("LLM intake", () => {
@@ -81,6 +92,55 @@ describe("LLM intake", () => {
     expect(result.extractionMode).toBe("deterministic");
     expect(result.warning).toBe("llm_fallback_used");
     expect(result.facts.issueType).toBe("controllable_airline_cancellation");
+  });
+
+  it("does not repeat questions for explicit facts omitted by valid model output", async () => {
+    const incompleteModelFacts = normalizeClaimFacts({
+      ...emptyClaimFacts(),
+      issueType: "eu261_delay_or_cancellation",
+      providerType: "airline",
+      provider: "Air France",
+      origin: {
+        city: "Paris",
+        airport: null,
+        country: "France",
+        region: "EU_EEA_CH"
+      },
+      destination: {
+        city: "New York",
+        airport: null,
+        country: "United States",
+        region: "US"
+      },
+      disruptionType: "cancellation",
+      disruptionReason: "unknown",
+      arrivalDelayMinutes: null,
+      confidence: "medium"
+    });
+    const client: StructuredOutputClient = {
+      generate: vi.fn().mockResolvedValue(incompleteModelFacts)
+    };
+
+    const first = await processIntake(
+      "My Air France flight from Paris was cancelled. I was rerouted and arrived at my final destination four hours late.",
+      emptyClaimFacts(),
+      { llmClient: client }
+    );
+
+    expect(first.facts.arrivalDelayMinutes).toBe(240);
+    expect(first.missingFields).toEqual(["disruptionReason"]);
+    expect(first.question).toBe("What reason did the airline give?");
+
+    const second = await processIntake(
+      "like four hours and it is because the plane arrived late",
+      first.facts,
+      { llmClient: client }
+    );
+
+    expect(second.facts.arrivalDelayMinutes).toBe(240);
+    expect(second.facts.disruptionReason).toBe("late_inbound_aircraft");
+    expect(second.status).toBe("ready");
+    expect(second.question).toBeNull();
   });
 });
 

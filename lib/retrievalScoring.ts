@@ -180,6 +180,14 @@ function candidateHasDisruptionReason(
     mechanical: ["mechanical", "maintenance", "equipment", "technical", "机械", "故障"],
     oversales: ["oversold", "overbooked", "oversales", "bump", "超售"],
     weather: ["weather", "storm", "snow", "天气", "暴雪"],
+    late_inbound_aircraft: [
+      "late inbound",
+      "late-arriving aircraft",
+      "incoming aircraft",
+      "previous flight arrived late",
+      "前序航班晚到",
+      "进港飞机晚到"
+    ],
     other_controllable: ["controllable", "airline control", "航司原因", "可控原因"]
   };
 

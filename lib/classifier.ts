@@ -196,6 +196,22 @@ function findDisruptionReason(text: string): ExtractedFacts["disruptionReason"] 
     return "oversales";
   }
 
+  if (
+    hasAny(text, [
+      "late inbound aircraft",
+      "late-arriving aircraft",
+      "inbound aircraft arrived late",
+      "incoming aircraft arrived late",
+      "incoming plane arrived late",
+      "previous flight arrived late",
+      "前序航班晚到",
+      "进港飞机晚到"
+    ]).length ||
+    /(?:because|due to)\s+(?:the\s+)?(?:plane|aircraft)\s+arrived late/.test(text)
+  ) {
+    return "late_inbound_aircraft";
+  }
+
   if (hasAny(text, ["within the airline's control", "airline control", "controllable", "航司原因", "可控原因"]).length) {
     return "other_controllable";
   }

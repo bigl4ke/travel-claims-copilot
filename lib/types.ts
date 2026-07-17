@@ -107,6 +107,7 @@ export type ExtractedFacts = {
     | "mechanical"
     | "oversales"
     | "weather"
+    | "late_inbound_aircraft"
     | "other_controllable"
     | "unknown";
   isOvernight?: boolean;
