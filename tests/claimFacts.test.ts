@@ -187,6 +187,6 @@ describe("structured analyze API", () => {
     const result = await response.json();
 
     expect(response.status).toBe(422);
-    expect(result.missingFields).toEqual(["deniedBoardingKind"]);
+    expect(result.missingFields).toEqual(["origin", "deniedBoardingKind"]);
   });
 });

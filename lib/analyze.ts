@@ -1,5 +1,7 @@
 import { deterministicFactExtractor } from "./classifier";
 import { generateAnalysis } from "./generator";
+import { assessEu261Candidate } from "./jurisdiction";
+import { controllabilityFromReason } from "./policyScope";
 import { retrieveKnowledge } from "./retrieval";
 import type { ClaimFacts } from "./claimFacts";
 import type {
@@ -7,6 +9,7 @@ import type {
   AnalyzeOptions,
   Case,
   ExtractedFacts,
+  PolicyRegion,
   Policy,
   Script
 } from "./types";
@@ -37,6 +40,15 @@ export {
 export { rankCases, rankPolicies, rankScripts } from "./retrievalScoring";
 export { buildScenarioSummaries } from "./scenarios";
 
+function policyRegionsFromClaimFacts(facts: ClaimFacts): PolicyRegion[] {
+  if (assessEu261Candidate(facts).isCandidate) {
+    return ["EU_EEA_CH"];
+  }
+
+  const routeRegion = facts.origin.region ?? facts.destination.region;
+  return routeRegion ? [routeRegion] : [];
+}
+
 export function claimFactsToExtractedFacts(
   facts: ClaimFacts,
   description = ""
@@ -52,6 +64,8 @@ export function claimFactsToExtractedFacts(
     disruptionReason: facts.disruptionReason,
     isOvernight: facts.isOvernight ?? undefined,
     deniedBoardingKind: facts.deniedBoardingKind,
+    policyRegions: policyRegionsFromClaimFacts(facts),
+    controllability: controllabilityFromReason(facts.disruptionReason),
     confidence: facts.confidence,
     signals: [],
     source: "llm"

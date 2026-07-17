@@ -54,7 +54,7 @@ const goldenScenarios: GoldenScenario[] = [
   {
     name: "Delta voluntary bump",
     description:
-      "My Delta flight is oversold and the gate agent is asking for volunteers to take a flight tomorrow. I have not volunteered yet.",
+      "My Delta flight departing from a United States airport is oversold and the gate agent is asking for volunteers to take a flight tomorrow. I have not volunteered yet.",
     expectedIssue: "denied_boarding",
     expectedProvider: "Delta",
     expectedPolicyId: "dot_bumping_oversales",
@@ -168,6 +168,39 @@ describe("classification safeguards", () => {
 });
 
 describe("retrieval quality controls", () => {
+  it("selects official policies by incident, jurisdiction, provider, and controllability", () => {
+    const euCancellation = retrieveKnowledge(
+      classifyInput(
+        "My Air France flight from Paris was cancelled because of a mechanical issue."
+      ),
+      policies,
+      cases,
+      scripts
+    );
+    const usControllableCancellation = retrieveKnowledge(
+      classifyInput("United cancelled my flight because the crew timed out."),
+      policies,
+      cases,
+      scripts
+    );
+    const usWeatherCancellation = retrieveKnowledge(
+      classifyInput("United cancelled my flight because of severe weather."),
+      policies,
+      cases,
+      scripts
+    );
+
+    expect(euCancellation.query.policyRegions).toEqual(["EU_EEA_CH"]);
+    expect(euCancellation.officialBasis.map((policy) => policy.policy_id)).toEqual([
+      "eu261_air_passenger_rights",
+      "eu261_regulation_261_2004"
+    ]);
+    expect(
+      usControllableCancellation.officialBasis.map((policy) => policy.policy_id)
+    ).toContain("dot_airline_cancellation_delay_dashboard");
+    expect(usWeatherCancellation.officialBasis).toEqual([]);
+  });
+
   it("explains why the provider-specific case ranks first", () => {
     const facts = classifyInput(
       "My American Airlines flight was delayed overnight by a mechanical problem."
@@ -191,7 +224,7 @@ describe("retrieval quality controls", () => {
     expect(retrieval.similarCases).toEqual([]);
   });
 
-  it("publishes only the five MVP scenarios", () => {
+  it("publishes only the four incident-based MVP scenarios", () => {
     const summaries = buildScenarioSummaries(policies, cases, scripts);
 
     expect(summaries.map((summary) => summary.issueType).sort()).toEqual(

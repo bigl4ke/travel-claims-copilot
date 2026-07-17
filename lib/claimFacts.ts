@@ -1,9 +1,9 @@
 import { enrichClaimJurisdiction } from "./jurisdiction";
-import type { MvpIssueType } from "./types";
+import type { MvpIssueType, PolicyRegion } from "./types";
 
 export type ClaimIssueType = MvpIssueType | "unknown";
 export type ClaimProviderType = "hotel" | "airline" | "unknown";
-export type ClaimRegion = "EU_EEA_CH" | "UK" | "US" | "other";
+export type ClaimRegion = Exclude<PolicyRegion, "global">;
 export type ClaimDisruptionType =
   | "hotel_walk"
   | "delay"
@@ -348,8 +348,13 @@ export function getMissingClaimFields(facts: ClaimFacts): ClaimFactField[] {
     }
   }
 
-  if (normalized.issueType === "denied_boarding" && normalized.deniedBoardingKind === "unknown") {
-    missing.push("deniedBoardingKind");
+  if (normalized.issueType === "denied_boarding") {
+    if (!hasLocation(normalized.origin)) {
+      missing.push("origin");
+    }
+    if (normalized.deniedBoardingKind === "unknown") {
+      missing.push("deniedBoardingKind");
+    }
   }
 
   return missing;

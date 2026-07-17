@@ -293,8 +293,26 @@ export function rankPolicies(
   query: RetrievalQuery,
   policies: Policy[]
 ): ScoredRetrievalItem<Policy>[] {
-  const aliases = new Set<string>(getIssueAliases(query.issueType));
-  const candidates = policies.filter((policy) => aliases.has(policy.issue_type));
+  const candidates = policies.filter((policy) => {
+    const incidentMatches = policy.incident_types.some(
+      (incidentType) => incidentType === query.issueType
+    );
+    const regionMatches =
+      policy.applicable_regions.includes("global") ||
+      policy.applicable_regions.some((region) => query.policyRegions.includes(region));
+    const providerMatches =
+      policy.applicable_providers.length === 0 ||
+      (query.provider
+        ? policy.applicable_providers.some(
+            (provider) => normalizeProvider(provider) === normalizeProvider(query.provider ?? "")
+          )
+        : false);
+    const controllabilityMatches =
+      policy.required_controllability === "any" ||
+      policy.required_controllability === query.controllability;
+
+    return incidentMatches && regionMatches && providerMatches && controllabilityMatches;
+  });
   const scored = candidates.map((policy) => {
     const result: ScoredRetrievalItem<Policy> = { item: policy, score: 0, reasons: [] };
     const candidateText = [
@@ -305,9 +323,21 @@ export function rankPolicies(
       policy.compensation_or_rights.join(" ")
     ].join(" ");
 
-    addIssueScore(result, query, policy.issue_type);
+    addIssueScore(result, query, query.issueType);
     addProviderScore(result, query.provider, policy.provider);
     addDescriptionOverlap(result, query.description, candidateText);
+
+    if (
+      policy.applicable_regions.some((region) => query.policyRegions.includes(region))
+    ) {
+      addScore(result, 15, "jurisdiction_match");
+    }
+    if (policy.applicable_providers.length > 0) {
+      addScore(result, 12, "provider_scope_match");
+    }
+    if (policy.required_controllability !== "any") {
+      addScore(result, 10, "controllability_match");
+    }
 
     if (policy.authority_level === "high") {
       addScore(result, 5, "authority_match");

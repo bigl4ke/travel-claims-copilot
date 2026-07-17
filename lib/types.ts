@@ -24,13 +24,19 @@ export type MvpIssueType = Extract<
 >;
 
 export type ProviderType = "hotel" | "airline" | "credit_card" | "ota" | "government";
+export type PolicyRegion = "EU_EEA_CH" | "UK" | "US" | "other" | "global";
+export type Controllability = "controllable" | "uncontrollable" | "unknown";
+export type PolicyControllability = Controllability | "any";
 
 export type Policy = {
   policy_id: string;
   provider_type: ProviderType;
   provider: string;
   policy_name: string;
-  issue_type: string;
+  incident_types: MvpIssueType[];
+  applicable_regions: PolicyRegion[];
+  applicable_providers: string[];
+  required_controllability: PolicyControllability;
   source_url: string;
   source_type:
     | "official_policy"
@@ -110,6 +116,8 @@ export type ExtractedFacts = {
     | "unknown";
   isOvernight?: boolean;
   deniedBoardingKind?: "voluntary" | "involuntary" | "unknown";
+  policyRegions?: PolicyRegion[];
+  controllability?: Controllability;
   caseId?: string;
   confidence: "low" | "medium" | "high";
   signals: string[];
@@ -127,6 +135,8 @@ export type RetrievalQuery = {
   disruptionReason?: ExtractedFacts["disruptionReason"];
   isOvernight?: boolean;
   deniedBoardingKind?: ExtractedFacts["deniedBoardingKind"];
+  policyRegions: PolicyRegion[];
+  controllability: Controllability;
 };
 
 export type RetrievalMatchReason =
@@ -142,6 +152,9 @@ export type RetrievalMatchReason =
   | "disruption_reason_match"
   | "denied_boarding_kind_match"
   | "description_overlap"
+  | "jurisdiction_match"
+  | "provider_scope_match"
+  | "controllability_match"
   | "authority_match"
   | "confidence_match";
 

@@ -1,4 +1,5 @@
 import { getIssueAliases, normalizeIssueType } from "./issueTaxonomy";
+import { controllabilityFromReason, policyRegionsFromCountry } from "./policyScope";
 import { rankCases, rankPolicies, rankScripts } from "./retrievalScoring";
 import type {
   Case,
@@ -52,7 +53,13 @@ export function buildRetrievalQuery(facts: ExtractedFacts): RetrievalQuery {
     loyaltyStatus: facts.loyaltyStatus,
     disruptionReason: facts.disruptionReason,
     isOvernight: facts.isOvernight,
-    deniedBoardingKind: facts.deniedBoardingKind
+    deniedBoardingKind: facts.deniedBoardingKind,
+    policyRegions:
+      facts.policyRegions && facts.policyRegions.length > 0
+        ? Array.from(new Set(facts.policyRegions))
+        : policyRegionsFromCountry(facts.country),
+    controllability:
+      facts.controllability ?? controllabilityFromReason(facts.disruptionReason)
   };
 }
 

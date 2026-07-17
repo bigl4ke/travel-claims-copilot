@@ -119,7 +119,10 @@ for (const policy of policies) {
       "provider_type",
       "provider",
       "policy_name",
-      "issue_type",
+      "incident_types",
+      "applicable_regions",
+      "applicable_providers",
+      "required_controllability",
       "source_url",
       "source_type",
       "authority_level",
@@ -129,6 +132,20 @@ for (const policy of policies) {
       "last_checked"
     ],
     `policy ${policy.policy_id ?? "<unknown>"}`
+  );
+  const label = `policy ${policy.policy_id ?? "<unknown>"}`;
+  for (const field of ["incident_types", "applicable_regions", "applicable_providers"]) {
+    if (!Array.isArray(policy[field])) {
+      throw new Error(`${label}.${field} must be an array.`);
+    }
+  }
+  for (const region of policy.applicable_regions) {
+    requireEnum(region, ["EU_EEA_CH", "UK", "US", "other", "global"], label);
+  }
+  requireEnum(
+    policy.required_controllability,
+    ["controllable", "uncontrollable", "unknown", "any"],
+    label
   );
 }
 

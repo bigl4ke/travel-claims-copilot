@@ -26,7 +26,9 @@ export function buildScenarioSummaries(
     .map((issueType) => {
       const aliases = new Set<string>(getIssueAliases(issueType));
       const matchingCases = approvedCases.filter((item) => aliases.has(item.issue_type));
-      const matchingPolicies = policies.filter((policy) => aliases.has(policy.issue_type));
+      const matchingPolicies = policies.filter((policy) =>
+        policy.incident_types.some((incidentType) => incidentType === issueType)
+      );
       const matchingScripts = scripts.filter((script) => aliases.has(script.issue_type));
       const providers = Array.from(new Set(matchingCases.map((item) => item.provider))).sort();
       const sampleCase = matchingCases[0];
