@@ -214,10 +214,22 @@ function questionForMissingFields(fields: ClaimFactField[], chinese: boolean): s
       ? "具体发生了什么：酒店到店无房、航班延误或取消，还是航班超售拒载？"
       : "What happened: a hotel had no room, a flight was delayed or cancelled, or you were bumped from an oversold flight?";
   }
-  if (selected.includes("origin") || selected.includes("destination")) {
+  const needsOrigin = selected.includes("origin");
+  const needsDestination = selected.includes("destination");
+  if (needsOrigin && needsDestination) {
     return chinese
       ? "这趟航班从哪里出发、飞往哪里？请提供城市或机场代码。"
       : "Where did the flight depart from and fly to? City names or airport codes are enough.";
+  }
+  if (needsOrigin) {
+    return chinese
+      ? "这趟航班从哪里出发？请提供城市或机场代码。"
+      : "Where did the flight depart from? A city name or airport code is enough.";
+  }
+  if (needsDestination) {
+    return chinese
+      ? "这趟航班飞往哪里？请提供城市或机场代码。"
+      : "Where did the flight fly to? A city name or airport code is enough.";
   }
   if (selected.includes("provider")) {
     return chinese

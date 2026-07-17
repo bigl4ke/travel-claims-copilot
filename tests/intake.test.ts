@@ -303,6 +303,8 @@ describe("intake API", () => {
 
     expect(response.status).toBe(200);
     expect(result.status).toBe("needs_info");
-    expect(result.question).toContain("Where did the flight depart");
+    expect(result.question).toBe(
+      "Where did the flight fly to? A city name or airport code is enough."
+    );
   });
 });
