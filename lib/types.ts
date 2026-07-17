@@ -24,7 +24,34 @@ export type MvpIssueType = Extract<
 >;
 
 export type ProviderType = "hotel" | "airline" | "credit_card" | "ota" | "government";
-export type PolicyRegion = "EU_EEA_CH" | "UK" | "US" | "other" | "global";
+export type PolicyRegion =
+  | "EU_EEA_CH"
+  | "UK"
+  | "US"
+  | "CA"
+  | "AU"
+  | "CN"
+  | "other"
+  | "global";
+export type LegalRegime =
+  | "provider_policy"
+  | "EU261"
+  | "UK261"
+  | "US_DOT_REFUND"
+  | "US_DOT_DENIED_BOARDING"
+  | "US_AIRLINE_COMMITMENT"
+  | "CA_APPR"
+  | "AU_ACL"
+  | "CN_FLIGHT_REGULATION";
+export type PolicyApplicabilityRule =
+  | "any_route"
+  | "listed_provider"
+  | "origin_region"
+  | "origin_or_destination_region"
+  | "eu261_route"
+  | "uk261_route"
+  | "australia_consumer_law"
+  | "china_flight_regulation";
 export type Controllability = "controllable" | "uncontrollable" | "unknown";
 export type PolicyControllability = Controllability | "any";
 
@@ -33,6 +60,8 @@ export type Policy = {
   provider_type: ProviderType;
   provider: string;
   policy_name: string;
+  legal_regime: LegalRegime;
+  applicability_rule: PolicyApplicabilityRule;
   incident_types: MvpIssueType[];
   applicable_regions: PolicyRegion[];
   applicable_providers: string[];

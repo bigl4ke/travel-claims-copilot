@@ -52,6 +52,28 @@ const legacyLegalIssueTypes = [
   "controllable_airline_cancellation",
   "eu261_delay_or_cancellation"
 ];
+const policyRegions = ["EU_EEA_CH", "UK", "US", "CA", "AU", "CN", "other", "global"];
+const legalRegimes = [
+  "provider_policy",
+  "EU261",
+  "UK261",
+  "US_DOT_REFUND",
+  "US_DOT_DENIED_BOARDING",
+  "US_AIRLINE_COMMITMENT",
+  "CA_APPR",
+  "AU_ACL",
+  "CN_FLIGHT_REGULATION"
+];
+const policyApplicabilityRules = [
+  "any_route",
+  "listed_provider",
+  "origin_region",
+  "origin_or_destination_region",
+  "eu261_route",
+  "uk261_route",
+  "australia_consumer_law",
+  "china_flight_regulation"
+];
 
 const [cases, policies, scripts] = await Promise.all([
   readJson("data/cases.json"),
@@ -134,6 +156,8 @@ for (const policy of policies) {
       "provider_type",
       "provider",
       "policy_name",
+      "legal_regime",
+      "applicability_rule",
       "incident_types",
       "applicable_regions",
       "applicable_providers",
@@ -158,8 +182,10 @@ for (const policy of policies) {
     requireEnum(incidentType, mvpIncidentTypes, label);
   }
   for (const region of policy.applicable_regions) {
-    requireEnum(region, ["EU_EEA_CH", "UK", "US", "other", "global"], label);
+    requireEnum(region, policyRegions, label);
   }
+  requireEnum(policy.legal_regime, legalRegimes, label);
+  requireEnum(policy.applicability_rule, policyApplicabilityRules, label);
   requireEnum(
     policy.required_controllability,
     ["controllable", "uncontrollable", "unknown", "any"],
@@ -195,7 +221,7 @@ for (const script of scripts) {
     requireEnum(incidentType, mvpIncidentTypes, label);
   }
   for (const region of script.applicable_regions) {
-    requireEnum(region, ["EU_EEA_CH", "UK", "US", "other", "global"], label);
+    requireEnum(region, policyRegions, label);
   }
   requireEnum(
     script.required_controllability,

@@ -71,7 +71,7 @@ const issueTypes: ClaimIssueType[] = [
   "unknown"
 ];
 const providerTypes: ClaimProviderType[] = ["hotel", "airline", "unknown"];
-const regions: ClaimRegion[] = ["EU_EEA_CH", "UK", "US", "other"];
+const regions: ClaimRegion[] = ["EU_EEA_CH", "UK", "US", "CA", "AU", "CN", "other"];
 const disruptionTypes: ClaimDisruptionType[] = [
   "hotel_walk",
   "delay",
