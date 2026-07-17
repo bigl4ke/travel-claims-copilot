@@ -10,14 +10,23 @@
 - provider_type: "hotel" | "airline" | "credit_card" | "ota" | "government"
 - provider: string
 - policy_name: string
-- issue_type: string
+- legal_regime: "provider_policy" | "EU261" | "UK261" | "US_DOT_REFUND" | "US_DOT_DENIED_BOARDING" | "US_AIRLINE_COMMITMENT" | "CA_APPR" | "AU_ACL" | "CN_FLIGHT_REGULATION"
+- applicability_rule: "any_route" | "listed_provider" | "origin_region" | "origin_or_destination_region" | "eu261_route" | "uk261_route" | "australia_consumer_law" | "china_flight_regulation"
+- incident_types: ("hotel_walk" | "airline_delay" | "airline_cancellation" | "denied_boarding")[]
+- applicable_regions: ("EU_EEA_CH" | "UK" | "US" | "CA" | "AU" | "CN" | "other" | "global")[]
+- applicable_providers: string[]
+- required_controllability: "controllable" | "uncontrollable" | "unknown" | "any"
 - source_url: string
-- source_type: "official_policy" | "government_regulation" | "official_dashboard" | "terms"
+- source_type: "official_policy" | "government_regulation" | "regulator_guidance" | "official_dashboard" | "terms"
 - authority_level: "high" | "medium" | "low"
 - applicable_conditions: string[]
 - compensation_or_rights: string[]
 - summary: string
 - last_checked: string
+
+`applicable_regions` records geography, while `legal_regime` identifies the legal or policy
+framework. `applicability_rule` is evaluated deterministically against route direction and,
+where required, the operating carrier. It must not be inferred solely from the incident type.
 
 ## Case
 
@@ -50,6 +59,8 @@
 
 `review_status` controls product retrieval. Only `approved` cases may appear as similar cases. Records marked `needs_review` or `excluded` remain in the consolidated file for provenance and future cleanup, but must not be presented to users.
 
+`issue_type` describes the incident itself. Legal regimes such as EU261 must not be stored as a case issue type.
+
 ## Script
 
 沟通话术模板。
@@ -57,7 +68,10 @@
 字段：
 
 - script_id: string
-- issue_type: string
+- incident_types: ("hotel_walk" | "airline_delay" | "airline_cancellation" | "denied_boarding")[]
+- applicable_regions: ("EU_EEA_CH" | "UK" | "US" | "CA" | "AU" | "CN" | "other" | "global")[]
+- applicability_rule: same deterministic route rule vocabulary as `Policy`
+- required_controllability: "controllable" | "uncontrollable" | "unknown" | "any"
 - provider: string
 - channel: "front_desk" | "airport_counter" | "phone" | "chat" | "email" | "corporate_escalation" | "regulator_complaint"
 - tone: "polite" | "polite_firm" | "firm"
@@ -73,7 +87,8 @@
 
 - outcome_id: string
 - user_case_summary: string
-- issue_type: string
+- incident_type: string
+- policy_regions: ("EU_EEA_CH" | "UK" | "US" | "CA" | "AU" | "CN" | "other")[]
 - provider: string
 - suggested_ask: string[]
 - actual_result: string

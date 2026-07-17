@@ -17,7 +17,7 @@ The product does **not** provide legal advice, promise compensation, or submit c
 
 ## Current Status
 
-This repo is in an MVP / Phase 1 state.
+This repo has a structured MVP plus the first LLM-assisted intake workflow.
 
 The app currently uses:
 
@@ -25,10 +25,27 @@ The app currently uses:
 - TypeScript
 - Tailwind CSS
 - local JSON seed data
-- deterministic keyword classification
-- deterministic retrieval and response generation
+- optional multi-turn LLM fact extraction through OpenAI Responses or DeepSeek Chat Completions
+- strict `ClaimFacts` JSON Schema validation with incident and jurisdiction kept separate
+- deterministic local extraction when no API key is configured or a model call fails
+- explainable weighted retrieval with deterministic Top-K results
+- approved-case filtering and deterministic response generation
+- Vitest golden-scenario and quality-guard tests
 
-There is no database, login, payment, scraping, email sending, or real LLM API integration yet.
+There is no database, login, payment, scraping, email sending, or claim submission. Conversation
+state currently stays in the browser and is not persisted.
+
+The current knowledge base contains 11 policies, 55 reviewed case records (35 approved for
+retrieval), and 14 reusable scripts. The first demo publishes four incident types:
+
+- `hotel_walk`
+- `airline_delay`
+- `airline_cancellation`
+- `denied_boarding`
+
+EU261, UK261, Canada APPR, US DOT, Australian Consumer Law, Chinese civil-aviation regulations,
+and provider commitments are policy scopes selected from route direction, operating carrier,
+provider, and controllability. They are not incident types.
 
 ## How To Run
 
@@ -44,6 +61,29 @@ Start the local dev server:
 npm run dev
 ```
 
+To enable LLM-assisted intake, copy `.env.example` to `.env.local` and configure one provider.
+For OpenAI:
+
+```bash
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_key_here
+OPENAI_INTAKE_MODEL=gpt-5.6-luna
+```
+
+For DeepSeek:
+
+```bash
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=your_key_here
+DEEPSEEK_INTAKE_MODEL=deepseek-v4-flash
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+```
+
+For backward compatibility, a DeepSeek setup using `OPENAI_API_KEY`, a `deepseek-*` model, and
+`OPENAI_BASE_URL=https://api.deepseek.com/` is detected automatically. The obsolete bare model
+name `deepseek-v4` is normalized to `deepseek-v4-flash`. Without a configured key, the same UI
+uses the deterministic fallback and labels it as `Local`.
+
 Open:
 
 ```text
@@ -56,6 +96,13 @@ Build for production:
 npm run build
 ```
 
+Validate the data and run the retrieval test suite:
+
+```bash
+npm run validate:data
+npm test
+```
+
 ## Demo Test Inputs
 
 Hotel walk:
@@ -64,28 +111,28 @@ Hotel walk:
 I had a confirmed Marriott Sheraton reservation booked directly, but when I arrived the front desk said the hotel was oversold and had no room. They moved me to a cheaper nearby hotel and did not offer compensation.
 ```
 
-Airline controllable cancellation:
+Airline cancellation with a controllable reason:
 
 ```text
 United cancelled my flight because of a crew issue and rebooked me for tomorrow morning. The airport agent said they would not provide a hotel or meal voucher.
 ```
 
-Baggage delay:
+Airline delay with a controllable reason:
 
 ```text
-Southwest made me gate-check my bag during a connection through MDW, but the bag did not arrive at SEA. They said it may come tomorrow and only offered delivery.
-```
-
-Hotel room feature mismatch:
-
-```text
-I paid extra to upgrade to a Hyatt suite because the website showed specific amenities, but the room was missing some of them and one advertised feature was broken.
+My American Airlines flight was delayed overnight because of a mechanical problem.
 ```
 
 Denied boarding / voluntary bump:
 
 ```text
-AA oversold my flight and the gate agent asked for volunteers to take a later flight. The next available flight may be tomorrow.
+Delta oversold my flight and the gate agent asked for volunteers to take a flight the next day.
+```
+
+EU-region cancellation:
+
+```text
+My Air France flight from Paris was cancelled and I arrived at my final destination four hours late.
 ```
 
 ## Project Structure
@@ -93,7 +140,8 @@ AA oversold my flight and the gate agent asked for volunteers to take a later fl
 ```text
 app/
   api/
-    analyze/route.ts      Main analysis API
+    intake/route.ts       Multi-turn structured fact intake API
+    analyze/route.ts      Deterministic structured analysis API
     scenarios/route.ts    Scenario catalog API
   page.tsx                Frontend demo page
 
@@ -104,37 +152,83 @@ data/
   README.md               Review rules and current quality summary
 
 lib/
-  analyze.ts              Thin orchestration compatibility wrapper
-  classifier.ts           Keyword-based fact extraction and issue classification
-  retrieval.ts            Local JSON policy/case/script retrieval
+  claimFacts.ts           ClaimFacts types, JSON Schema, validation, and missing fields
+  jurisdiction.ts         Location, carrier, EU261, and UK261 route enrichment
+  policyScope.ts          Route applicability and controllability rules
+  intake.ts               Multi-turn extraction, fact merging, questions, and fallback
+  llm.ts                  OpenAI and DeepSeek structured-output adapters
+  analyze.ts              Structured-facts and legacy-description orchestration
+  classifier.ts           Structured fact extraction and issue classification
+  retrieval.ts            Top-K local JSON policy/case/script retrieval
+  retrievalScoring.ts     Explainable, deterministic ranking rules
   generator.ts            Deterministic AnalysisResult generation
   scenarios.ts            Scenario summary builder
   issueTaxonomy.ts        Issue labels, aliases, and normalization
   types.ts                Shared TypeScript types
+
+tests/
+  claimFacts.test.ts      Schema, jurisdiction, and structured API tests
+  intake.test.ts          LLM client, fallback, and multi-turn API tests
+  intake-evals.test.ts    Colloquial and multi-turn evaluation conversations
+  retrieval.test.ts       Five golden scenarios plus classification/retrieval guards
 ```
 
 ## Current Pipeline
 
-The current analysis flow is deterministic:
+The current product flow separates semantic intake from deterministic analysis:
 
 ```text
-user input or selected scenario
-  -> classifyInput()
-  -> retrieveKnowledge()
+natural user message + prior ClaimFacts
+  -> POST /api/intake
+  -> provider-specific LLM structured output, or deterministic fallback
+  -> server validation + jurisdiction enrichment + missing-field calculation
+  -> targeted follow-up question until ready
+  -> POST /api/analyze with validated ClaimFacts
+  -> incident type + origin/destination regions + operating carrier + controllability
+  -> deterministic legal-regime applicability rules
+  -> scope-aware policy / case / script scoring
+  -> Top-K retrieval (3 policies / 3 cases / 2 scripts)
   -> generateAnalysis()
   -> AnalysisResult
 ```
 
-The long-term goal is to keep this structure and plug an LLM into selected stages:
+Policy filtering first checks incident type, route direction, operating-carrier rules, provider
+scope, and required controllability. A policy's `legal_regime` is distinct from its geographic
+`applicable_regions`, and `applicability_rule` controls deterministic route matching. Case ranking
+then considers incident, region, provider, country, booking channel,
+loyalty status, disruption reason, text overlap, source authority, and confidence. Equal scores
+use stable IDs as a deterministic tie-breaker. Only cases with `review_status: "approved"` can
+be returned.
 
-- use LLM for structured fact extraction
-- keep deterministic keyword classification as fallback
-- retrieve policies, cases, and scripts from the knowledge base
-- use LLM to generate a more natural answer from retrieved evidence only
+### LLM boundaries
+
+The LLM is an interviewer and semantic parser, not the policy engine or retrieval database.
+It receives prior structured facts plus the latest user message and must return the strict
+four-incident `ClaimFacts` schema. The server recomputes missing fields, geographic regions,
+policy scope, and controllability.
+
+The OpenAI adapter requests strict JSON Schema output with `store: false`. The DeepSeek adapter
+uses Chat Completions JSON Output and includes the same schema in its system prompt. Both use a
+bounded timeout, runtime `ClaimFacts` validation, and a deterministic fallback. `/api/analyze`
+never relies on model memory for policies, cases, compensation amounts, or sources.
 
 The LLM should not invent policies, cases, compensation amounts, or sources.
 
 ## APIs
+
+### `POST /api/intake`
+
+Start or continue a fact-gathering conversation:
+
+```json
+{
+  "message": "My Air France flight from Paris was cancelled and I arrived four hours late.",
+  "facts": null
+}
+```
+
+The response is either `needs_info` with the accumulated `facts`, `missingFields`, and one
+targeted `question`, or `ready` with validated facts that can be sent to `/api/analyze`.
 
 ### `GET /api/scenarios`
 
@@ -163,6 +257,18 @@ Example response shape:
 
 ### `POST /api/analyze`
 
+The preferred request uses the validated `facts` returned by `/api/intake`:
+
+```ts
+{
+  description: "Optional original conversation text",
+  facts: intakeResponse.facts
+}
+```
+
+The complete object must match `ClaimFacts`; incomplete valid facts receive HTTP `422` with
+`missingFields`. The following legacy inputs remain supported for compatibility.
+
 Analyze by free-text description:
 
 ```json
@@ -175,7 +281,7 @@ Analyze by selected issue type:
 
 ```json
 {
-  "issueType": "hotel_room_feature_mismatch"
+  "issueType": "denied_boarding"
 }
 ```
 
@@ -192,6 +298,19 @@ Returns:
 ```ts
 {
   issueType: string;
+  policyRegions: Array<"EU_EEA_CH" | "UK" | "US" | "CA" | "AU" | "CN" | "other" | "global">;
+  legalRegimes: Array<
+    | "provider_policy"
+    | "EU261"
+    | "UK261"
+    | "US_DOT_REFUND"
+    | "US_DOT_DENIED_BOARDING"
+    | "US_AIRLINE_COMMITMENT"
+    | "CA_APPR"
+    | "AU_ACL"
+    | "CN_FLIGHT_REGULATION"
+  >;
+  controllability: "controllable" | "uncontrollable" | "unknown";
   strength: "low" | "medium" | "high";
   summary: string;
   officialBasis: Policy[];
@@ -217,7 +336,11 @@ Examples:
 
 - Marriott Ultimate Reservation Guarantee
 - DOT Airline Cancellation and Delay Dashboard
-- EU passenger rights
+- EU261 and UK261
+- Canada Air Passenger Protection Regulations
+- US DOT automatic refund rules
+- Australian Consumer Law travel guidance
+- Chinese flight-regularity and passenger-service regulations
 
 ### `data/cases.json`
 
@@ -262,28 +385,32 @@ The app should clearly separate:
 
 Completed:
 
-- deterministic app flow
-- local JSON seed data
-- split classifier / retrieval / generator / scenarios modules
-- scenario-aware APIs
+- consolidated, reviewed local JSON data
+- deterministic structured extraction for the four demo issue types
+- explainable structured filtering and Top-K ranking
+- approved-only case retrieval
+- replaceable async fact-extraction boundary
+- guided multi-turn frontend with visible LLM/local extraction mode
+- strict structured LLM intake with safe fallback
+- automated golden-scenario, schema, API, colloquial, and multi-turn tests
 
 Recommended next work:
 
-- add more official policies
-- add more cases
-- add more scripts
-- add test prompts with expected issue types
-- improve frontend scenario selection UI
+- expand the airport/country and operating-carrier reference tables
+- run the conversational evaluation set against a configured model and record latency/cost
+- add outcome feedback logging before expanding the taxonomy
 
 ### Phase 2: LLM-Assisted Analysis
 
-Add `lib/llm.ts` and use an LLM for:
+Implemented foundation:
 
-- structured fact extraction
-- issue classification assistance
-- natural-language answer generation from retrieved data
+- server-only OpenAI configuration
+- strict structured fact extraction within the four-type allowlist
+- multi-turn fact merging and targeted clarification
+- deterministic fallback, schema validation, timeouts, and evidence-only retrieval
 
-Keep deterministic fallback.
+Recommended next step: evaluate model quality on real anonymized phrasing before adding an
+LLM-written final response. Any later answer-generation model must use retrieved evidence only.
 
 ### Phase 3: Database
 
@@ -295,11 +422,12 @@ Move local JSON data into a database such as Supabase:
 - outcomes
 - scenario taxonomy
 
-### Phase 4: Retrieval
+### Phase 4: Semantic Retrieval
 
-Add structured filtering and vector search:
+Keep structured filters and add embeddings/vector search only when the reviewed corpus and
+evaluation set show that lexical ranking is the bottleneck:
 
-- filter by issue type, provider, route, location, booking channel, and status
+- preserve issue type, provider, route, location, booking channel, and review-status filters
 - search similar cases by embeddings
 - rank cases by relevance and outcome quality
 

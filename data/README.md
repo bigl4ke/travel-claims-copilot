@@ -18,12 +18,12 @@ The application only retrieves `approved` cases. Current review summary:
 
 | Status | Count |
 | --- | ---: |
-| approved | 34 |
+| approved | 35 |
 | needs_review | 13 |
 | excluded | 7 |
-| total | 54 |
+| total | 55 |
 
-The 54 records contain 50 unique community source URLs and 4 explicitly labeled synthetic demo examples. Of the approved records, 30 are community datapoints and 4 are synthetic examples.
+The 55 records contain 50 unique community source URLs and 5 explicitly labeled synthetic demo examples. Of the approved records, 30 are community datapoints and 5 are synthetic examples.
 
 ## Review rules
 
@@ -46,3 +46,13 @@ The 54 records contain 50 unique community source URLs and 4 explicitly labeled 
 - Removed personal executive email addresses and unsupported universal deadlines from the Delta baggage case.
 
 Run `npm run validate:data` after editing any JSON file.
+
+## Policy source rules
+
+- Use government legislation, regulator guidance, or a provider's own published terms.
+- Store geography in `applicable_regions` and the legal framework in `legal_regime`.
+- Encode route direction and operating-carrier requirements in `applicability_rule`.
+- Keep statutory rights separate from airline or hotel commitments.
+- State conditions and exclusions conservatively; do not convert a contextual remedy into a
+  universal fixed amount.
+- Record `last_checked` whenever the official source and current status are verified.

@@ -2,16 +2,32 @@
 
 import { useMemo, useState } from "react";
 
+import type { ClaimFacts } from "../lib/claimFacts";
+import type { IntakeExtractionMode, IntakeResult } from "../lib/intake";
 import type { AnalysisResult, Case, Policy, Script, SuggestedAsks } from "../lib/types";
 
 const exampleText =
-  "I had a confirmed Sheraton reservation, but the hotel said they were oversold and had no room when I arrived.";
+  "My Air France flight from Paris was cancelled. I was rerouted and arrived at my final destination four hours late.";
+
+type ConversationMessage = {
+  id: string;
+  role: "assistant" | "user";
+  content: string;
+};
+
+const initialMessages: ConversationMessage[] = [
+  {
+    id: "intake-welcome",
+    role: "assistant",
+    content:
+      "Tell me what happened in your own words. I’ll ask only for details that change the policy or case search."
+  }
+];
 
 const issueLabels: Partial<Record<AnalysisResult["issueType"], string>> = {
   hotel_walk: "Hotel walk",
-  controllable_airline_cancellation: "Controllable airline cancellation",
-  controllable_airline_delay: "Controllable airline delay",
-  eu261_delay_or_cancellation: "EU261 delay or cancellation",
+  airline_cancellation: "Airline cancellation",
+  airline_delay: "Airline delay",
   denied_boarding: "Denied boarding or voluntary bump",
   baggage_delay: "Baggage delay",
   airline_delay_trip_insurance: "Airline delay and trip insurance",
@@ -33,39 +49,110 @@ const strengthStyles: Record<AnalysisResult["strength"], string> = {
 };
 
 export default function Home() {
-  const [description, setDescription] = useState(exampleText);
+  const [draft, setDraft] = useState(exampleText);
+  const [messages, setMessages] = useState<ConversationMessage[]>(initialMessages);
+  const [facts, setFacts] = useState<ClaimFacts | null>(null);
+  const [extractionMode, setExtractionMode] = useState<IntakeExtractionMode | null>(null);
+  const [intakeWarning, setIntakeWarning] = useState<IntakeResult["warning"]>();
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
 
-  async function analyzeClaim() {
+  async function submitIntake(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const message = draft.trim();
+    if (!message || isLoading) {
+      return;
+    }
+
+    const userMessage: ConversationMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: message
+    };
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setDraft("");
     setIsLoading(true);
     setError("");
     setCopiedScriptId(null);
+    setResult(null);
 
     try {
-      const response = await fetch("/api/analyze", {
+      const intakeResponse = await fetch("/api/intake", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ description })
+        body: JSON.stringify({ message, facts })
       });
+      const intake = (await intakeResponse.json()) as IntakeResult & { error?: string };
 
-      const payload = await response.json();
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Analysis failed.");
+      if (!intakeResponse.ok) {
+        throw new Error(intake.error ?? "Intake failed.");
       }
 
-      setResult(payload);
+      setFacts(intake.facts);
+      setExtractionMode(intake.extractionMode);
+      setIntakeWarning(intake.warning);
+
+      if (intake.status === "needs_info") {
+        setMessages([
+          ...nextMessages,
+          {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content: intake.question ?? "Please add a little more detail."
+          }
+        ]);
+        return;
+      }
+
+      const description = nextMessages
+        .filter((item) => item.role === "user")
+        .map((item) => item.content)
+        .join("\n");
+      const analyzeResponse = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ description, facts: intake.facts })
+      });
+      const analysis = (await analyzeResponse.json()) as AnalysisResult & { error?: string };
+
+      if (!analyzeResponse.ok) {
+        throw new Error(analysis.error ?? "Analysis failed.");
+      }
+
+      setResult(analysis);
+      setMessages([
+        ...nextMessages,
+        {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content:
+            "I have enough detail for the first-pass analysis. Review the extracted facts and the grounded references below."
+        }
+      ]);
     } catch (caughtError) {
       setResult(null);
       setError(caughtError instanceof Error ? caughtError.message : "Analysis failed.");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function resetClaim() {
+    setDraft("");
+    setMessages(initialMessages);
+    setFacts(null);
+    setExtractionMode(null);
+    setIntakeWarning(undefined);
+    setResult(null);
+    setError("");
+    setCopiedScriptId(null);
   }
 
   async function copyScript(script: Script) {
@@ -77,33 +164,81 @@ export default function Home() {
     <main className="min-h-screen">
       <section className="border-b border-ink/10 bg-paper">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 md:px-8">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-mint">
-              Travel Claims Copilot
-            </p>
-            <h1 className="max-w-3xl text-3xl font-semibold leading-tight text-ink md:text-5xl">
-              Analyze a travel dispute and prepare the ask.
-            </h1>
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-mint">
+                Travel Claims Copilot · Guided intake
+              </p>
+              <h1 className="max-w-3xl text-3xl font-semibold leading-tight text-ink md:text-5xl">
+                Build the case file before making the ask.
+              </h1>
+              <p className="max-w-2xl text-sm leading-6 text-ink/65 md:text-base">
+                Describe the disruption naturally. The intake will identify missing facts before
+                searching official sources, reviewed cases, and reusable scripts.
+              </p>
+            </div>
+            <button
+              className="w-fit rounded-full border border-ink/15 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink/65 transition hover:border-coral hover:text-coral"
+              type="button"
+              onClick={resetClaim}
+            >
+              New claim
+            </button>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-ink/80">Dispute description</span>
-              <textarea
-                className="min-h-44 w-full resize-y rounded-lg border border-ink/15 bg-white p-4 text-base leading-7 text-ink shadow-sm outline-none transition focus:border-mint focus:ring-4 focus:ring-mint/15"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Describe what happened, including provider, route or hotel, timing, and expenses."
-              />
-            </label>
-            <button
-              className="h-12 rounded-lg bg-ink px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-mint disabled:cursor-not-allowed disabled:bg-ink/40 lg:w-36"
-              type="button"
-              onClick={analyzeClaim}
-              disabled={isLoading}
+          <div className="overflow-hidden rounded-xl border border-ink/10 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-ink/10 bg-ink px-5 py-3 text-white">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em]">Intake transcript</p>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium">
+                {isLoading ? "Reviewing details" : result ? "Analysis ready" : "Collecting facts"}
+              </span>
+            </div>
+
+            <div className="max-h-96 space-y-4 overflow-y-auto px-5 py-5 md:px-7" aria-live="polite">
+              {messages.map((item, index) => (
+                <article
+                  className="grid gap-2 md:grid-cols-[92px_1fr]"
+                  key={item.id}
+                >
+                  <p className="pt-1 text-xs font-semibold uppercase tracking-[0.12em] text-ink/45">
+                    {index + 1}. {item.role === "assistant" ? "Copilot" : "You"}
+                  </p>
+                  <p
+                    className={`rounded-lg border px-4 py-3 text-sm leading-6 md:text-base ${
+                      item.role === "assistant"
+                        ? "border-mint/20 bg-mint/5 text-ink/75"
+                        : "border-ink/10 bg-paper text-ink"
+                    }`}
+                  >
+                    {item.content}
+                  </p>
+                </article>
+              ))}
+            </div>
+
+            <form
+              className="grid gap-3 border-t border-ink/10 bg-paper/70 p-4 md:grid-cols-[1fr_auto] md:items-end md:p-5"
+              onSubmit={submitIntake}
             >
-              {isLoading ? "Analyzing" : "Analyze"}
-            </button>
+              <label className="flex flex-col gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-ink/55">
+                  Your answer
+                </span>
+                <textarea
+                  className="min-h-28 w-full resize-y rounded-lg border border-ink/15 bg-white p-4 text-base leading-7 text-ink shadow-sm outline-none transition focus:border-mint focus:ring-4 focus:ring-mint/15"
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="Describe what happened, or answer the follow-up question."
+                />
+              </label>
+              <button
+                className="h-12 rounded-lg bg-ink px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-mint disabled:cursor-not-allowed disabled:bg-ink/40 md:w-36"
+                type="submit"
+                disabled={isLoading || !draft.trim()}
+              >
+                {isLoading ? "Reviewing" : facts ? "Continue" : "Start intake"}
+              </button>
+            </form>
           </div>
 
           {error ? (
@@ -116,6 +251,11 @@ export default function Home() {
 
       <section className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-6 md:px-8 lg:grid-cols-[320px_1fr]">
         <aside className="flex flex-col gap-4">
+          <ClaimSnapshot
+            facts={facts}
+            extractionMode={extractionMode}
+            warning={intakeWarning}
+          />
           <SummaryPanel result={result} />
           {result ? <SuggestedAsks asks={result.suggestedAsks} /> : null}
         </aside>
@@ -145,9 +285,75 @@ export default function Home() {
 function EmptyState() {
   return (
     <div className="rounded-lg border border-dashed border-ink/20 bg-white p-8 text-center text-ink/65">
-      Enter a claim description and run the analysis.
+      Complete the guided intake to retrieve official references, reviewed cases, and scripts.
     </div>
   );
+}
+
+function ClaimSnapshot({
+  facts,
+  extractionMode,
+  warning
+}: {
+  facts: ClaimFacts | null;
+  extractionMode: IntakeExtractionMode | null;
+  warning?: IntakeResult["warning"];
+}) {
+  const route = facts
+    ? [formatLocation(facts.origin), formatLocation(facts.destination)].filter(Boolean).join(" → ")
+    : "";
+
+  return (
+    <div className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink/60">
+          Case file
+        </h2>
+        {extractionMode ? (
+          <span className="rounded-full bg-paper px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
+            {extractionMode === "llm" ? "LLM" : "Local"}
+          </span>
+        ) : null}
+      </div>
+
+      {facts ? (
+        <dl className="mt-4 space-y-3 text-sm">
+          <FactRow label="Issue" value={issueLabels[facts.issueType] ?? "Needs more detail"} />
+          <FactRow label="Provider" value={facts.provider ?? facts.operatingCarrier ?? "Unknown"} />
+          <FactRow label="Route" value={route || "Unknown"} />
+          <FactRow
+            label="Event"
+            value={facts.disruptionType.replaceAll("_", " ")}
+          />
+        </dl>
+      ) : (
+        <p className="mt-4 text-sm leading-6 text-ink/65">
+          Facts will appear here as the conversation becomes specific enough to search.
+        </p>
+      )}
+
+      {warning ? (
+        <p className="mt-4 border-l-2 border-coral/50 pl-3 text-xs leading-5 text-ink/60">
+          {warning === "llm_not_configured"
+            ? "Using the local fallback because no server-side LLM key is configured."
+            : "The LLM response failed validation, so this turn used the local fallback."}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function FactRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[72px_1fr] gap-3 border-b border-ink/5 pb-3 last:border-0 last:pb-0">
+      <dt className="text-ink/45">{label}</dt>
+      <dd className="font-medium capitalize text-ink">{value}</dd>
+    </div>
+  );
+}
+
+function formatLocation(location: ClaimFacts["origin"]): string {
+  return location.airport ?? location.city ?? location.country ?? "";
 }
 
 function SummaryPanel({ result }: { result: AnalysisResult | null }) {
@@ -169,6 +375,30 @@ function SummaryPanel({ result }: { result: AnalysisResult | null }) {
             >
               {result.strength}
             </span>
+          </div>
+          <div className="grid gap-2 border-t border-ink/5 pt-3 text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-ink/60">Route regions</span>
+              <span className="text-right font-medium text-ink">
+                {result.policyRegions.length > 0
+                  ? result.policyRegions.join(", ").replaceAll("_", " ")
+                  : "Unresolved"}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-ink/60">Legal regimes</span>
+              <span className="text-right font-medium text-ink">
+                {result.legalRegimes.length > 0
+                  ? result.legalRegimes.join(", ").replaceAll("_", " ")
+                  : "Unresolved"}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-ink/60">Controllability</span>
+              <span className="font-medium capitalize text-ink">
+                {result.controllability}
+              </span>
+            </div>
           </div>
         </div>
       ) : (
@@ -226,7 +456,9 @@ function PolicySection({ policies }: { policies: Policy[] }) {
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-ink">{policy.policy_name}</h3>
-                  <p className="text-sm text-ink/60">{policy.provider}</p>
+                  <p className="text-sm text-ink/60">
+                    {policy.provider} · {policy.legal_regime.replaceAll("_", " ")}
+                  </p>
                 </div>
                 <a
                   className="text-sm font-semibold text-mint hover:text-coral"

@@ -1,10 +1,18 @@
-import type { IssueType } from "./types";
+import type { IssueType, MvpIssueType } from "./types";
+
+export const MVP_ISSUE_TYPES = [
+  "hotel_walk",
+  "airline_delay",
+  "airline_cancellation",
+  "denied_boarding"
+] as const satisfies readonly MvpIssueType[];
+
+const mvpIssueTypeSet = new Set<IssueType>(MVP_ISSUE_TYPES);
 
 export const issueLabels: Record<IssueType, string> = {
   hotel_walk: "Hotel walk",
-  controllable_airline_cancellation: "Controllable airline cancellation",
-  controllable_airline_delay: "Controllable airline delay",
-  eu261_delay_or_cancellation: "EU261 delay or cancellation",
+  airline_cancellation: "Airline cancellation",
+  airline_delay: "Airline delay",
   denied_boarding: "Denied boarding or voluntary bump",
   baggage_delay: "Baggage delay",
   airline_delay_trip_insurance: "Airline delay and trip insurance",
@@ -19,20 +27,29 @@ export const issueLabels: Record<IssueType, string> = {
   unknown: "Needs more detail"
 };
 
-const issueAliases: Partial<Record<IssueType, IssueType[]>> = {
+const issueAliases: Partial<Record<IssueType, string[]>> = {
   hotel_walk: ["hotel_walk"],
-  controllable_airline_cancellation: [
+  airline_cancellation: [
+    "airline_cancellation",
     "controllable_airline_cancellation",
-    "controllable_airline_delay"
-  ],
-  controllable_airline_delay: [
     "controllable_airline_delay",
-    "controllable_airline_cancellation"
+    "eu261_delay_or_cancellation"
+  ],
+  airline_delay: [
+    "airline_delay",
+    "controllable_airline_delay",
+    "controllable_airline_cancellation",
+    "eu261_delay_or_cancellation"
   ],
   baggage_delay: ["baggage_delay", "airline_baggage_not_checked"],
-  eu261_delay_or_cancellation: ["eu261_delay_or_cancellation"],
   denied_boarding: ["denied_boarding"],
   unknown: []
+};
+
+const legacyIssueTypes: Record<string, IssueType> = {
+  controllable_airline_cancellation: "airline_cancellation",
+  controllable_airline_delay: "airline_delay",
+  eu261_delay_or_cancellation: "airline_delay"
 };
 
 export function normalizeIssueType(value: unknown): IssueType | undefined {
@@ -40,9 +57,17 @@ export function normalizeIssueType(value: unknown): IssueType | undefined {
     return undefined;
   }
 
+  if (value in legacyIssueTypes) {
+    return legacyIssueTypes[value];
+  }
+
   return value in issueLabels ? (value as IssueType) : undefined;
 }
 
-export function getIssueAliases(issueType: IssueType): IssueType[] {
+export function getIssueAliases(issueType: IssueType): string[] {
   return issueAliases[issueType] ?? [issueType];
+}
+
+export function isMvpIssueType(issueType: IssueType): issueType is MvpIssueType {
+  return mvpIssueTypeSet.has(issueType);
 }

@@ -1,5 +1,12 @@
 import { issueLabels } from "./issueTaxonomy";
-import type { AnalysisResult, ExtractedFacts, IssueType, RetrievalResult, SuggestedAsks } from "./types";
+import type {
+  AnalysisResult,
+  ExtractedFacts,
+  IssueType,
+  LegalRegime,
+  RetrievalResult,
+  SuggestedAsks
+} from "./types";
 
 const fallbackSuggestedAsks: SuggestedAsks = {
   conservative: ["Ask the provider to explain the applicable policy in writing"],
@@ -10,6 +17,165 @@ const fallbackSuggestedAsks: SuggestedAsks = {
   aggressive: [
     "Escalate with a concise timeline and receipts",
     "Use regulator, card-benefit, or corporate channels only after confirming they apply"
+  ]
+};
+
+const eu261SuggestedAsks: SuggestedAsks = {
+  conservative: ["Care expenses such as meals and hotel if applicable"],
+  standard: [
+    "Refund or rerouting if applicable",
+    "Care expenses",
+    "Written delay or cancellation reason"
+  ],
+  aggressive: [
+    "Fixed EU261 compensation if eligibility is met",
+    "Care expense reimbursement",
+    "Escalation to the relevant national enforcement body"
+  ]
+};
+
+const eu261Evidence = [
+  "Full itinerary and ticket receipt",
+  "Scheduled and actual arrival times",
+  "Departure and arrival airport details",
+  "Airline's written delay or cancellation reason",
+  "Receipts for care expenses"
+];
+
+const eu261Cautions = [
+  "EU261 eligibility depends on route, carrier, delay length at arrival, and extraordinary-circumstance defenses.",
+  "Fixed compensation is separate from care, refund, or rerouting rights."
+];
+
+const suggestedAsksByRegime: Partial<Record<LegalRegime, SuggestedAsks>> = {
+  EU261: eu261SuggestedAsks,
+  UK261: {
+    conservative: ["Care expenses such as meals and hotel if UK261 applies"],
+    standard: [
+      "Refund or rerouting if applicable",
+      "Care expense reimbursement",
+      "Written disruption reason"
+    ],
+    aggressive: [
+      "Fixed UK261 compensation if every eligibility condition is met",
+      "Care expense reimbursement",
+      "Escalation through the applicable ADR provider or CAA channel"
+    ]
+  },
+  CA_APPR: {
+    conservative: ["Written disruption reason and APPR cause classification"],
+    standard: [
+      "Rebooking or refund under the applicable APPR conditions",
+      "Food, communication, or overnight accommodation if eligible",
+      "Written confirmation of the final arrival delay"
+    ],
+    aggressive: [
+      "Inconvenience compensation only if the APPR control, notice, and timing tests are met",
+      "Reimbursement of documented eligible expenses",
+      "CTA complaint after a written airline claim is not resolved"
+    ]
+  },
+  US_DOT_REFUND: {
+    conservative: ["Written notice of the available refund and rebooking options"],
+    standard: [
+      "Automatic refund to the original payment method if no alternative was accepted",
+      "Refund of the unused ticket and eligible ancillary fees",
+      "Written confirmation of the refund amount and processing date"
+    ],
+    aggressive: [
+      "DOT complaint if an eligible refund is not processed after written follow-up",
+      "Separate review of airline meal or hotel commitments for a controllable disruption",
+      "Documented out-of-pocket costs only where another applicable policy supports them"
+    ]
+  },
+  AU_ACL: {
+    conservative: ["A written explanation of the delay, cancellation, and replacement offered"],
+    standard: [
+      "Replacement travel within a reasonable time or a refund if the guarantee was not met",
+      "Review of documented replacement travel costs",
+      "Written response under the airline's policy and applicable consumer guarantees"
+    ],
+    aggressive: [
+      "Reimbursement of reasonably incurred replacement travel if supported by the circumstances",
+      "Escalation through the appropriate state or territory consumer channel",
+      "No fixed-sum compensation request unless a separate airline policy supports it"
+    ]
+  },
+  CN_FLIGHT_REGULATION: {
+    conservative: ["Written delay or cancellation reason and disruption certificate"],
+    standard: [
+      "Fee-free involuntary refund or qualifying ticket change",
+      "Meals or accommodation when the applicable cause and location rules require them",
+      "Written application of the carrier's published transport conditions"
+    ],
+    aggressive: [
+      "Reimbursement of documented care expenses where the regulation or carrier terms support it",
+      "Published oversales compensation and service if denied boarding",
+      "Escalation through the CAAC service-quality complaint channel after airline review"
+    ]
+  }
+};
+
+const evidenceByRegime: Partial<Record<LegalRegime, string[]>> = {
+  EU261: eu261Evidence,
+  UK261: [
+    "Full itinerary and ticket receipt",
+    "Scheduled and actual arrival times",
+    "Departure and arrival airports",
+    "Operating carrier confirmation",
+    "Written disruption reason and care receipts"
+  ],
+  CA_APPR: [
+    "Full itinerary and boarding documents",
+    "Airline notices and stated cause classification",
+    "Scheduled and actual final-arrival times",
+    "Carrier name and whether it is treated as large or small",
+    "Receipts and the written claim sent to the airline"
+  ],
+  US_DOT_REFUND: [
+    "Ticket receipt and full itinerary",
+    "Cancellation or significant-change notice",
+    "Proof that no alternative transportation or credit was accepted",
+    "Original payment method",
+    "Airline refund correspondence"
+  ],
+  AU_ACL: [
+    "Booking confirmation and booking website or seller",
+    "Original and replacement itinerary",
+    "Delay or cancellation reason",
+    "Evidence showing why the replacement timing was unreasonable",
+    "Receipts for replacement travel and other claimed loss"
+  ],
+  CN_FLIGHT_REGULATION: [
+    "客票、行程单和登机凭证",
+    "航班延误或取消通知及书面证明",
+    "航司公布的运输总条件",
+    "实际行程时间和后续改签记录",
+    "餐食、住宿、交通等支出票据"
+  ]
+};
+
+const cautionsByRegime: Partial<Record<LegalRegime, string[]>> = {
+  EU261: eu261Cautions,
+  UK261: [
+    "UK261 route coverage can depend on the operating carrier for flights arriving in the UK.",
+    "Care, refund or rerouting, and fixed compensation have separate eligibility tests."
+  ],
+  CA_APPR: [
+    "Canadian remedies depend on the airline's cause classification, notice, arrival delay, and carrier size.",
+    "Compensation for inconvenience is narrower than rebooking and refund rights."
+  ],
+  US_DOT_REFUND: [
+    "The automatic-refund right generally depends on not accepting the offered alternative transportation or credit.",
+    "US meal and hotel benefits are often enforceable airline commitments, not a general fixed-compensation law."
+  ],
+  AU_ACL: [
+    "Australian Consumer Law uses a context-specific reasonable-time test and does not create an EU-style fixed compensation table.",
+    "Inbound coverage can depend on how and where the travel service was booked."
+  ],
+  CN_FLIGHT_REGULATION: [
+    "China's rules distinguish carrier causes from weather, air traffic control, and other non-carrier causes.",
+    "Carrier transport conditions set many compensation standards; do not treat one airline's amount as a national fixed entitlement."
   ]
 };
 
@@ -30,7 +196,7 @@ const suggestedAsksByIssue: Partial<Record<IssueType, SuggestedAsks>> = {
       "Highest applicable guarantee compensation for brand and status"
     ]
   },
-  controllable_airline_cancellation: {
+  airline_cancellation: {
     conservative: ["Rebooking on the next available flight", "Meal voucher if waiting"],
     standard: [
       "Rebooking",
@@ -40,10 +206,10 @@ const suggestedAsksByIssue: Partial<Record<IssueType, SuggestedAsks>> = {
     aggressive: [
       "Reimbursement for reasonable hotel, meal, and transport costs",
       "Travel credit or miles for the service failure",
-      "DOT complaint review if commitments were denied"
+      "Escalation through an applicable airline or regulator channel"
     ]
   },
-  controllable_airline_delay: {
+  airline_delay: {
     conservative: ["Rebooking help", "Meal voucher during the delay"],
     standard: [
       "Meal voucher",
@@ -54,19 +220,6 @@ const suggestedAsksByIssue: Partial<Record<IssueType, SuggestedAsks>> = {
       "Reimbursement for out-of-pocket hotel, meal, and transport costs",
       "Travel credit or miles for the disruption",
       "Written explanation of controllability"
-    ]
-  },
-  eu261_delay_or_cancellation: {
-    conservative: ["Care expenses such as meals and hotel if applicable"],
-    standard: [
-      "Refund or rerouting if applicable",
-      "Care expenses",
-      "Written delay or cancellation reason"
-    ],
-    aggressive: [
-      "Fixed EU261 compensation if eligibility is met",
-      "Care expense reimbursement",
-      "Escalation to the relevant national enforcement body"
     ]
   },
   denied_boarding: {
@@ -241,26 +394,19 @@ const evidenceByIssue: Partial<Record<IssueType, string[]>> = {
     "Property notes confirming no room was available",
     "Alternate hotel, transportation, and incidental receipts"
   ],
-  controllable_airline_cancellation: [
+  airline_cancellation: [
     "Cancellation notice",
     "Boarding pass or ticket receipt",
     "Written reason for cancellation if available",
     "Hotel, meal, and ground transportation receipts",
     "Screenshots of airline chat or airport desk response"
   ],
-  controllable_airline_delay: [
+  airline_delay: [
     "Delay notification",
     "Boarding pass or ticket receipt",
     "Actual departure and arrival times",
     "Hotel, meal, and ground transportation receipts",
     "Screenshots of any airline voucher denial"
-  ],
-  eu261_delay_or_cancellation: [
-    "Full itinerary and ticket receipt",
-    "Scheduled and actual arrival times",
-    "Departure and arrival airport details",
-    "Airline's written delay or cancellation reason",
-    "Receipts for care expenses"
   ],
   denied_boarding: [
     "Boarding pass and ticket receipt",
@@ -352,17 +498,13 @@ const cautionsByIssue: Partial<Record<IssueType, string[]>> = {
     "Brand guarantees often depend on membership, brand, status, and whether the reservation was booked through an eligible channel.",
     "Ask for written confirmation before leaving the property if possible."
   ],
-  controllable_airline_cancellation: [
-    "DOT dashboard commitments generally turn on whether the airline treats the disruption as controllable.",
+  airline_cancellation: [
+    "Airline commitments and legal remedies depend on route, carrier, cause, and timing.",
     "Keep receipts if the airline cannot issue vouchers immediately."
   ],
-  controllable_airline_delay: [
+  airline_delay: [
     "Delay rights vary by airline commitment, cause, and length of delay.",
     "A weather or air traffic control delay may weaken a controllable-disruption claim."
-  ],
-  eu261_delay_or_cancellation: [
-    "EU261 eligibility depends on route, carrier, delay length at arrival, and extraordinary-circumstance defenses.",
-    "Fixed compensation is separate from care, refund, or rerouting rights."
   ],
   denied_boarding: [
     "Voluntary bump negotiation is different from involuntary denied boarding rights.",
@@ -414,15 +556,55 @@ const cautionsByIssue: Partial<Record<IssueType, string[]>> = {
   ]
 };
 
-function getSuggestedAsks(issueType: IssueType): SuggestedAsks {
+function getLegalRegimes(retrieval: RetrievalResult): LegalRegime[] {
+  return Array.from(new Set(retrieval.officialBasis.map((policy) => policy.legal_regime)));
+}
+
+function getPrimaryLegalRegime(retrieval: RetrievalResult): LegalRegime | undefined {
+  const regimes = getLegalRegimes(retrieval);
+  const preferredByOrigin: Partial<Record<NonNullable<RetrievalResult["query"]["originRegion"]>, LegalRegime[]>> = {
+    EU_EEA_CH: ["EU261"],
+    UK: ["UK261"],
+    CA: ["CA_APPR"],
+    AU: ["AU_ACL"],
+    CN: ["CN_FLIGHT_REGULATION"],
+    US:
+      retrieval.query.controllability === "controllable"
+        ? ["US_AIRLINE_COMMITMENT", "US_DOT_REFUND", "US_DOT_DENIED_BOARDING"]
+        : ["US_DOT_REFUND", "US_DOT_DENIED_BOARDING", "US_AIRLINE_COMMITMENT"],
+    other: []
+  };
+  const preferred = retrieval.query.originRegion
+    ? preferredByOrigin[retrieval.query.originRegion] ?? []
+    : [];
+
+  return preferred.find((regime) => regimes.includes(regime)) ?? regimes[0];
+}
+
+function getSuggestedAsks(
+  issueType: IssueType,
+  retrieval: RetrievalResult
+): SuggestedAsks {
+  const regime = getPrimaryLegalRegime(retrieval);
+  if (regime && suggestedAsksByRegime[regime]) {
+    return suggestedAsksByRegime[regime];
+  }
   return suggestedAsksByIssue[issueType] ?? fallbackSuggestedAsks;
 }
 
-function getEvidence(issueType: IssueType): string[] {
+function getEvidence(issueType: IssueType, retrieval: RetrievalResult): string[] {
+  const regime = getPrimaryLegalRegime(retrieval);
+  if (regime && evidenceByRegime[regime]) {
+    return evidenceByRegime[regime];
+  }
   return evidenceByIssue[issueType] ?? fallbackEvidence;
 }
 
-function getCautions(issueType: IssueType): string[] {
+function getCautions(issueType: IssueType, retrieval: RetrievalResult): string[] {
+  const regime = getPrimaryLegalRegime(retrieval);
+  if (regime && cautionsByRegime[regime]) {
+    return cautionsByRegime[regime];
+  }
   return cautionsByIssue[issueType] ?? fallbackCautions;
 }
 
@@ -435,29 +617,37 @@ function buildSummary(facts: ExtractedFacts, retrieval: RetrievalResult): string
     return "The current demo could not confidently classify the description. Add provider, timing, route or property, reason, and expenses for a stronger result.";
   }
 
-  return `Matched scenario: ${issueLabels[facts.issueType]}. This result uses local demo policies, cases, and scripts only.`;
+  const regions = retrieval.query.policyRegions.join(", ") || "no resolved jurisdiction";
+  const regimes = getLegalRegimes(retrieval).join(", ") || "no matched legal regime";
+  return `Matched incident: ${issueLabels[facts.issueType]}. Official sources were selected using route regions ${regions}, legal regimes ${regimes}, provider scope, and controllability; results remain a first-pass assessment.`;
 }
 
 export function generateAnalysis(
   facts: ExtractedFacts,
   retrieval: RetrievalResult
 ): AnalysisResult {
+  const hasUnresolvedAirlineControl =
+    (facts.issueType === "airline_delay" || facts.issueType === "airline_cancellation") &&
+    retrieval.query.controllability !== "controllable";
   const strength =
     facts.issueType === "unknown"
       ? "low"
-      : retrieval.officialBasis.length > 0
+      : retrieval.officialBasis.length > 0 && !hasUnresolvedAirlineControl
         ? "high"
         : "medium";
 
   return {
     issueType: facts.issueType,
+    policyRegions: retrieval.query.policyRegions,
+    legalRegimes: getLegalRegimes(retrieval),
+    controllability: retrieval.query.controllability,
     strength,
     summary: buildSummary(facts, retrieval),
     officialBasis: retrieval.officialBasis,
     similarCases: retrieval.similarCases,
-    suggestedAsks: getSuggestedAsks(facts.issueType),
-    evidenceChecklist: getEvidence(facts.issueType),
+    suggestedAsks: getSuggestedAsks(facts.issueType, retrieval),
+    evidenceChecklist: getEvidence(facts.issueType, retrieval),
     scripts: retrieval.scripts,
-    cautions: getCautions(facts.issueType)
+    cautions: getCautions(facts.issueType, retrieval)
   };
 }

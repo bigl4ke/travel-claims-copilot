@@ -1,4 +1,9 @@
-import { getIssueAliases, issueLabels, normalizeIssueType } from "./issueTaxonomy";
+import {
+  getIssueAliases,
+  isMvpIssueType,
+  issueLabels,
+  normalizeIssueType
+} from "./issueTaxonomy";
 import type { Case, IssueType, Policy, ScenarioSummary, Script } from "./types";
 
 function getKnownIssueTypes(cases: Case[]): IssueType[] {
@@ -6,7 +11,8 @@ function getKnownIssueTypes(cases: Case[]): IssueType[] {
     new Set(cases.filter((item) => item.review_status === "approved").map((item) => item.issue_type))
   )
     .map(normalizeIssueType)
-    .filter((issueType): issueType is IssueType => Boolean(issueType));
+    .filter((issueType): issueType is IssueType => Boolean(issueType))
+    .filter(isMvpIssueType);
 }
 
 export function buildScenarioSummaries(
@@ -20,8 +26,12 @@ export function buildScenarioSummaries(
     .map((issueType) => {
       const aliases = new Set<string>(getIssueAliases(issueType));
       const matchingCases = approvedCases.filter((item) => aliases.has(item.issue_type));
-      const matchingPolicies = policies.filter((policy) => aliases.has(policy.issue_type));
-      const matchingScripts = scripts.filter((script) => aliases.has(script.issue_type));
+      const matchingPolicies = policies.filter((policy) =>
+        policy.incident_types.some((incidentType) => incidentType === issueType)
+      );
+      const matchingScripts = scripts.filter((script) =>
+        script.incident_types.some((incidentType) => incidentType === issueType)
+      );
       const providers = Array.from(new Set(matchingCases.map((item) => item.provider))).sort();
       const sampleCase = matchingCases[0];
 

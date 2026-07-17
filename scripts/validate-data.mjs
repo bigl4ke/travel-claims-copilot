@@ -41,6 +41,40 @@ function requireEnum(value, allowed, label) {
   }
 }
 
+const mvpIncidentTypes = [
+  "hotel_walk",
+  "airline_delay",
+  "airline_cancellation",
+  "denied_boarding"
+];
+const legacyLegalIssueTypes = [
+  "controllable_airline_delay",
+  "controllable_airline_cancellation",
+  "eu261_delay_or_cancellation"
+];
+const policyRegions = ["EU_EEA_CH", "UK", "US", "CA", "AU", "CN", "other", "global"];
+const legalRegimes = [
+  "provider_policy",
+  "EU261",
+  "UK261",
+  "US_DOT_REFUND",
+  "US_DOT_DENIED_BOARDING",
+  "US_AIRLINE_COMMITMENT",
+  "CA_APPR",
+  "AU_ACL",
+  "CN_FLIGHT_REGULATION"
+];
+const policyApplicabilityRules = [
+  "any_route",
+  "listed_provider",
+  "origin_region",
+  "origin_or_destination_region",
+  "eu261_route",
+  "uk261_route",
+  "australia_consumer_law",
+  "china_flight_regulation"
+];
+
 const [cases, policies, scripts] = await Promise.all([
   readJson("data/cases.json"),
   readJson("data/policies.json"),
@@ -84,6 +118,9 @@ for (const item of cases) {
   requireEnum(item.reservation_type, ["paid", "points", "award", "unknown"], label);
   requireEnum(item.confidence, ["high", "medium", "low"], label);
   requireEnum(item.review_status, ["approved", "needs_review", "excluded"], label);
+  if (legacyLegalIssueTypes.includes(item.issue_type)) {
+    throw new Error(`${label}.issue_type must describe the incident, not a legal regime.`);
+  }
 
   for (const field of ["requested_compensation", "evidence_used", "escalation_path", "review_notes"]) {
     if (!Array.isArray(item[field])) {
@@ -119,7 +156,12 @@ for (const policy of policies) {
       "provider_type",
       "provider",
       "policy_name",
-      "issue_type",
+      "legal_regime",
+      "applicability_rule",
+      "incident_types",
+      "applicable_regions",
+      "applicable_providers",
+      "required_controllability",
       "source_url",
       "source_type",
       "authority_level",
@@ -130,6 +172,34 @@ for (const policy of policies) {
     ],
     `policy ${policy.policy_id ?? "<unknown>"}`
   );
+  const label = `policy ${policy.policy_id ?? "<unknown>"}`;
+  for (const field of ["incident_types", "applicable_regions", "applicable_providers"]) {
+    if (!Array.isArray(policy[field])) {
+      throw new Error(`${label}.${field} must be an array.`);
+    }
+  }
+  for (const incidentType of policy.incident_types) {
+    requireEnum(incidentType, mvpIncidentTypes, label);
+  }
+  for (const region of policy.applicable_regions) {
+    requireEnum(region, policyRegions, label);
+  }
+  requireEnum(policy.legal_regime, legalRegimes, label);
+  requireEnum(policy.applicability_rule, policyApplicabilityRules, label);
+  requireEnum(
+    policy.source_type,
+    ["official_policy", "government_regulation", "regulator_guidance", "official_dashboard", "terms"],
+    label
+  );
+  requireEnum(policy.authority_level, ["high", "medium", "low"], label);
+  if (!policy.source_url.startsWith("https://")) {
+    throw new Error(`${label}.source_url must be an HTTPS URL.`);
+  }
+  requireEnum(
+    policy.required_controllability,
+    ["controllable", "uncontrollable", "unknown", "any"],
+    label
+  );
 }
 
 requireUnique(scripts, "script_id", "scripts.json");
@@ -137,7 +207,36 @@ for (const script of scripts) {
   const label = `script ${script.script_id ?? "<unknown>"}`;
   requireFields(
     script,
-    ["script_id", "issue_type", "provider", "channel", "tone", "language", "template", "when_to_use"],
+    [
+      "script_id",
+      "incident_types",
+      "applicable_regions",
+      "applicability_rule",
+      "required_controllability",
+      "provider",
+      "channel",
+      "tone",
+      "language",
+      "template",
+      "when_to_use"
+    ],
+    label
+  );
+  for (const field of ["incident_types", "applicable_regions"]) {
+    if (!Array.isArray(script[field])) {
+      throw new Error(`${label}.${field} must be an array.`);
+    }
+  }
+  for (const incidentType of script.incident_types) {
+    requireEnum(incidentType, mvpIncidentTypes, label);
+  }
+  for (const region of script.applicable_regions) {
+    requireEnum(region, policyRegions, label);
+  }
+  requireEnum(script.applicability_rule, policyApplicabilityRules, label);
+  requireEnum(
+    script.required_controllability,
+    ["controllable", "uncontrollable", "unknown", "any"],
     label
   );
   requireEnum(

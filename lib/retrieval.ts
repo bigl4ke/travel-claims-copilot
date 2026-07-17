@@ -1,5 +1,21 @@
 import { getIssueAliases, normalizeIssueType } from "./issueTaxonomy";
-import type { Case, ExtractedFacts, Policy, RetrievalResult, Script } from "./types";
+import { controllabilityFromReason, policyRegionsFromCountry } from "./policyScope";
+import { rankCases, rankPolicies, rankScripts } from "./retrievalScoring";
+import type {
+  Case,
+  ExtractedFacts,
+  Policy,
+  RetrievalLimits,
+  RetrievalQuery,
+  RetrievalResult,
+  Script
+} from "./types";
+
+const defaultLimits: Required<RetrievalLimits> = {
+  policyLimit: 3,
+  caseLimit: 3,
+  scriptLimit: 2
+};
 
 function isApprovedCase(item: Case): boolean {
   return item.review_status === "approved";
@@ -14,49 +30,97 @@ function withSelectedCaseFacts(facts: ExtractedFacts, selectedCase?: Case): Extr
 
   return {
     ...facts,
+    description: facts.description || selectedCase.facts,
     issueType: selectedIssueType ?? facts.issueType,
     provider: selectedCase.provider,
     providerType: selectedCase.provider_type,
+    country: selectedCase.location_country,
+    bookingChannel: selectedCase.booking_channel,
+    loyaltyStatus: selectedCase.loyalty_status,
     confidence: selectedIssueType ? "high" : facts.confidence,
     source: "selected_case"
   };
 }
 
-export function searchPolicies(facts: ExtractedFacts, policies: Policy[]): Policy[] {
-  const aliases = new Set<string>(getIssueAliases(facts.issueType));
-
-  return policies.filter((policy) => aliases.has(policy.issue_type));
+export function buildRetrievalQuery(facts: ExtractedFacts): RetrievalQuery {
+  return {
+    description: facts.description,
+    issueType: facts.issueType,
+    provider: facts.provider,
+    providerType: facts.providerType,
+    country: facts.country,
+    bookingChannel: facts.bookingChannel,
+    loyaltyStatus: facts.loyaltyStatus,
+    disruptionReason: facts.disruptionReason,
+    isOvernight: facts.isOvernight,
+    deniedBoardingKind: facts.deniedBoardingKind,
+    operatingCarrier: facts.operatingCarrier ?? facts.provider,
+    operatingCarrierRegion: facts.operatingCarrierRegion,
+    originRegion: facts.originRegion,
+    destinationRegion: facts.destinationRegion,
+    policyRegions:
+      facts.policyRegions && facts.policyRegions.length > 0
+        ? Array.from(new Set(facts.policyRegions))
+        : policyRegionsFromCountry(facts.country),
+    controllability:
+      facts.controllability ?? controllabilityFromReason(facts.disruptionReason)
+  };
 }
 
-export function searchCases(facts: ExtractedFacts, cases: Case[]): Case[] {
-  const aliases = new Set<string>(getIssueAliases(facts.issueType));
-
-  return cases.filter((item) => isApprovedCase(item) && aliases.has(item.issue_type));
+export function searchPolicies(
+  query: RetrievalQuery,
+  policies: Policy[],
+  limit = defaultLimits.policyLimit
+): Policy[] {
+  return rankPolicies(query, policies)
+    .slice(0, limit)
+    .map((result) => result.item);
 }
 
-export function searchScripts(facts: ExtractedFacts, scripts: Script[]): Script[] {
-  const aliases = new Set<string>(getIssueAliases(facts.issueType));
+export function searchCases(
+  query: RetrievalQuery,
+  cases: Case[],
+  limit = defaultLimits.caseLimit
+): Case[] {
+  return rankCases(query, cases)
+    .slice(0, limit)
+    .map((result) => result.item);
+}
 
-  return scripts.filter((script) => aliases.has(script.issue_type));
+export function searchScripts(
+  query: RetrievalQuery,
+  scripts: Script[],
+  limit = defaultLimits.scriptLimit
+): Script[] {
+  return rankScripts(query, scripts)
+    .slice(0, limit)
+    .map((result) => result.item);
 }
 
 export function retrieveKnowledge(
   facts: ExtractedFacts,
   policies: Policy[],
   cases: Case[],
-  scripts: Script[]
+  scripts: Script[],
+  limits: RetrievalLimits = {}
 ): RetrievalResult {
   const selectedCase = facts.caseId
     ? cases.find((item) => isApprovedCase(item) && item.case_id === facts.caseId)
     : undefined;
   const resolvedFacts = withSelectedCaseFacts(facts, selectedCase);
+  const query = buildRetrievalQuery(resolvedFacts);
 
   return {
     facts: resolvedFacts,
+    query,
     issueAliases: getIssueAliases(resolvedFacts.issueType),
-    officialBasis: searchPolicies(resolvedFacts, policies),
-    similarCases: searchCases(resolvedFacts, cases),
-    scripts: searchScripts(resolvedFacts, scripts),
+    officialBasis: searchPolicies(
+      query,
+      policies,
+      limits.policyLimit ?? defaultLimits.policyLimit
+    ),
+    similarCases: searchCases(query, cases, limits.caseLimit ?? defaultLimits.caseLimit),
+    scripts: searchScripts(query, scripts, limits.scriptLimit ?? defaultLimits.scriptLimit),
     selectedCase
   };
 }
