@@ -31,32 +31,32 @@ const providerDefinitions: ProviderDefinition[] = [
   {
     provider: "American Airlines",
     providerType: "airline",
-    terms: ["american airlines", "american flight", "aa flight", "aa"]
+    terms: ["american airlines", "american flight", "aa flight", "aa", "美国航空", "美航"]
   },
   {
     provider: "United",
     providerType: "airline",
-    terms: ["united airlines", "united flight", "united", "ua"]
+    terms: ["united airlines", "united flight", "united", "ua", "美联航"]
   },
   {
     provider: "Delta",
     providerType: "airline",
-    terms: ["delta air lines", "delta flight", "delta", "dl"]
+    terms: ["delta air lines", "delta flight", "delta", "dl", "达美"]
   },
   {
     provider: "Alaska Airlines",
     providerType: "airline",
-    terms: ["alaska airlines", "alaska flight"]
+    terms: ["alaska airlines", "alaska flight", "阿拉斯加航空"]
   },
   {
     provider: "Air France",
     providerType: "airline",
-    terms: ["air france", "af flight"]
+    terms: ["air france", "af flight", "法航"]
   },
   {
     provider: "Lufthansa",
     providerType: "airline",
-    terms: ["lufthansa", "lh flight"]
+    terms: ["lufthansa", "lh flight", "汉莎"]
   },
   {
     provider: "China Eastern Airlines",
@@ -86,13 +86,13 @@ const providerDefinitions: ProviderDefinition[] = [
 ];
 
 const loyaltyStatuses = [
-  "Titanium",
-  "Platinum Pro",
-  "Platinum",
-  "Globalist",
-  "Explorist",
-  "Diamond",
-  "Gold"
+  { status: "Titanium", terms: ["titanium", "钛金"] },
+  { status: "Platinum Pro", terms: ["platinum pro"] },
+  { status: "Platinum", terms: ["platinum", "白金"] },
+  { status: "Globalist", terms: ["globalist", "环球客", "球客"] },
+  { status: "Explorist", terms: ["explorist", "探索者"] },
+  { status: "Diamond", terms: ["diamond", "钻石", "钻卡"] },
+  { status: "Gold", terms: ["gold", "金卡"] }
 ] as const;
 
 function hasTerm(text: string, term: string): boolean {
@@ -103,15 +103,31 @@ function hasTerm(text: string, term: string): boolean {
   return text.includes(term);
 }
 
+function findTermIndex(text: string, term: string): number {
+  if (/^[a-z0-9]+$/i.test(term) && term.length <= 3) {
+    return text.search(new RegExp(`\\b${term}\\b`, "i"));
+  }
+
+  return text.indexOf(term);
+}
+
 function hasAny(text: string, terms: string[]): string[] {
   return terms.filter((term) => hasTerm(text, term));
 }
 
 function findProvider(text: string): Pick<MatchResult, "provider" | "providerType"> {
   const providerText = text.replaceAll("united states", "");
-  const match = providerDefinitions.find((definition) =>
-    definition.terms.some((term) => hasTerm(providerText, term))
-  );
+  const match = providerDefinitions
+    .flatMap((definition) =>
+      definition.terms.map((term) => ({
+        definition,
+        index: findTermIndex(providerText, term),
+        termLength: term.length
+      }))
+    )
+    .filter(({ index }) => index >= 0)
+    .sort((left, right) => left.index - right.index || right.termLength - left.termLength)[0]
+    ?.definition;
 
   return match
     ? { provider: match.provider, providerType: match.providerType }
@@ -150,7 +166,7 @@ function findBookingChannel(text: string): Case["booking_channel"] | undefined {
 }
 
 function findLoyaltyStatus(text: string): string | undefined {
-  return loyaltyStatuses.find((status) => hasTerm(text, status.toLowerCase()));
+  return loyaltyStatuses.find(({ terms }) => terms.some((term) => hasTerm(text, term)))?.status;
 }
 
 function findDisruptionReason(text: string): ExtractedFacts["disruptionReason"] {
@@ -197,9 +213,11 @@ function findDeniedBoardingKind(text: string): ExtractedFacts["deniedBoardingKin
       "voluntary bump",
       "volunteer my seat",
       "asked for volunteers",
+      "asking for volunteers",
       "seeking volunteers",
       "自愿改签",
-      "征集自愿者"
+      "征集自愿者",
+      "征集自愿改签"
     ]).length
   ) {
     return "voluntary";
@@ -341,6 +359,7 @@ function matchIssue(description: string): MatchResult {
     "involuntarily bumped",
     "voluntary bump",
     "asked for volunteers",
+    "asking for volunteers",
     "seeking volunteers",
     "oversold flight",
     "overbooked flight",
@@ -349,6 +368,7 @@ function matchIssue(description: string): MatchResult {
     "拒载",
     "航班超售",
     "征集自愿者",
+    "征集自愿改签",
     "自愿改签"
   ]);
   if (
@@ -408,6 +428,26 @@ function matchIssue(description: string): MatchResult {
       providerType: "airline",
       confidence: "low",
       signals: [...airlineContextSignals, ...cancellationSignals, ...delaySignals]
+    };
+  }
+
+  const travelDocumentSignals = hasAny(text, [
+    "evus",
+    "esta",
+    "visa",
+    "passport",
+    "travel document",
+    "签证",
+    "护照",
+    "旅行证件"
+  ]);
+  if (travelDocumentSignals.length > 0) {
+    return {
+      ...shared,
+      issueType: "unknown",
+      providerType: "airline",
+      confidence: "low",
+      signals: [...airlineContextSignals, ...travelDocumentSignals]
     };
   }
 
