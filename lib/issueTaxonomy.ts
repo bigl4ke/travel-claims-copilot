@@ -1,4 +1,14 @@
-import type { IssueType } from "./types";
+import type { IssueType, MvpIssueType } from "./types";
+
+export const MVP_ISSUE_TYPES = [
+  "hotel_walk",
+  "controllable_airline_delay",
+  "controllable_airline_cancellation",
+  "denied_boarding",
+  "eu261_delay_or_cancellation"
+] as const satisfies readonly MvpIssueType[];
+
+const mvpIssueTypeSet = new Set<IssueType>(MVP_ISSUE_TYPES);
 
 export const issueLabels: Record<IssueType, string> = {
   hotel_walk: "Hotel walk",
@@ -45,4 +55,8 @@ export function normalizeIssueType(value: unknown): IssueType | undefined {
 
 export function getIssueAliases(issueType: IssueType): IssueType[] {
   return issueAliases[issueType] ?? [issueType];
+}
+
+export function isMvpIssueType(issueType: IssueType): issueType is MvpIssueType {
+  return mvpIssueTypeSet.has(issueType);
 }

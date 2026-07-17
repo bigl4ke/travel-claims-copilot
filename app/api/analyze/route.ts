@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = buildAnalysisResult(
+  const result = await buildAnalysisResult(
     description,
     policies as Policy[],
     cases as Case[],

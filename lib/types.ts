@@ -16,6 +16,15 @@ export type IssueType =
   | "hotel_elite_benefit_closure"
   | "unknown";
 
+export type MvpIssueType = Extract<
+  IssueType,
+  | "hotel_walk"
+  | "controllable_airline_cancellation"
+  | "controllable_airline_delay"
+  | "eu261_delay_or_cancellation"
+  | "denied_boarding"
+>;
+
 export type ProviderType = "hotel" | "airline" | "credit_card" | "ota" | "government";
 
 export type Policy = {
@@ -90,14 +99,68 @@ export type ExtractedFacts = {
   issueType: IssueType;
   provider?: string;
   providerType?: ProviderType;
+  country?: string;
+  bookingChannel?: Case["booking_channel"];
+  loyaltyStatus?: string;
+  disruptionReason?:
+    | "crew"
+    | "mechanical"
+    | "oversales"
+    | "weather"
+    | "other_controllable"
+    | "unknown";
+  isOvernight?: boolean;
+  deniedBoardingKind?: "voluntary" | "involuntary" | "unknown";
   caseId?: string;
   confidence: "low" | "medium" | "high";
   signals: string[];
-  source: "keyword" | "selected_case" | "selected_issue" | "fallback";
+  source: "keyword" | "selected_case" | "selected_issue" | "fallback" | "llm";
+};
+
+export type RetrievalQuery = {
+  description: string;
+  issueType: IssueType;
+  provider?: string;
+  providerType?: ProviderType;
+  country?: string;
+  bookingChannel?: Case["booking_channel"];
+  loyaltyStatus?: string;
+  disruptionReason?: ExtractedFacts["disruptionReason"];
+  isOvernight?: boolean;
+  deniedBoardingKind?: ExtractedFacts["deniedBoardingKind"];
+};
+
+export type RetrievalMatchReason =
+  | "exact_issue_match"
+  | "issue_alias_match"
+  | "provider_exact_match"
+  | "provider_partial_match"
+  | "generic_provider_match"
+  | "provider_type_match"
+  | "country_match"
+  | "booking_channel_match"
+  | "loyalty_status_match"
+  | "disruption_reason_match"
+  | "denied_boarding_kind_match"
+  | "description_overlap"
+  | "authority_match"
+  | "confidence_match";
+
+export type ScoredRetrievalItem<T> = {
+  item: T;
+  score: number;
+  reasons: RetrievalMatchReason[];
+};
+
+export type RetrievalLimits = {
+  policyLimit?: number;
+  caseLimit?: number;
+  scriptLimit?: number;
 };
 
 export type RetrievalResult = {
   facts: ExtractedFacts;
+  query: RetrievalQuery;
   issueAliases: IssueType[];
   officialBasis: Policy[];
   similarCases: Case[];
