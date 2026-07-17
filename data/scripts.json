@@ -18,5 +18,65 @@
     "language": "en",
     "template": "Can you please confirm whether this delay or cancellation is within the airline's control? If so, I would like hotel accommodation, transportation to and from the hotel, meal vouchers, and rebooking on the earliest available flight, consistent with the airline's customer service commitment.",
     "when_to_use": "Use at the airport when a controllable airline delay or cancellation requires an overnight stay."
+  },
+  {
+    "script_id": "hotel_walk_escalation_email_en",
+    "issue_type": "hotel_walk",
+    "provider": "generic_hotel",
+    "channel": "corporate_escalation",
+    "tone": "polite_firm",
+    "language": "en",
+    "template": "I arrived with a confirmed reservation, but the property could not provide the booked room. Please review the attached confirmation and receipts, explain the applicable reservation guarantee, and address the alternate accommodation, transportation, and documented out-of-pocket costs. I understand that any additional goodwill depends on the brand terms and the facts of this stay.",
+    "when_to_use": "Use after a hotel walk when the property did not fully resolve relocation or documented expenses."
+  },
+  {
+    "script_id": "airline_controllable_cancellation_email_en",
+    "issue_type": "controllable_airline_cancellation",
+    "provider": "generic_airline",
+    "channel": "email",
+    "tone": "polite_firm",
+    "language": "en",
+    "template": "My flight was cancelled and I was told the cause was within the airline's control. Please confirm the cancellation reason in writing and review the attached hotel, meal, and transportation receipts against the commitments in your customer service plan. I am requesting reimbursement only for documented reasonable expenses and any other remedy that your published commitment provides.",
+    "when_to_use": "Use after a controllable cancellation when airport vouchers were unavailable or documented expenses remain unresolved."
+  },
+  {
+    "script_id": "denied_boarding_volunteer_gate_en",
+    "issue_type": "denied_boarding",
+    "provider": "generic_airline",
+    "channel": "airport_counter",
+    "tone": "polite_firm",
+    "language": "en",
+    "template": "Before I decide whether to volunteer, please confirm the compensation amount and form, every restriction, a confirmed replacement itinerary rather than standby, and whether meals, hotel, and transportation are included if the new flight is overnight. Please also tell me the compensation that would apply if I were involuntarily bumped.",
+    "when_to_use": "Use when an oversold flight is seeking volunteers and you have not yet agreed to give up your seat."
+  },
+  {
+    "script_id": "denied_boarding_involuntary_email_en",
+    "issue_type": "denied_boarding",
+    "provider": "generic_airline",
+    "channel": "email",
+    "tone": "firm",
+    "language": "en",
+    "template": "I had a confirmed reservation, met the check-in and gate deadlines, and did not volunteer to give up my seat. Please provide the written statement of denied-boarding rights, the boarding-priority basis used, my confirmed alternate itinerary, and an assessment of any denied boarding compensation that applies under the US DOT oversales rules.",
+    "when_to_use": "Use after involuntary denied boarding caused by oversales on a flight departing from a US airport."
+  },
+  {
+    "script_id": "eu261_claim_email_en",
+    "issue_type": "eu261_delay_or_cancellation",
+    "provider": "generic_airline",
+    "channel": "email",
+    "tone": "polite_firm",
+    "language": "en",
+    "template": "Please assess this itinerary under Regulation (EC) No 261/2004. My scheduled arrival was [time] and my actual arrival was [time]. Please provide the disruption reason in writing and review my request for rerouting or refund, care expenses, and fixed compensation only to the extent each remedy applies. I have attached the full itinerary, boarding documents, timing evidence, and receipts.",
+    "when_to_use": "Use for a potentially qualifying EU261 delay, cancellation, or missed connection after assembling the full itinerary and arrival evidence."
+  },
+  {
+    "script_id": "eu261_authority_escalation_en",
+    "issue_type": "eu261_delay_or_cancellation",
+    "provider": "generic_airline",
+    "channel": "regulator_complaint",
+    "tone": "firm",
+    "language": "en",
+    "template": "I asked the operating airline to assess the attached itinerary and disruption under Regulation (EC) No 261/2004, but the response did not address [eligibility / disruption reason / care expenses]. I am requesting review by the competent authority. Attached are the airline correspondence, complete itinerary, scheduled and actual arrival evidence, and receipts.",
+    "when_to_use": "Use only after identifying the competent authority and giving the airline a reasonable opportunity to respond."
   }
 ]

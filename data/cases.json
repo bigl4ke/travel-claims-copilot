@@ -843,6 +843,46 @@
     "review_notes": []
   },
   {
+    "case_id": "synthetic_us_involuntary_denied_boarding_001",
+    "source_type": "synthetic_example",
+    "source_name": "Synthetic demo case",
+    "source_url": "",
+    "provider_type": "airline",
+    "provider": "Generic US airline",
+    "brand_or_airline": "US airline",
+    "issue_type": "denied_boarding",
+    "location_country": "US",
+    "booking_channel": "direct",
+    "loyalty_status": "None",
+    "reservation_type": "paid",
+    "facts": "Passenger held a confirmed reservation, checked in and reached the gate on time, and did not volunteer. After the airline could not find enough volunteers for an oversold flight, it selected the passenger for involuntary denied boarding before boarding. The confirmed replacement itinerary was scheduled to arrive more than two hours later.",
+    "requested_compensation": [
+      "Written denied-boarding rights notice",
+      "Confirmed rebooking",
+      "Applicable denied boarding compensation after eligibility is confirmed",
+      "Written record that the passenger did not volunteer"
+    ],
+    "actual_outcome": "Synthetic example: the airline documented the involuntary bump, confirmed a replacement flight, and assessed denied boarding compensation using the applicable DOT criteria.",
+    "evidence_used": [
+      "Original boarding pass and ticket receipt",
+      "Check-in and gate arrival timestamps",
+      "Written denied-boarding notice",
+      "Confirmed replacement itinerary"
+    ],
+    "escalation_path": [
+      "Gate supervisor",
+      "Airline customer relations",
+      "US DOT complaint if the airline does not provide the required written notice or assess eligibility"
+    ],
+    "reusable_lesson": "Do not describe an involuntary bump as voluntary. Ask the airline to document the reason, provide the written rights notice, and confirm the replacement arrival time before assessing whether DOT compensation criteria may apply.",
+    "confidence": "medium",
+    "notes": "Synthetic example for testing the distinction between voluntary and involuntary denied boarding. It is not a reported community outcome.",
+    "review_status": "approved",
+    "review_notes": [
+      "Synthetic demo example; never present as a community outcome."
+    ]
+  },
+  {
     "case_id": "uscf_af_eu261_cancellation_2026_03",
     "source_type": "community_dp",
     "source_name": "USCardForum thread summary via Nitan",

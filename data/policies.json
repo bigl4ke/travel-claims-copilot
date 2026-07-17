@@ -46,6 +46,31 @@
     "last_checked": "2026-05-12"
   },
   {
+    "policy_id": "dot_bumping_oversales",
+    "provider_type": "government",
+    "provider": "US DOT",
+    "policy_name": "Bumping and Oversales",
+    "issue_type": "denied_boarding",
+    "source_url": "https://www.transportation.gov/individuals/aviation-consumer-protection/bumping-oversales",
+    "source_type": "government_regulation",
+    "authority_level": "high",
+    "applicable_conditions": [
+      "Oversold flight departing from a US airport",
+      "Passenger has a confirmed reservation and meets check-in and gate deadlines",
+      "Voluntary and involuntary denied boarding must be distinguished",
+      "Compensation eligibility depends on the reason for denial and alternate arrival time"
+    ],
+    "compensation_or_rights": [
+      "Airline must seek volunteers before involuntarily denying boarding for oversales",
+      "Volunteers may negotiate and must be told material voucher restrictions",
+      "Involuntarily bumped passengers must receive a written statement of rights",
+      "Eligible involuntarily bumped passengers may receive denied boarding compensation",
+      "Confirmed alternate transportation"
+    ],
+    "summary": "US DOT guidance distinguishes voluntary offers from involuntary denied boarding caused by oversales. Eligibility and compensation depend on the passenger meeting applicable deadlines, the reason for denial, and the delay in reaching the destination.",
+    "last_checked": "2026-07-16"
+  },
+  {
     "policy_id": "eu261_air_passenger_rights",
     "provider_type": "government",
     "provider": "European Union",

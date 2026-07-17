@@ -18,12 +18,12 @@ The application only retrieves `approved` cases. Current review summary:
 
 | Status | Count |
 | --- | ---: |
-| approved | 34 |
+| approved | 35 |
 | needs_review | 13 |
 | excluded | 7 |
-| total | 54 |
+| total | 55 |
 
-The 54 records contain 50 unique community source URLs and 4 explicitly labeled synthetic demo examples. Of the approved records, 30 are community datapoints and 4 are synthetic examples.
+The 55 records contain 50 unique community source URLs and 5 explicitly labeled synthetic demo examples. Of the approved records, 30 are community datapoints and 5 are synthetic examples.
 
 ## Review rules
 
