@@ -158,7 +158,17 @@ function findBookingChannel(text: string): Case["booking_channel"] | undefined {
     return "ota";
   }
 
-  if (hasAny(text, ["booked direct", "direct booking", "official website", "官网预订", "直接预订"]).length) {
+  if (
+    hasAny(text, [
+      "booked direct",
+      "direct booking",
+      "official website",
+      "官网预订",
+      "官网订",
+      "官方渠道",
+      "直接预订"
+    ]).length
+  ) {
     return "direct";
   }
 

@@ -17,7 +17,7 @@ The product does **not** provide legal advice, promise compensation, or submit c
 
 ## Current Status
 
-This repo is in an MVP / Phase 1 state.
+This repo has a structured MVP plus the first LLM-assisted intake workflow.
 
 The app currently uses:
 
@@ -25,12 +25,15 @@ The app currently uses:
 - TypeScript
 - Tailwind CSS
 - local JSON seed data
-- deterministic structured fact extraction and classification
+- optional multi-turn LLM fact extraction through the OpenAI Responses API
+- strict `ClaimFacts` JSON Schema validation and deterministic jurisdiction rules
+- deterministic local extraction when no API key is configured or a model call fails
 - explainable weighted retrieval with deterministic Top-K results
 - approved-case filtering and deterministic response generation
 - Vitest golden-scenario and quality-guard tests
 
-There is no database, login, payment, scraping, email sending, or real LLM API integration yet.
+There is no database, login, payment, scraping, email sending, or claim submission. Conversation
+state currently stays in the browser and is not persisted.
 
 The current knowledge base contains 4 policies, 55 reviewed case records (35 approved for
 retrieval), and 8 reusable scripts. The first demo only publishes these five issue types:
@@ -54,6 +57,16 @@ Start the local dev server:
 ```bash
 npm run dev
 ```
+
+To enable LLM-assisted intake, copy `.env.example` to `.env.local` and set the server-side key:
+
+```bash
+OPENAI_API_KEY=your_key_here
+```
+
+The default intake model is `gpt-5.6-luna` and can be changed with
+`OPENAI_INTAKE_MODEL`. Without a key, the same UI uses the deterministic fallback and labels it
+as `Local`.
 
 Open:
 
@@ -111,7 +124,8 @@ My Air France flight from Paris was cancelled and I arrived at my final destinat
 ```text
 app/
   api/
-    analyze/route.ts      Main analysis API
+    intake/route.ts       Multi-turn structured fact intake API
+    analyze/route.ts      Deterministic structured analysis API
     scenarios/route.ts    Scenario catalog API
   page.tsx                Frontend demo page
 
@@ -122,7 +136,11 @@ data/
   README.md               Review rules and current quality summary
 
 lib/
-  analyze.ts              Async orchestration and replaceable FactExtractor boundary
+  claimFacts.ts           ClaimFacts types, JSON Schema, validation, and missing fields
+  jurisdiction.ts         Location enrichment and EU261 candidate rules
+  intake.ts               Multi-turn extraction, fact merging, questions, and fallback
+  llm.ts                  OpenAI Responses API structured-output client
+  analyze.ts              Structured-facts and legacy-description orchestration
   classifier.ts           Structured fact extraction and issue classification
   retrieval.ts            Top-K local JSON policy/case/script retrieval
   retrievalScoring.ts     Explainable, deterministic ranking rules
@@ -132,16 +150,23 @@ lib/
   types.ts                Shared TypeScript types
 
 tests/
+  claimFacts.test.ts      Schema, jurisdiction, and structured API tests
+  intake.test.ts          LLM client, fallback, and multi-turn API tests
+  intake-evals.test.ts    Colloquial and multi-turn evaluation conversations
   retrieval.test.ts       Five golden scenarios plus classification/retrieval guards
 ```
 
 ## Current Pipeline
 
-The current analysis flow is deterministic and asynchronous at the extraction boundary:
+The current product flow separates semantic intake from deterministic analysis:
 
 ```text
-user input or selected scenario
-  -> FactExtractor.extract()
+natural user message + prior ClaimFacts
+  -> POST /api/intake
+  -> LLM strict structured output, or deterministic fallback
+  -> server validation + jurisdiction enrichment + missing-field calculation
+  -> targeted follow-up question until ready
+  -> POST /api/analyze with validated ClaimFacts
   -> structured RetrievalQuery
   -> explainable policy / case / script scoring
   -> Top-K retrieval (3 policies / 3 cases / 2 scripts)
@@ -154,20 +179,33 @@ status, disruption reason, denied-boarding kind, text overlap, source authority,
 confidence. Equal scores use stable IDs as a deterministic tie-breaker. Only cases with
 `review_status: "approved"` can be returned.
 
-### LLM API decision
+### LLM boundaries
 
-No LLM API key is required for the current milestone. `FactExtractor` is already an async,
-replaceable interface, so a later LLM-backed implementation will not require changing the
-retrieval or generation layers.
+The LLM is an interviewer and semantic parser, not the policy engine or retrieval database.
+It receives prior structured facts plus the latest user message and must return the strict
+five-type `ClaimFacts` schema. The server recomputes missing fields and geographic regions.
 
-The recommended next LLM step is a guarded fallback: call the LLM only when deterministic
-extraction returns `unknown` or low confidence, require structured output, validate it against
-the five-type taxonomy, and fall back safely on timeout or invalid output. A later natural-language
-generation step should use retrieved evidence only.
+Model responses use `store: false`, a bounded timeout, strict JSON Schema output, runtime
+validation, and a deterministic fallback. `/api/analyze` never relies on model memory for
+policies, cases, compensation amounts, or sources.
 
 The LLM should not invent policies, cases, compensation amounts, or sources.
 
 ## APIs
+
+### `POST /api/intake`
+
+Start or continue a fact-gathering conversation:
+
+```json
+{
+  "message": "My Air France flight from Paris was cancelled and I arrived four hours late.",
+  "facts": null
+}
+```
+
+The response is either `needs_info` with the accumulated `facts`, `missingFields`, and one
+targeted `question`, or `ready` with validated facts that can be sent to `/api/analyze`.
 
 ### `GET /api/scenarios`
 
@@ -195,6 +233,18 @@ Example response shape:
 ```
 
 ### `POST /api/analyze`
+
+The preferred request uses the validated `facts` returned by `/api/intake`:
+
+```ts
+{
+  description: "Optional original conversation text",
+  facts: intakeResponse.facts
+}
+```
+
+The complete object must match `ClaimFacts`; incomplete valid facts receive HTTP `422` with
+`missingFields`. The following legacy inputs remain supported for compatibility.
 
 Analyze by free-text description:
 
@@ -300,24 +350,27 @@ Completed:
 - explainable structured filtering and Top-K ranking
 - approved-only case retrieval
 - replaceable async fact-extraction boundary
-- 20 automated golden-scenario and quality-guard tests
+- guided multi-turn frontend with visible LLM/local extraction mode
+- strict structured LLM intake with safe fallback
+- automated golden-scenario, schema, API, colloquial, and multi-turn tests
 
 Recommended next work:
 
-- connect the five supported scenarios to the frontend result experience
-- add a small manual evaluation set using real user phrasing
-- show missing facts and low-confidence clarification prompts
+- expand the airport/country and operating-carrier reference tables
+- run the conversational evaluation set against a configured model and record latency/cost
 - add outcome feedback logging before expanding the taxonomy
 
 ### Phase 2: LLM-Assisted Analysis
 
-Add `lib/llm.ts` only after the deterministic baseline is measured, then use an LLM for:
+Implemented foundation:
 
-- low-confidence structured fact extraction
-- issue classification assistance within the five-type allowlist
-- natural-language answer generation from retrieved data
+- server-only OpenAI configuration
+- strict structured fact extraction within the five-type allowlist
+- multi-turn fact merging and targeted clarification
+- deterministic fallback, schema validation, timeouts, and evidence-only retrieval
 
-Keep deterministic fallback, schema validation, timeouts, and evidence-only generation.
+Recommended next step: evaluate model quality on real anonymized phrasing before adding an
+LLM-written final response. Any later answer-generation model must use retrieved evidence only.
 
 ### Phase 3: Database
 
