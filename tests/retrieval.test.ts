@@ -168,6 +168,24 @@ describe("classification safeguards", () => {
 });
 
 describe("retrieval quality controls", () => {
+  it("matches a Chinese Marriott alias to Marriott policy and cases only", () => {
+    const facts = {
+      ...classifyInput("我订了万豪酒店，但是到店无房。"),
+      provider: "万豪酒店"
+    };
+    const retrieval = retrieveKnowledge(facts, policies, cases, scripts);
+
+    expect(retrieval.officialBasis.map((policy) => policy.policy_id)).toContain(
+      "marriott_ultimate_reservation_guarantee"
+    );
+    expect(retrieval.similarCases.map((item) => item.case_id)).toEqual([
+      "marriott_walk_synthetic_001"
+    ]);
+    expect(retrieval.similarCases.every((item) => item.provider === "Marriott")).toBe(
+      true
+    );
+  });
+
   it("selects official policies by incident, jurisdiction, provider, and controllability", () => {
     const euCancellation = retrieveKnowledge(
       classifyInput(

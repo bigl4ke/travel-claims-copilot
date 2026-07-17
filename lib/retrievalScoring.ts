@@ -4,6 +4,11 @@ import {
   policyAppliesToRoute,
   policyRegionsFromCountry
 } from "./policyScope";
+import {
+  canonicalHotelGroup,
+  providerMatchKey,
+  providersMatch
+} from "./provider";
 import type {
   Case,
   Policy,
@@ -67,13 +72,6 @@ function normalizeText(value: string): string {
     .trim();
 }
 
-function normalizeProvider(value: string): string {
-  return normalizeText(value)
-    .replace(/\b(airline|airlines|air lines|hotel|hotels|resort|resorts)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function tokenize(value: string): Set<string> {
   const normalized = normalizeText(value);
   const latinTokens = normalized
@@ -114,7 +112,7 @@ function addProviderScore<T>(
   queryProvider: string | undefined,
   candidateProvider: string
 ) {
-  const normalizedCandidate = normalizeProvider(candidateProvider);
+  const normalizedCandidate = providerMatchKey(candidateProvider);
 
   if (normalizedCandidate.startsWith("generic")) {
     addScore(result, 10, "generic_provider_match");
@@ -125,7 +123,7 @@ function addProviderScore<T>(
     return;
   }
 
-  const normalizedQuery = normalizeProvider(queryProvider);
+  const normalizedQuery = providerMatchKey(queryProvider);
   if (!normalizedQuery || !normalizedCandidate) {
     return;
   }
@@ -249,9 +247,16 @@ export function rankCases(
   cases: Case[]
 ): ScoredRetrievalItem<Case>[] {
   const aliases = new Set<string>(getIssueAliases(query.issueType));
+  const queryHotelGroup =
+    query.providerType === "hotel" ? canonicalHotelGroup(query.provider) : undefined;
   const candidates = cases.filter((item) => {
     if (item.review_status !== "approved" || !aliases.has(item.issue_type)) {
       return false;
+    }
+    if (queryHotelGroup) {
+      const caseHotelGroup =
+        canonicalHotelGroup(item.provider) ?? canonicalHotelGroup(item.brand_or_airline);
+      return item.provider_type === "hotel" && caseHotelGroup === queryHotelGroup;
     }
     if (item.provider_type !== "airline" || query.policyRegions.length === 0) {
       return true;
@@ -335,7 +340,7 @@ export function rankPolicies(
       policy.applicable_providers.length === 0 ||
       (query.provider
         ? policy.applicable_providers.some(
-            (provider) => normalizeProvider(provider) === normalizeProvider(query.provider ?? "")
+            (provider) => providersMatch(provider, query.provider)
           )
         : false);
     const controllabilityMatches =
@@ -400,12 +405,10 @@ export function rankScripts(
       script.applicable_regions,
       query
     );
-    const normalizedScriptProvider = normalizeProvider(script.provider);
+    const normalizedScriptProvider = providerMatchKey(script.provider);
     const providerMatches =
       normalizedScriptProvider.startsWith("generic") ||
-      (query.provider
-        ? normalizeProvider(query.provider) === normalizedScriptProvider
-        : false);
+      (query.provider ? providersMatch(query.provider, script.provider) : false);
     const controllabilityMatches =
       script.required_controllability === "any" ||
       script.required_controllability === query.controllability;
