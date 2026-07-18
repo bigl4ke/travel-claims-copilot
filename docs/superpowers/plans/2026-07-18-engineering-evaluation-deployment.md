@@ -86,10 +86,12 @@ eslint-config-prettier@9.1.0
 eslint-plugin-import@2.31.0
 eslint-plugin-jsx-a11y@6.10.2
 eslint-plugin-react@7.37.5
-eslint-plugin-react-hooks@5.2.0
+eslint-plugin-react-hooks@4.6.2
 prettier@3.6.2
 tsx@4.20.3
 ```
+
+`eslint-plugin-react-hooks@4.6.2` is intentional: `eslint-config-airbnb@19.0.4` declares the peer range `^4.3.0`. Do not install 5.x through `--force` or `--legacy-peer-deps`.
 
 - [ ] **Step 3: Pin runtime, scripts, and formatting rules**
 
@@ -164,7 +166,7 @@ Use this exact lint/format baseline:
 Use Node `22.14.0`, then run:
 
 ```bash
-npm install --save-exact --save-dev @playwright/test@1.55.0 @typescript-eslint/eslint-plugin@7.18.0 @typescript-eslint/parser@7.18.0 eslint-config-airbnb@19.0.4 eslint-config-airbnb-typescript@18.0.0 eslint-config-prettier@9.1.0 eslint-plugin-import@2.31.0 eslint-plugin-jsx-a11y@6.10.2 eslint-plugin-react@7.37.5 eslint-plugin-react-hooks@5.2.0 prettier@3.6.2 tsx@4.20.3
+npm install --save-exact --save-dev @playwright/test@1.55.0 @typescript-eslint/eslint-plugin@7.18.0 @typescript-eslint/parser@7.18.0 eslint-config-airbnb@19.0.4 eslint-config-airbnb-typescript@18.0.0 eslint-config-prettier@9.1.0 eslint-plugin-import@2.31.0 eslint-plugin-jsx-a11y@6.10.2 eslint-plugin-react@7.37.5 eslint-plugin-react-hooks@4.6.2 prettier@3.6.2 tsx@4.20.3
 ```
 
 Then run:
