@@ -1,9 +1,11 @@
 import type { ClaimDisruptionReason } from "./claimFacts";
 import {
-  isChineseOperatingCarrier,
-  isEuOperatingCarrier,
-  isUkOrEuOperatingCarrier
-} from "./jurisdiction";
+  isChineseCarrierValue,
+  isEuCarrierValue,
+  isUkOrEuCarrierValue,
+  policyRegionsFromCountryValue,
+  resolveControllability
+} from "./domain/context-resolver";
 import type {
   Controllability,
   Policy,
@@ -13,64 +15,14 @@ import type {
   RetrievalQuery
 } from "./types";
 
-const euCountries = new Set([
-  "eu",
-  "france",
-  "germany",
-  "italy",
-  "spain",
-  "netherlands",
-  "ireland",
-  "portugal",
-  "belgium",
-  "austria",
-  "greece",
-  "sweden",
-  "denmark",
-  "finland",
-  "poland",
-  "czechia",
-  "norway",
-  "iceland",
-  "switzerland"
-]);
-
 export function controllabilityFromReason(
   reason: ClaimDisruptionReason | undefined
 ): Controllability {
-  if (reason === "crew" || reason === "mechanical" || reason === "other_controllable") {
-    return "controllable";
-  }
-  if (reason === "weather") {
-    return "uncontrollable";
-  }
-  return "unknown";
+  return resolveControllability(reason === "unknown" ? null : reason).value;
 }
 
 export function policyRegionsFromCountry(country: string | undefined): PolicyRegion[] {
-  const normalized = country?.trim().toLowerCase();
-  if (!normalized) {
-    return [];
-  }
-  if (euCountries.has(normalized)) {
-    return ["EU_EEA_CH"];
-  }
-  if (normalized === "us" || normalized === "usa" || normalized === "united states") {
-    return ["US"];
-  }
-  if (normalized === "uk" || normalized === "united kingdom") {
-    return ["UK"];
-  }
-  if (normalized === "ca" || normalized === "canada") {
-    return ["CA"];
-  }
-  if (normalized === "au" || normalized === "australia") {
-    return ["AU"];
-  }
-  if (normalized === "cn" || normalized === "china" || normalized === "mainland china") {
-    return ["CN"];
-  }
-  return ["other"];
+  return policyRegionsFromCountryValue(country);
 }
 
 type RouteScopeQuery = Pick<
@@ -109,7 +61,7 @@ export function applicabilityRuleMatches(
   const hasExplicitRoute = Boolean(query.originRegion || query.destinationRegion);
   const originMatches = includesRouteRegion(applicableRegions, query.originRegion);
   const destinationMatches = includesRouteRegion(applicableRegions, query.destinationRegion);
-  const carrier = query.operatingCarrier ?? query.provider;
+  const carrier = query.operatingCarrier;
 
   if (rule === "origin_region") {
     return hasExplicitRoute ? originMatches : coarseRegionMatch(applicableRegions, query);
@@ -126,7 +78,7 @@ export function applicabilityRuleMatches(
       return true;
     }
     if (query.destinationRegion === "EU_EEA_CH") {
-      return query.operatingCarrierRegion === "EU_EEA_CH" || isEuOperatingCarrier(carrier);
+      return query.operatingCarrierRegion === "EU_EEA_CH" || isEuCarrierValue(carrier);
     }
     return hasExplicitRoute ? false : coarseRegionMatch(applicableRegions, query);
   }
@@ -139,7 +91,7 @@ export function applicabilityRuleMatches(
       return (
         query.operatingCarrierRegion === "UK" ||
         query.operatingCarrierRegion === "EU_EEA_CH" ||
-        isUkOrEuOperatingCarrier(carrier)
+        isUkOrEuCarrierValue(carrier)
       );
     }
     return hasExplicitRoute ? false : coarseRegionMatch(applicableRegions, query);
@@ -157,7 +109,7 @@ export function applicabilityRuleMatches(
     if (
       query.originRegion === "CN" ||
       query.operatingCarrierRegion === "CN" ||
-      isChineseOperatingCarrier(carrier)
+      isChineseCarrierValue(carrier)
     ) {
       return true;
     }

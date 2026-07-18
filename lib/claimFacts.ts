@@ -1,5 +1,6 @@
-import { enrichClaimJurisdiction } from "./jurisdiction";
-import { canonicalizeProviderName } from "./provider";
+import { resolveClaimContext, resolveKnownLocation } from "./domain/context-resolver";
+import type { ClaimState, RawClaimFacts } from "./domain/claim-contract";
+import { emptyRawClaimFacts } from "./domain/raw-fact-schema";
 import type { MvpIssueType, PolicyRouteRegion } from "./types";
 
 export type ClaimIssueType = MvpIssueType | "unknown";
@@ -303,9 +304,49 @@ export function parseClaimFacts(value: unknown): ClaimFactsParseResult {
   return { success: true, data: normalizeClaimFacts(facts) };
 }
 
+function legacyToRawFacts(facts: ClaimFacts): RawClaimFacts {
+  const empty = emptyRawClaimFacts();
+  return {
+    ...empty,
+    incidentType: facts.issueType === "unknown" ? null : facts.issueType,
+    providerType: facts.providerType === "unknown" ? null : facts.providerType,
+    provider: facts.provider,
+    operatingCarrier: facts.operatingCarrier,
+    origin: {
+      city: facts.origin.city,
+      airport: facts.origin.airport,
+      country: facts.origin.country
+    },
+    destination: {
+      city: facts.destination.city,
+      airport: facts.destination.airport,
+      country: facts.destination.country
+    },
+    reasonCategory: facts.disruptionReason === "unknown" ? null : facts.disruptionReason,
+    finalArrivalDelayMinutes: facts.arrivalDelayMinutes,
+    isOvernight: facts.isOvernight,
+    deniedBoardingKind: facts.deniedBoardingKind === "unknown" ? null : facts.deniedBoardingKind,
+    bookingChannel: facts.bookingChannel === "unknown" ? null : facts.bookingChannel,
+    loyaltyStatus: facts.loyaltyStatus,
+    expenses: [...facts.expenses],
+    evidence: [...facts.evidence],
+    userGoal: facts.userGoal
+  };
+}
+
 export function normalizeClaimFacts(facts: ClaimFacts): ClaimFacts {
-  const normalized = enrichClaimJurisdiction(facts);
-  let { disruptionType } = normalized;
+  const rawFacts = legacyToRawFacts(facts);
+  const state: ClaimState = {
+    facts: rawFacts,
+    provenance: {},
+    revision: 0,
+    conflicts: [],
+    unresolvedFields: []
+  };
+  const context = resolveClaimContext({ state });
+  const origin = resolveKnownLocation(rawFacts.origin);
+  const destination = resolveKnownLocation(rawFacts.destination);
+  let { disruptionType } = facts;
   if (disruptionType === "unknown") {
     const disruptionTypeByIssue: Partial<Record<ClaimIssueType, ClaimDisruptionType>> = {
       hotel_walk: "hotel_walk",
@@ -313,23 +354,36 @@ export function normalizeClaimFacts(facts: ClaimFacts): ClaimFacts {
       airline_cancellation: "cancellation",
       denied_boarding: "denied_boarding"
     };
-    disruptionType = disruptionTypeByIssue[normalized.issueType] ?? "unknown";
+    disruptionType = disruptionTypeByIssue[facts.issueType] ?? "unknown";
   }
 
-  let { providerType } = normalized;
+  let { providerType } = facts;
   if (providerType === "unknown") {
-    if (normalized.issueType === "hotel_walk") {
+    if (facts.issueType === "hotel_walk") {
       providerType = "hotel";
-    } else if (normalized.issueType !== "unknown") {
+    } else if (facts.issueType !== "unknown") {
       providerType = "airline";
     }
   }
 
   return {
-    ...normalized,
+    ...facts,
     providerType,
-    provider: canonicalizeProviderName(normalized.provider, providerType),
-    operatingCarrier: canonicalizeProviderName(normalized.operatingCarrier, "airline"),
+    provider: context.normalizedProvider.value,
+    operatingCarrier: context.normalizedOperatingCarrier.value,
+    operatingCarrierRegion: context.jurisdiction.operatingCarrierRegion.value,
+    origin: {
+      city: origin.city,
+      airport: origin.airport,
+      country: origin.country,
+      region: context.jurisdiction.originRegion.value
+    },
+    destination: {
+      city: destination.city,
+      airport: destination.airport,
+      country: destination.country,
+      region: context.jurisdiction.destinationRegion.value
+    },
     disruptionType
   };
 }
