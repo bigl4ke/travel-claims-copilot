@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeIncidentInput } from "../../lib/domain/incident-taxonomy";
+import { normalizeIssueType } from "../../lib/issueTaxonomy";
 
 describe("normalizeIncidentInput", () => {
   it.each([
@@ -26,5 +27,14 @@ describe("normalizeIncidentInput", () => {
   it.each(["baggage_delay", "hotel_property_loss", "insurance_claim"])(
     "rejects dormant public input %s",
     (input) => expect(normalizeIncidentInput(input)).toBeNull()
+  );
+
+  it.each(["constructor", "toString", "__proto__"])("rejects inherited alias key %s", (input) =>
+    expect(normalizeIncidentInput(input)).toBeNull()
+  );
+
+  it.each(["constructor", "toString", "__proto__"])(
+    "rejects inherited compatibility key %s",
+    (input) => expect(normalizeIssueType(input)).toBeUndefined()
   );
 });

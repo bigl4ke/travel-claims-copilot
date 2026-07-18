@@ -36,7 +36,9 @@ export function normalizeIssueType(value: unknown): IssueType | undefined {
     return normalizedIncident.incident ?? undefined;
   }
 
-  return typeof value === "string" && value in issueLabels ? (value as IssueType) : undefined;
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(issueLabels, value)
+    ? (value as IssueType)
+    : undefined;
 }
 
 export function getIssueAliases(issueType: IssueType): string[] {

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import cases from "../../../data/cases.json";
 import policies from "../../../data/policies.json";
 import scripts from "../../../data/scripts.json";
-import { buildAnalysisFromFacts, buildAnalysisResult } from "../../../lib/analyze";
+import { buildAnalysisFromFacts, buildAnalysisResult, classifyIssue } from "../../../lib/analyze";
 import { getMissingClaimFields, parseClaimFacts } from "../../../lib/claimFacts";
 import { normalizeIncidentInput } from "../../../lib/domain/incident-taxonomy";
 import type { ScenarioId, WorkflowStatus } from "../../../lib/domain/claim-contract";
@@ -20,6 +20,20 @@ type LegacySafeScopeResponse = {
   nextActions: string[];
 };
 
+function outOfScopeResponse(): Response {
+  const response: LegacySafeScopeResponse = {
+    status: "out_of_scope",
+    primaryScenario: null,
+    scenarioIds: [],
+    missingFacts: [],
+    assessments: [],
+    cautions: ["This competition build supports four frozen travel-disruption journeys."],
+    nextActions: []
+  };
+
+  return Response.json(response);
+}
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     caseId?: unknown;
@@ -33,8 +47,20 @@ export async function POST(request: Request) {
   const incidentInput = body?.issueType ?? body?.selectedIssueType;
   const incidentNormalization = normalizeIncidentInput(incidentInput);
   const issueType = incidentNormalization?.incident ?? normalizeIssueType(incidentInput);
+  const isStructuredFactsRequest = body?.facts !== undefined;
+  const selectedCaseIssueType =
+    !isStructuredFactsRequest && caseId
+      ? normalizeIssueType(
+          (cases as Case[]).find(
+            (item) => item.review_status === "approved" && item.case_id === caseId
+          )?.issue_type
+        )
+      : undefined;
+  const classifiedDescriptionIssueType =
+    !isStructuredFactsRequest && description ? classifyIssue(description) : undefined;
+  const scopeIssueType = selectedCaseIssueType ?? issueType ?? classifiedDescriptionIssueType;
 
-  if (incidentNormalization?.needsSubtype) {
+  if (incidentNormalization?.needsSubtype && selectedCaseIssueType === undefined) {
     const response: LegacySafeScopeResponse = {
       status: "needs_information",
       primaryScenario: null,
@@ -48,18 +74,8 @@ export async function POST(request: Request) {
     return Response.json(response);
   }
 
-  if (issueType && issueType !== "unknown" && !isMvpIssueType(issueType)) {
-    const response: LegacySafeScopeResponse = {
-      status: "out_of_scope",
-      primaryScenario: null,
-      scenarioIds: [],
-      missingFacts: [],
-      assessments: [],
-      cautions: ["This competition build supports four frozen travel-disruption journeys."],
-      nextActions: []
-    };
-
-    return Response.json(response);
+  if (scopeIssueType && scopeIssueType !== "unknown" && !isMvpIssueType(scopeIssueType)) {
+    return outOfScopeResponse();
   }
 
   if (body?.facts !== undefined) {

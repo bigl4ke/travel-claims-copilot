@@ -16,7 +16,7 @@ export function normalizeIncidentInput(value: unknown): IncidentNormalization | 
   if (CANONICAL_INCIDENTS.includes(value as CanonicalIncident)) {
     return { incident: value as CanonicalIncident, legacy: false, needsSubtype: false };
   }
-  if (value in aliases) {
+  if (Object.prototype.hasOwnProperty.call(aliases, value)) {
     return {
       incident: aliases[value as keyof typeof aliases],
       legacy: true,
