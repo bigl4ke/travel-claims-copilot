@@ -80,18 +80,18 @@ Request approval to activate/install Node `22.14.0`, npm `10.9.2`, install the e
 @playwright/test@1.55.0
 @typescript-eslint/eslint-plugin@7.18.0
 @typescript-eslint/parser@7.18.0
-eslint-config-airbnb@19.0.4
+eslint-config-airbnb-base@15.0.0
 eslint-config-airbnb-typescript@18.0.0
 eslint-config-prettier@9.1.0
 eslint-plugin-import@2.31.0
 eslint-plugin-jsx-a11y@6.10.2
 eslint-plugin-react@7.37.5
-eslint-plugin-react-hooks@4.6.2
+eslint-plugin-react-hooks@5.2.0
 prettier@3.6.2
 tsx@4.20.3
 ```
 
-`eslint-plugin-react-hooks@4.6.2` is intentional: `eslint-config-airbnb@19.0.4` declares the peer range `^4.3.0`. Do not install 5.x through `--force` or `--legacy-peer-deps`.
+Use `airbnb-base` plus `airbnb-typescript/base` for Airbnb's base and TypeScript rules. Next 15's `next/core-web-vitals` owns React, JSX accessibility, and Hooks rules and requires `eslint-plugin-react-hooks@5.2.0`; do not combine it with full `eslint-config-airbnb@19.0.4`, whose Hooks 4.x peer range is incompatible. Never bypass this boundary with `--force` or `--legacy-peer-deps`.
 
 - [ ] **Step 3: Pin runtime, scripts, and formatting rules**
 
@@ -128,9 +128,8 @@ Use this exact lint/format baseline:
   "parser": "@typescript-eslint/parser",
   "parserOptions": { "project": "./tsconfig.json" },
   "extends": [
-    "airbnb",
-    "airbnb/hooks",
-    "airbnb-typescript",
+    "airbnb-base",
+    "airbnb-typescript/base",
     "next/core-web-vitals",
     "prettier"
   ],
@@ -166,7 +165,7 @@ Use this exact lint/format baseline:
 Use Node `22.14.0`, then run:
 
 ```bash
-npm install --save-exact --save-dev @playwright/test@1.55.0 @typescript-eslint/eslint-plugin@7.18.0 @typescript-eslint/parser@7.18.0 eslint-config-airbnb@19.0.4 eslint-config-airbnb-typescript@18.0.0 eslint-config-prettier@9.1.0 eslint-plugin-import@2.31.0 eslint-plugin-jsx-a11y@6.10.2 eslint-plugin-react@7.37.5 eslint-plugin-react-hooks@4.6.2 prettier@3.6.2 tsx@4.20.3
+npm install --save-exact --save-dev @playwright/test@1.55.0 @typescript-eslint/eslint-plugin@7.18.0 @typescript-eslint/parser@7.18.0 eslint-config-airbnb-base@15.0.0 eslint-config-airbnb-typescript@18.0.0 eslint-config-prettier@9.1.0 eslint-plugin-import@2.31.0 eslint-plugin-jsx-a11y@6.10.2 eslint-plugin-react@7.37.5 eslint-plugin-react-hooks@5.2.0 prettier@3.6.2 tsx@4.20.3
 ```
 
 Then run:
