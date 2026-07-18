@@ -36,6 +36,10 @@ function normalizeCorrection(correction: UserFactEdit | undefined): UserFactEdit
   ) {
     throw new Error("invalid_user_fact_edit");
   }
+  const correctionKeys = Object.keys(correction as unknown as Record<string, unknown>);
+  if (correctionKeys.some((key) => key !== "set" && key !== "clear")) {
+    throw new Error("invalid_user_fact_edit");
+  }
 
   const parsedSet = parseRawFactPatch({ set: correction.set });
   if (!parsedSet.success) {
@@ -216,7 +220,7 @@ export function mergeRawFacts(input: MergeRawFactsInput): MergeRawFactsResult {
     state,
     baseRevision: input.baseRevision,
     changedFields,
-    conflicts,
-    unresolvedFields
+    conflicts: cloneConflicts(conflicts),
+    unresolvedFields: [...unresolvedFields]
   };
 }

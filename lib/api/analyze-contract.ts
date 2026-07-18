@@ -126,6 +126,12 @@ function parseConflictCandidate(
   };
 }
 
+function rawFactValuesEqual(left: RawFactValue, right: RawFactValue): boolean {
+  return Array.isArray(left) && Array.isArray(right)
+    ? left.length === right.length && left.every((item, index) => item === right[index])
+    : left === right;
+}
+
 function parseConflicts(value: unknown, errors: string[]): FactConflict[] {
   if (!Array.isArray(value)) {
     errors.push("prior.conflicts must be an array");
@@ -140,8 +146,8 @@ function parseConflicts(value: unknown, errors: string[]): FactConflict[] {
       hasOnlyKeys(candidate, ["field", "candidates"], path, errors);
       if (typeof candidate.field !== "string" || !rawFactPathSet.has(candidate.field)) {
         errors.push(`${path}.field is not an allowed raw fact path`);
-      } else if (!Array.isArray(candidate.candidates) || candidate.candidates.length === 0) {
-        errors.push(`${path}.candidates must be a nonempty array`);
+      } else if (!Array.isArray(candidate.candidates) || candidate.candidates.length !== 2) {
+        errors.push(`${path}.candidates must contain exactly two candidates`);
       } else {
         const field = candidate.field as RawFactPath;
         const parsedCandidates = candidate.candidates
@@ -149,11 +155,27 @@ function parseConflicts(value: unknown, errors: string[]): FactConflict[] {
             parseConflictCandidate(item, field, `${path}.candidates.${candidateIndex}`, errors)
           )
           .filter((item): item is FactConflict["candidates"][number] => item !== undefined);
-        if (parsedCandidates.length === candidate.candidates.length) {
+        const candidateSources = new Set(parsedCandidates.map(({ source }) => source));
+        const hasBothSources = conflictSources.every((source) => candidateSources.has(source));
+        if (parsedCandidates.length === 2 && !hasBothSources) {
+          errors.push(`${path}.candidates must contain one candidate from each extractor`);
+        } else if (
+          parsedCandidates.length === 2 &&
+          rawFactValuesEqual(parsedCandidates[0].value, parsedCandidates[1].value)
+        ) {
+          errors.push(`${path}.candidates must contain different values`);
+        } else if (parsedCandidates.length === candidate.candidates.length) {
           conflicts.push({ field, candidates: parsedCandidates });
         }
       }
     }
+  });
+  const seenFields = new Set<RawFactPath>();
+  conflicts.forEach(({ field }) => {
+    if (seenFields.has(field)) {
+      errors.push(`prior.conflicts contains duplicate field ${field}`);
+    }
+    seenFields.add(field);
   });
   return conflicts;
 }
@@ -198,6 +220,11 @@ function parseClaimState(value: unknown, errors: string[]): ClaimState | undefin
   const provenance = parseProvenance(value.provenance, revision, errors);
   const conflicts = parseConflicts(value.conflicts, errors);
   const unresolvedFields = parseUnresolvedFields(value.unresolvedFields, errors);
+  conflicts.forEach(({ field }) => {
+    if (!unresolvedFields.includes(field)) {
+      errors.push(`prior conflict field ${field} must be unresolved`);
+    }
+  });
   if (!facts.success || !isNonNegativeInteger(value.revision)) return undefined;
   return { facts: facts.data, provenance, revision, conflicts, unresolvedFields };
 }
@@ -298,7 +325,7 @@ export function parseAnalyzeClaimRequest(value: unknown): AnalyzeClaimRequestPar
   return {
     success: true,
     data: {
-      message: correction ? "" : value.message.trim(),
+      message: correction ? "" : value.message,
       prior,
       ...(correction ? { correction } : {}),
       baseRevision: value.baseRevision,

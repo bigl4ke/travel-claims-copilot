@@ -3,6 +3,7 @@ import { classifyInput } from "../classifier";
 import { inferRouteLocationsValue, findCanonicalProviderMatch } from "../domain/context-resolver";
 import {
   CANONICAL_INCIDENTS,
+  RAW_FACT_PATHS,
   type ExtractionProvider,
   type RawClaimFacts,
   type RawFactPatch,
@@ -80,6 +81,19 @@ function locationPatch(
   };
 }
 
+function hasExplicitConfirmedHotelReservation(message: string): boolean {
+  if (
+    /never (?:received|got)(?: a)?(?: booking)? confirmation|no booking confirmation|not (?:a )?confirmed (?:booking|reservation)|(?:booking|reservation) was not confirmed|未收到.*确认|没有收到.*确认|预订未确认/i.test(
+      message
+    )
+  ) {
+    return false;
+  }
+  return /confirmed (?:booking|reservation)|(?:booking|reservation) confirmation|received(?: a)?(?: booking)? confirmation|预订已确认|确认预订|收到.*确认/i.test(
+    message
+  );
+}
+
 export class LocalRawFactExtractor implements RawFactExtractor {
   readonly provider = "local" as const;
 
@@ -124,11 +138,7 @@ export class LocalRawFactExtractor implements RawFactExtractor {
     if (extracted.loyaltyStatus) set.loyaltyStatus = extracted.loyaltyStatus;
     if (set.incidentType === "hotel_walk") {
       set.wasWalked = true;
-      if (
-        /confirmed reservation|confirmed booking|I (?:booked|reserved)|我订了|确认预订/i.test(
-          input.message
-        )
-      ) {
+      if (hasExplicitConfirmedHotelReservation(input.message)) {
         set.confirmedHotelReservation = true;
       }
     }
@@ -142,6 +152,16 @@ legal-regime, controllability, scenario, or other derived fields. Do not copy pr
 patch unless the current message supplies a new value. null means no new value and never clears an
 existing value. Provider and operating carrier are distinct; set operatingCarrier only when the
 current message explicitly identifies the actual operating carrier.`;
+
+const rawFactPatchStructuredOutputJsonSchema = {
+  ...rawFactPatchJsonSchema,
+  properties: {
+    set: {
+      ...rawFactPatchJsonSchema.properties.set,
+      required: [...RAW_FACT_PATHS]
+    }
+  }
+} as const;
 
 export class OpenAIRawFactExtractor implements RawFactExtractor {
   readonly provider = "openai" as const;
@@ -157,7 +177,7 @@ export class OpenAIRawFactExtractor implements RawFactExtractor {
   async extract(input: RawFactExtractionInput): Promise<RawFactPatch> {
     const value = await this.client.generate<unknown>({
       schemaName: "raw_fact_patch",
-      schema: rawFactPatchJsonSchema as unknown as Record<string, unknown>,
+      schema: rawFactPatchStructuredOutputJsonSchema as unknown as Record<string, unknown>,
       instructions: rawFactExtractionInstructions,
       input: JSON.stringify({
         currentMessage: input.message,

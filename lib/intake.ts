@@ -11,7 +11,7 @@ import {
 import type { ClaimState, RawClaimFacts } from "./domain/claim-contract";
 import { resolveClaimContext } from "./domain/context-resolver";
 import { mergeRawFacts } from "./domain/fact-merge";
-import { emptyRawClaimFacts } from "./domain/raw-fact-schema";
+import { buildResolutionFacts, emptyRawClaimFacts } from "./domain/raw-fact-schema";
 import type { StructuredOutputClient } from "./llm";
 import {
   LocalRawFactExtractor,
@@ -75,7 +75,7 @@ export async function processClaimTurn(
   if (!request.correction) {
     const input = extractionInput(request);
     deterministicPatch = await dependencies.localExtractor.extract(input);
-    if (dependencies.openaiExtractor) {
+    if (request.requestedMode === "gpt" && dependencies.openaiExtractor) {
       openaiPatch = await dependencies.openaiExtractor.extract(input);
     }
   }
@@ -90,7 +90,12 @@ export async function processClaimTurn(
   return {
     baseRevision: merged.baseRevision,
     claimState: merged.state,
-    status: context.scenarios.status === "needs_information" ? "needs_information" : "ready"
+    status:
+      merged.conflicts.length > 0 ||
+      merged.unresolvedFields.length > 0 ||
+      context.scenarios.status === "needs_information"
+        ? "needs_information"
+        : "ready"
   };
 }
 
@@ -269,16 +274,17 @@ export async function processIntake(
     extractionMode = "deterministic";
     warning = "llm_fallback_used";
   }
-  const facts = rawFactsToLegacyFacts(response.claimState.facts);
+  const facts = rawFactsToLegacyFacts(buildResolutionFacts(response.claimState));
   const missingFields = getMissingClaimFields(facts);
+  const needsInformation =
+    missingFields.length > 0 || response.claimState.unresolvedFields.length > 0;
   return {
-    status: missingFields.length === 0 ? "ready" : "needs_info",
+    status: needsInformation ? "needs_info" : "ready",
     facts,
     missingFields,
-    question:
-      missingFields.length > 0
-        ? questionForMissingFields(missingFields, isChinese(message), facts)
-        : null,
+    question: needsInformation
+      ? questionForMissingFields(missingFields, isChinese(message), facts)
+      : null,
     extractionMode,
     ...(warning ? { warning } : {})
   };
@@ -305,16 +311,14 @@ export function createIntakePostHandler(dependencies: ProcessClaimTurnDependenci
       return Response.json({ error: "Invalid JSON request." }, { status: 400 });
     }
     if (isCanonicalShape(body)) {
+      const parsed = parseAnalyzeClaimRequest(body);
+      if (!parsed.success) {
+        return Response.json({ error: "Invalid canonical intake request." }, { status: 400 });
+      }
       try {
-        return Response.json(await processClaimTurn(body, dependencies));
-      } catch (error) {
-        return Response.json(
-          {
-            error: "Invalid canonical intake request.",
-            details: error instanceof Error ? error.message : "invalid_analyze_claim_request"
-          },
-          { status: 400 }
-        );
+        return Response.json(await processClaimTurn(parsed.data, dependencies));
+      } catch {
+        return Response.json({ error: "Intake processing failed." }, { status: 500 });
       }
     }
     if (!hasOwn(body, "facts")) {
@@ -328,18 +332,19 @@ export function createIntakePostHandler(dependencies: ProcessClaimTurnDependenci
     if (body.facts !== null) {
       const parsed = parseClaimFacts(body.facts);
       if (!parsed.success) {
-        return Response.json(
-          { error: "Invalid existing claim facts.", details: parsed.errors },
-          { status: 400 }
-        );
+        return Response.json({ error: "Invalid existing claim facts." }, { status: 400 });
       }
       currentFacts = parsed.data;
     }
-    return Response.json(
-      await processIntake(message, currentFacts, {
-        llmClient: null,
-        localExtractor: dependencies.localExtractor
-      })
-    );
+    try {
+      return Response.json(
+        await processIntake(message, currentFacts, {
+          llmClient: null,
+          localExtractor: dependencies.localExtractor
+        })
+      );
+    } catch {
+      return Response.json({ error: "Intake processing failed." }, { status: 500 });
+    }
   };
 }

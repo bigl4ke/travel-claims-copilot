@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { StructuredOutputClient } from "../../lib/llm";
+import { RAW_FACT_PATHS } from "../../lib/domain/claim-contract";
 import {
   LocalRawFactExtractor,
   OpenAIRawFactExtractor,
@@ -96,6 +97,28 @@ describe("LocalRawFactExtractor", () => {
     expect(patch.set).not.toHaveProperty("provider");
     expect(patch.set).not.toHaveProperty("operatingCarrier");
   });
+
+  it.each([
+    "I booked a Marriott room but never received confirmation, and the hotel had no room.",
+    "我订了万豪，但一直没有收到确认，到店后没有房间。"
+  ])(
+    "does not infer a confirmed hotel reservation from an unconfirmed booking: %s",
+    async (message) => {
+      const patch = await new LocalRawFactExtractor().extract(extractionInput(message));
+
+      expect(patch.set.incidentType).toBe("hotel_walk");
+      expect(patch.set.wasWalked).toBe(true);
+      expect(patch.set).not.toHaveProperty("confirmedHotelReservation");
+    }
+  );
+
+  it("accepts an explicitly confirmed hotel reservation", async () => {
+    const patch = await new LocalRawFactExtractor().extract(
+      extractionInput("I received a booking confirmation, but the Marriott had no room.")
+    );
+
+    expect(patch.set.confirmedHotelReservation).toBe(true);
+  });
 });
 
 describe("OpenAIRawFactExtractor", () => {
@@ -134,6 +157,8 @@ describe("OpenAIRawFactExtractor", () => {
       additionalProperties: false,
       required: ["set"]
     });
+    expect(request.schema.properties.set.required).toEqual(RAW_FACT_PATHS);
+    expect(new Set(request.schema.properties.set.required).size).toBe(50);
     const outbound = JSON.parse(request.input);
     expect(outbound).toEqual({
       currentMessage: "I did not volunteer.",

@@ -351,6 +351,53 @@ describe("revisioned raw fact merge", () => {
     ).toThrowError("invalid_raw_fact_path");
   });
 
+  it("fails closed on unknown UserFactEdit keys when callers bypass the parser", () => {
+    expect(() =>
+      mergeRawFacts({
+        prior: claimState(),
+        correction: {
+          set: { provider: "Delta" },
+          clear: [],
+          derivedOverride: true
+        } as never,
+        deterministicPatch: { set: {} },
+        baseRevision: 0
+      })
+    ).toThrowError("invalid_user_fact_edit");
+  });
+
+  it("accepts current single-candidate evidence over a prior 20-minute value", () => {
+    const result = mergeRawFacts({
+      prior: claimState({ finalArrivalDelayMinutes: 20 }, 4),
+      deterministicPatch: { set: { finalArrivalDelayMinutes: 240 } },
+      baseRevision: 4
+    });
+
+    expect(result.state.facts.finalArrivalDelayMinutes).toBe(240);
+    expect(result.state.revision).toBe(5);
+    expect(result.changedFields).toEqual(["finalArrivalDelayMinutes"]);
+    expect(result.state.provenance.finalArrivalDelayMinutes).toEqual({
+      source: "deterministic_extraction",
+      factsRevision: 5
+    });
+  });
+
+  it("does not share mutable conflict or unresolved arrays across result views", () => {
+    const result = mergeRawFacts({
+      prior: claimState({ provider: "United" }),
+      deterministicPatch: { set: { provider: "Delta" } },
+      openaiPatch: { set: { provider: "Air France" } },
+      baseRevision: 0
+    });
+
+    expect(result.conflicts).not.toBe(result.state.conflicts);
+    expect(result.unresolvedFields).not.toBe(result.state.unresolvedFields);
+    result.conflicts.splice(0);
+    result.unresolvedFields.splice(0);
+    expect(result.state.conflicts).toHaveLength(1);
+    expect(result.state.unresolvedFields).toEqual(["provider"]);
+  });
+
   it("preserves a conflict across a stateless JSON round trip and unrelated turn", () => {
     const turnOne = mergeRawFacts({
       prior: claimState({ deniedBoardingKind: "voluntary" }, 6),
