@@ -5,8 +5,20 @@ import policies from "../../../data/policies.json";
 import scripts from "../../../data/scripts.json";
 import { buildAnalysisFromFacts, buildAnalysisResult } from "../../../lib/analyze";
 import { getMissingClaimFields, parseClaimFacts } from "../../../lib/claimFacts";
-import { normalizeIssueType } from "../../../lib/issueTaxonomy";
+import { normalizeIncidentInput } from "../../../lib/domain/incident-taxonomy";
+import type { ScenarioId, WorkflowStatus } from "../../../lib/domain/claim-contract";
+import { isMvpIssueType, normalizeIssueType } from "../../../lib/issueTaxonomy";
 import type { Case, Policy, Script } from "../../../lib/types";
+
+type LegacySafeScopeResponse = {
+  status: Extract<WorkflowStatus, "needs_information" | "out_of_scope">;
+  primaryScenario: ScenarioId | null;
+  scenarioIds: ScenarioId[];
+  missingFacts: string[];
+  assessments: unknown[];
+  cautions: string[];
+  nextActions: string[];
+};
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
@@ -18,7 +30,37 @@ export async function POST(request: Request) {
   } | null;
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const caseId = typeof body?.caseId === "string" ? body.caseId.trim() : "";
-  const issueType = normalizeIssueType(body?.issueType ?? body?.selectedIssueType);
+  const incidentInput = body?.issueType ?? body?.selectedIssueType;
+  const incidentNormalization = normalizeIncidentInput(incidentInput);
+  const issueType = incidentNormalization?.incident ?? normalizeIssueType(incidentInput);
+
+  if (incidentNormalization?.needsSubtype) {
+    const response: LegacySafeScopeResponse = {
+      status: "needs_information",
+      primaryScenario: null,
+      scenarioIds: [],
+      missingFacts: ["incidentType"],
+      assessments: [],
+      cautions: ["Specify whether the EU/UK airline disruption was a delay or cancellation."],
+      nextActions: []
+    };
+
+    return Response.json(response);
+  }
+
+  if (issueType && issueType !== "unknown" && !isMvpIssueType(issueType)) {
+    const response: LegacySafeScopeResponse = {
+      status: "out_of_scope",
+      primaryScenario: null,
+      scenarioIds: [],
+      missingFacts: [],
+      assessments: [],
+      cautions: ["This competition build supports four frozen travel-disruption journeys."],
+      nextActions: []
+    };
+
+    return Response.json(response);
+  }
 
   if (body?.facts !== undefined) {
     const parsedFacts = parseClaimFacts(body.facts);

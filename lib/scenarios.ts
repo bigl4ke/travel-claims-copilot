@@ -1,5 +1,11 @@
 import { getIssueAliases, isMvpIssueType, issueLabels, normalizeIssueType } from "./issueTaxonomy";
+import { getPublicScenarioCatalog as getCanonicalPublicScenarioCatalog } from "./domain/claim-contract";
+import type { PublicScenarioSummary } from "./domain/claim-contract";
 import type { Case, IssueType, Policy, ScenarioSummary, Script } from "./types";
+
+export function getPublicScenarioCatalog(): readonly PublicScenarioSummary[] {
+  return getCanonicalPublicScenarioCatalog();
+}
 
 function getKnownIssueTypes(cases: Case[]): IssueType[] {
   return Array.from(

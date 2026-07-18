@@ -1,11 +1,8 @@
+import { CANONICAL_INCIDENTS } from "./domain/claim-contract";
+import { normalizeIncidentInput } from "./domain/incident-taxonomy";
 import type { IssueType, MvpIssueType } from "./types";
 
-export const MVP_ISSUE_TYPES = [
-  "hotel_walk",
-  "airline_delay",
-  "airline_cancellation",
-  "denied_boarding"
-] as const satisfies readonly MvpIssueType[];
+export const MVP_ISSUE_TYPES = CANONICAL_INCIDENTS satisfies readonly MvpIssueType[];
 
 const mvpIssueTypeSet = new Set<IssueType>(MVP_ISSUE_TYPES);
 
@@ -28,40 +25,18 @@ export const issueLabels: Record<IssueType, string> = {
 };
 
 const issueAliases: Partial<Record<IssueType, string[]>> = {
-  hotel_walk: ["hotel_walk"],
-  airline_cancellation: [
-    "airline_cancellation",
-    "controllable_airline_cancellation",
-    "controllable_airline_delay",
-    "eu261_delay_or_cancellation"
-  ],
-  airline_delay: [
-    "airline_delay",
-    "controllable_airline_delay",
-    "controllable_airline_cancellation",
-    "eu261_delay_or_cancellation"
-  ],
   baggage_delay: ["baggage_delay", "airline_baggage_not_checked"],
-  denied_boarding: ["denied_boarding"],
   unknown: []
 };
 
-const legacyIssueTypes: Record<string, IssueType> = {
-  controllable_airline_cancellation: "airline_cancellation",
-  controllable_airline_delay: "airline_delay",
-  eu261_delay_or_cancellation: "airline_delay"
-};
-
 export function normalizeIssueType(value: unknown): IssueType | undefined {
-  if (typeof value !== "string") {
-    return undefined;
+  const normalizedIncident = normalizeIncidentInput(value);
+
+  if (normalizedIncident) {
+    return normalizedIncident.incident ?? undefined;
   }
 
-  if (value in legacyIssueTypes) {
-    return legacyIssueTypes[value];
-  }
-
-  return value in issueLabels ? (value as IssueType) : undefined;
+  return typeof value === "string" && value in issueLabels ? (value as IssueType) : undefined;
 }
 
 export function getIssueAliases(issueType: IssueType): string[] {
