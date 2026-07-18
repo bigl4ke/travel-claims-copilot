@@ -7,8 +7,8 @@ import {
 } from "../../lib/domain/claim-contract";
 import { resolveClaimContext } from "../../lib/domain/context-resolver";
 
-export type DeepPartial<T> = T extends readonly (infer Item)[]
-  ? DeepPartial<Item>[]
+export type DeepPartial<T> = T extends readonly unknown[]
+  ? T
   : T extends object
     ? { [Key in keyof T]?: DeepPartial<T[Key]> }
     : T;

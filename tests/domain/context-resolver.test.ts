@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { emptyClaimFacts, parseClaimFacts } from "../../lib/claimFacts";
 import { RAW_FACT_PATHS, type RawFactPath } from "../../lib/domain/claim-contract";
@@ -20,6 +20,7 @@ import {
 } from "../../lib/domain/raw-fact-schema";
 import {
   claimState,
+  type DeepPartial,
   rawFacts,
   resolvedContext as fixtureResolvedContext
 } from "../fixtures/raw-claims";
@@ -45,6 +46,23 @@ describe("raw fact schema", () => {
     expect(fixtureResolvedContext({ incidentType: "hotel_walk" }).raw.facts).toEqual(
       rawFacts({ incidentType: "hotel_walk" })
     );
+  });
+
+  it("keeps array and tuple types intact in fixture deep partials", () => {
+    type FixtureShape = {
+      mutableItems: string[];
+      readonlyItems: readonly string[];
+      tuple: readonly [string, { nested: number }];
+      object: { nested: number };
+    };
+    type ExpectedPartial = {
+      mutableItems?: string[];
+      readonlyItems?: readonly string[];
+      tuple?: readonly [string, { nested: number }];
+      object?: { nested?: number };
+    };
+
+    expectTypeOf<DeepPartial<FixtureShape>>().toEqualTypeOf<ExpectedPartial>();
   });
 
   it("builds fixture state without sharing supplied mutable authority", () => {
@@ -155,6 +173,23 @@ describe("raw fact schema", () => {
       ])
     );
     expect(parsed.errors).toHaveLength(7);
+  });
+
+  it("accumulates array length and item errors without mutating the input", () => {
+    const expenses: unknown[] = Array.from({ length: 20 }, (_, index) => `expense-${index}`);
+    expenses.push(42);
+    const originalExpenses = structuredClone(expenses);
+    const input: unknown = { ...rawFacts(), expenses };
+
+    const parsed = parseRawClaimFacts(input);
+
+    expect(parsed.success).toBe(false);
+    if (parsed.success) throw new Error("expected invalid raw facts");
+    expect(parsed.errors.filter((error) => error.startsWith("expenses"))).toEqual([
+      "expenses must contain at most 20 items",
+      "expenses items must be strings of at most 256 Unicode code points"
+    ]);
+    expect(expenses).toEqual(originalExpenses);
   });
 });
 
@@ -292,6 +327,25 @@ describe("server-owned context", () => {
   ] as const)("resolves %s to %s controllability", (reason, expected) => {
     expect(resolveControllability(reason).value).toBe(expected);
   });
+
+  it.each([
+    ["eu261", "CDG"],
+    ["uk261", "LHR"]
+  ] as const)(
+    "keeps %s unresolved when a qualifying destination and nonmatching carrier have an unknown origin",
+    (applicability, destinationAirport) => {
+      const context = fixtureResolvedContext({
+        incidentType: "airline_cancellation",
+        destination: { airport: destinationAirport },
+        operatingCarrier: "United"
+      });
+
+      expect(context.jurisdiction[applicability].value).toBe("unknown");
+      expect(context.scenarios.status).toBe("needs_information");
+      expect(context.scenarios.scenarioIds).toEqual([]);
+      expect(context.scenarios.missingFacts).toEqual(["origin.airport"]);
+    }
+  );
 
   it("projects canonical regions through the legacy parser instead of trusting injections", () => {
     const legacy = {

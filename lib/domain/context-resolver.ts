@@ -604,6 +604,9 @@ function resolveApplicability(
     if (carrierRegion === null) {
       return resolved("unknown", "insufficient_facts", "low", ["operating_carrier_region_unknown"]);
     }
+    if (originRegion === null) {
+      return resolved("unknown", "insufficient_facts", "low", ["origin_region_unknown"]);
+    }
     return resolved("does_not_apply", "scenario_rule", "high", ["inbound_carrier_excluded"]);
   }
   if (originRegion === null || destinationRegion === null) {

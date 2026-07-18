@@ -161,12 +161,17 @@ function parseStringArray(value: unknown, path: string, errors: string[]): strin
     errors.push(`${path} must be an array of strings`);
     return [];
   }
-  if (value.length > 20) {
+  const exceedsMaximumItems = value.length > 20;
+  if (exceedsMaximumItems) {
     errors.push(`${path} must contain at most 20 items`);
-    return [];
   }
-  if (value.some((item) => typeof item !== "string" || [...item.trim()].length > 256)) {
+  const hasInvalidItem = value.some(
+    (item) => typeof item !== "string" || [...item.trim()].length > 256
+  );
+  if (hasInvalidItem) {
     errors.push(`${path} items must be strings of at most 256 Unicode code points`);
+  }
+  if (exceedsMaximumItems || hasInvalidItem) {
     return [];
   }
   return [...new Set(value.map((item) => item.trim()).filter(Boolean))];
