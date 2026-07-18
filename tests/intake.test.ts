@@ -55,11 +55,9 @@ describe("deterministic intake fallback", () => {
   });
 
   it("asks a hotel-specific provider question for a Chinese walk report", async () => {
-    const result = await processIntake(
-      "我订了酒店但是到店无房",
-      emptyClaimFacts(),
-      { llmClient: null }
-    );
+    const result = await processIntake("我订了酒店但是到店无房", emptyClaimFacts(), {
+      llmClient: null
+    });
 
     expect(result.facts.issueType).toBe("hotel_walk");
     expect(result.missingFields).toEqual(["provider"]);
@@ -185,9 +183,7 @@ describe("OpenAI Responses client", () => {
         JSON.stringify({
           output: [
             {
-              content: [
-                { type: "output_text", text: JSON.stringify(emptyClaimFacts()) }
-              ]
+              content: [{ type: "output_text", text: JSON.stringify(emptyClaimFacts()) }]
             }
           ]
         }),
@@ -305,9 +301,7 @@ describe("LLM provider configuration", () => {
     };
 
     expect(resolveLlmProvider(env)).toBe("deepseek");
-    expect(createStructuredOutputClientFromEnv(env)).toBeInstanceOf(
-      DeepSeekChatCompletionsClient
-    );
+    expect(createStructuredOutputClientFromEnv(env)).toBeInstanceOf(DeepSeekChatCompletionsClient);
   });
 
   it("respects an explicit OpenAI provider", () => {

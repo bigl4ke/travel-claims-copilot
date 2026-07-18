@@ -16,23 +16,23 @@ async function readJson(relativePath) {
 }
 
 function requireFields(record, fields, label) {
-  for (const field of fields) {
+  fields.forEach((field) => {
     if (!(field in record)) {
       throw new Error(`${label} is missing required field ${field}.`);
     }
-  }
+  });
 }
 
 function requireUnique(records, field, label) {
   const seen = new Set();
 
-  for (const record of records) {
+  records.forEach((record) => {
     const value = record[field];
     if (seen.has(value)) {
       throw new Error(`${label} has duplicate ${field}: ${value}`);
     }
     seen.add(value);
-  }
+  });
 }
 
 function requireEnum(value, allowed, label) {
@@ -41,12 +41,7 @@ function requireEnum(value, allowed, label) {
   }
 }
 
-const mvpIncidentTypes = [
-  "hotel_walk",
-  "airline_delay",
-  "airline_cancellation",
-  "denied_boarding"
-];
+const mvpIncidentTypes = ["hotel_walk", "airline_delay", "airline_cancellation", "denied_boarding"];
 const legacyLegalIssueTypes = [
   "controllable_airline_delay",
   "controllable_airline_cancellation",
@@ -109,7 +104,7 @@ const caseFields = [
 requireUnique(cases, "case_id", "cases.json");
 
 const communityUrls = new Set();
-for (const item of cases) {
+cases.forEach((item) => {
   const label = `case ${item.case_id ?? "<unknown>"}`;
   requireFields(item, caseFields, label);
   requireEnum(item.source_type, ["community_dp", "user_submitted", "synthetic_example"], label);
@@ -122,11 +117,13 @@ for (const item of cases) {
     throw new Error(`${label}.issue_type must describe the incident, not a legal regime.`);
   }
 
-  for (const field of ["requested_compensation", "evidence_used", "escalation_path", "review_notes"]) {
-    if (!Array.isArray(item[field])) {
-      throw new Error(`${label}.${field} must be an array.`);
+  ["requested_compensation", "evidence_used", "escalation_path", "review_notes"].forEach(
+    (field) => {
+      if (!Array.isArray(item[field])) {
+        throw new Error(`${label}.${field} must be an array.`);
+      }
     }
-  }
+  );
 
   if (item.source_type === "community_dp") {
     if (!item.source_url.startsWith("https://")) {
@@ -145,10 +142,10 @@ for (const item of cases) {
   if (item.review_status === "approved" && item.issue_type === "unknown") {
     throw new Error(`${label} cannot be approved with an unknown issue type.`);
   }
-}
+});
 
 requireUnique(policies, "policy_id", "policies.json");
-for (const policy of policies) {
+policies.forEach((policy) => {
   requireFields(
     policy,
     [
@@ -173,22 +170,28 @@ for (const policy of policies) {
     `policy ${policy.policy_id ?? "<unknown>"}`
   );
   const label = `policy ${policy.policy_id ?? "<unknown>"}`;
-  for (const field of ["incident_types", "applicable_regions", "applicable_providers"]) {
+  ["incident_types", "applicable_regions", "applicable_providers"].forEach((field) => {
     if (!Array.isArray(policy[field])) {
       throw new Error(`${label}.${field} must be an array.`);
     }
-  }
-  for (const incidentType of policy.incident_types) {
+  });
+  policy.incident_types.forEach((incidentType) => {
     requireEnum(incidentType, mvpIncidentTypes, label);
-  }
-  for (const region of policy.applicable_regions) {
+  });
+  policy.applicable_regions.forEach((region) => {
     requireEnum(region, policyRegions, label);
-  }
+  });
   requireEnum(policy.legal_regime, legalRegimes, label);
   requireEnum(policy.applicability_rule, policyApplicabilityRules, label);
   requireEnum(
     policy.source_type,
-    ["official_policy", "government_regulation", "regulator_guidance", "official_dashboard", "terms"],
+    [
+      "official_policy",
+      "government_regulation",
+      "regulator_guidance",
+      "official_dashboard",
+      "terms"
+    ],
     label
   );
   requireEnum(policy.authority_level, ["high", "medium", "low"], label);
@@ -200,10 +203,10 @@ for (const policy of policies) {
     ["controllable", "uncontrollable", "unknown", "any"],
     label
   );
-}
+});
 
 requireUnique(scripts, "script_id", "scripts.json");
-for (const script of scripts) {
+scripts.forEach((script) => {
   const label = `script ${script.script_id ?? "<unknown>"}`;
   requireFields(
     script,
@@ -222,17 +225,17 @@ for (const script of scripts) {
     ],
     label
   );
-  for (const field of ["incident_types", "applicable_regions"]) {
+  ["incident_types", "applicable_regions"].forEach((field) => {
     if (!Array.isArray(script[field])) {
       throw new Error(`${label}.${field} must be an array.`);
     }
-  }
-  for (const incidentType of script.incident_types) {
+  });
+  script.incident_types.forEach((incidentType) => {
     requireEnum(incidentType, mvpIncidentTypes, label);
-  }
-  for (const region of script.applicable_regions) {
+  });
+  script.applicable_regions.forEach((region) => {
     requireEnum(region, policyRegions, label);
-  }
+  });
   requireEnum(script.applicability_rule, policyApplicabilityRules, label);
   requireEnum(
     script.required_controllability,
@@ -241,10 +244,18 @@ for (const script of scripts) {
   );
   requireEnum(
     script.channel,
-    ["front_desk", "airport_counter", "phone", "chat", "email", "corporate_escalation", "regulator_complaint"],
+    [
+      "front_desk",
+      "airport_counter",
+      "phone",
+      "chat",
+      "email",
+      "corporate_escalation",
+      "regulator_complaint"
+    ],
     label
   );
-}
+});
 
 const statusCounts = Object.fromEntries(
   ["approved", "needs_review", "excluded"].map((status) => [
@@ -253,8 +264,8 @@ const statusCounts = Object.fromEntries(
   ])
 );
 
-console.log(
+process.stdout.write(
   `Validated ${policies.length} policies, ${cases.length} cases (${Object.entries(statusCounts)
     .map(([status, count]) => `${count} ${status}`)
-    .join(", ")}), and ${scripts.length} scripts.`
+    .join(", ")}), and ${scripts.length} scripts.\n`
 );

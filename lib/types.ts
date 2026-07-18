@@ -17,22 +17,11 @@ export type IssueType =
 
 export type MvpIssueType = Extract<
   IssueType,
-  | "hotel_walk"
-  | "airline_cancellation"
-  | "airline_delay"
-  | "denied_boarding"
+  "hotel_walk" | "airline_cancellation" | "airline_delay" | "denied_boarding"
 >;
 
 export type ProviderType = "hotel" | "airline" | "credit_card" | "ota" | "government";
-export type PolicyRegion =
-  | "EU_EEA_CH"
-  | "UK"
-  | "US"
-  | "CA"
-  | "AU"
-  | "CN"
-  | "other"
-  | "global";
+export type PolicyRegion = "EU_EEA_CH" | "UK" | "US" | "CA" | "AU" | "CN" | "other" | "global";
 export type PolicyRouteRegion = Exclude<PolicyRegion, "global">;
 export type LegalRegime =
   | "provider_policy"

@@ -118,14 +118,7 @@ const providerDefinitions: ProviderDefinition[] = [
   {
     provider: "Hyatt",
     providerType: "hotel",
-    terms: [
-      "destination by hyatt",
-      "unbound collection",
-      "hyatt",
-      "andaz",
-      "凯悦",
-      "安达仕"
-    ]
+    terms: ["destination by hyatt", "unbound collection", "hyatt", "andaz", "凯悦", "安达仕"]
   },
   {
     provider: "Hilton",
@@ -189,7 +182,8 @@ export function findProviderMatch(
   const normalized = normalizeProviderText(value).replaceAll("united states", "");
   const match = providerDefinitions
     .filter(
-      (definition) => !providerType || providerType === "unknown" || definition.providerType === providerType
+      (definition) =>
+        !providerType || providerType === "unknown" || definition.providerType === providerType
     )
     .flatMap((definition) =>
       definition.terms.map((term) => ({
@@ -199,8 +193,9 @@ export function findProviderMatch(
       }))
     )
     .filter(({ index }) => index >= 0)
-    .sort((left, right) => left.index - right.index || right.termLength - left.termLength)[0]
-    ?.definition;
+    .sort(
+      (left, right) => left.index - right.index || right.termLength - left.termLength
+    )[0]?.definition;
 
   return match
     ? {

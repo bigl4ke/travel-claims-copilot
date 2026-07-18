@@ -62,8 +62,7 @@ export function buildRetrievalQuery(facts: ExtractedFacts): RetrievalQuery {
       facts.policyRegions && facts.policyRegions.length > 0
         ? Array.from(new Set(facts.policyRegions))
         : policyRegionsFromCountry(facts.country),
-    controllability:
-      facts.controllability ?? controllabilityFromReason(facts.disruptionReason)
+    controllability: facts.controllability ?? controllabilityFromReason(facts.disruptionReason)
   };
 }
 
@@ -114,11 +113,7 @@ export function retrieveKnowledge(
     facts: resolvedFacts,
     query,
     issueAliases: getIssueAliases(resolvedFacts.issueType),
-    officialBasis: searchPolicies(
-      query,
-      policies,
-      limits.policyLimit ?? defaultLimits.policyLimit
-    ),
+    officialBasis: searchPolicies(query, policies, limits.policyLimit ?? defaultLimits.policyLimit),
     similarCases: searchCases(query, cases, limits.caseLimit ?? defaultLimits.caseLimit),
     scripts: searchScripts(query, scripts, limits.scriptLimit ?? defaultLimits.scriptLimit),
     selectedCase

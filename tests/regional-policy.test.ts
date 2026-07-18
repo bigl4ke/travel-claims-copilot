@@ -39,6 +39,13 @@ function analyzeRoute({
   destination: ClaimLocation;
   reason?: ClaimDisruptionReason;
 }) {
+  let disruptionType: "delay" | "cancellation" | "denied_boarding" = "cancellation";
+  if (issueType === "airline_delay") {
+    disruptionType = "delay";
+  } else if (issueType === "denied_boarding") {
+    disruptionType = "denied_boarding";
+  }
+
   const facts = normalizeClaimFacts({
     ...emptyClaimFacts(),
     issueType,
@@ -47,12 +54,7 @@ function analyzeRoute({
     operatingCarrier: provider,
     origin,
     destination,
-    disruptionType:
-      issueType === "airline_delay"
-        ? "delay"
-        : issueType === "denied_boarding"
-          ? "denied_boarding"
-          : "cancellation",
+    disruptionType,
     disruptionReason: reason,
     arrivalDelayMinutes: issueType === "airline_delay" ? 240 : null,
     deniedBoardingKind: issueType === "denied_boarding" ? "involuntary" : "unknown",
@@ -87,9 +89,7 @@ describe("regional policy applicability", () => {
     expect(result.officialBasis.map((policy) => policy.policy_id)).toContain(
       "uk261_assimilated_regulation_261_2004"
     );
-    expect(result.scripts.map((script) => script.script_id)).toContain(
-      "uk261_claim_email_en"
-    );
+    expect(result.scripts.map((script) => script.script_id)).toContain("uk261_claim_email_en");
   });
 
   it("does not apply UK261 to an inbound flight on an unconfirmed non-UK/EU carrier", () => {
@@ -101,9 +101,7 @@ describe("regional policy applicability", () => {
     });
 
     expect(result.legalRegimes).not.toContain("UK261");
-    expect(result.scripts.map((script) => script.script_id)).not.toContain(
-      "uk261_claim_email_en"
-    );
+    expect(result.scripts.map((script) => script.script_id)).not.toContain("uk261_claim_email_en");
   });
 
   it("applies EU261 to an EU-carrier arrival but not a non-EU-carrier arrival", () => {
@@ -150,7 +148,9 @@ describe("regional policy applicability", () => {
     });
 
     expect(result.legalRegimes).toEqual(["AU_ACL"]);
-    expect(result.cautions.join(" ")).toContain("does not create an EU-style fixed compensation table");
+    expect(result.cautions.join(" ")).toContain(
+      "does not create an EU-style fixed compensation table"
+    );
   });
 
   it("retrieves both Chinese passenger-service regulations for a mainland departure", () => {

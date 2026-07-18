@@ -6,7 +6,7 @@
 
 **Architecture:** The work is split into trustworthy domain/API, source-transparent product experience, engineering/evaluation/deployment, and Build Week evidence. Cross-plan interfaces below are frozen before UI and release work; each numbered task ends with targeted verification and a rollback-friendly commit.
 
-**Tech Stack:** Next.js 15.5.18, React 19.2.6, TypeScript 5.9.3, Node.js 22.14.0, npm 10.9.2, Vitest 4.1.10, Playwright 1.55.0, Tailwind CSS 3.4, OpenAI Responses API, GPT-5.6 Luna, local JSON knowledge files, Vercel.
+**Tech Stack:** Next.js 15.5.18, React 19.2.6, TypeScript 5.5.4, Node.js 22.14.0, npm 10.9.2, Vitest 4.1.10, Playwright 1.55.0, Tailwind CSS 3.4, OpenAI Responses API, GPT-5.6 Luna, local JSON knowledge files, Vercel.
 
 ## Global Constraints
 

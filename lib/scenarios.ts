@@ -1,14 +1,11 @@
-import {
-  getIssueAliases,
-  isMvpIssueType,
-  issueLabels,
-  normalizeIssueType
-} from "./issueTaxonomy";
+import { getIssueAliases, isMvpIssueType, issueLabels, normalizeIssueType } from "./issueTaxonomy";
 import type { Case, IssueType, Policy, ScenarioSummary, Script } from "./types";
 
 function getKnownIssueTypes(cases: Case[]): IssueType[] {
   return Array.from(
-    new Set(cases.filter((item) => item.review_status === "approved").map((item) => item.issue_type))
+    new Set(
+      cases.filter((item) => item.review_status === "approved").map((item) => item.issue_type)
+    )
   )
     .map(normalizeIssueType)
     .filter((issueType): issueType is IssueType => Boolean(issueType))

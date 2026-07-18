@@ -157,9 +157,7 @@ describe("classification safeguards", () => {
   });
 
   it("recognizes a Chinese voluntary-bump description", () => {
-    const facts = classifyInput(
-      "达美航班超售，登机口正在征集自愿改签到第二天航班的乘客。"
-    );
+    const facts = classifyInput("达美航班超售，登机口正在征集自愿改签到第二天航班的乘客。");
 
     expect(facts.issueType).toBe("denied_boarding");
     expect(facts.provider).toBe("Delta");
@@ -181,16 +179,12 @@ describe("retrieval quality controls", () => {
     expect(retrieval.similarCases.map((item) => item.case_id)).toEqual([
       "marriott_walk_synthetic_001"
     ]);
-    expect(retrieval.similarCases.every((item) => item.provider === "Marriott")).toBe(
-      true
-    );
+    expect(retrieval.similarCases.every((item) => item.provider === "Marriott")).toBe(true);
   });
 
   it("selects official policies by incident, jurisdiction, provider, and controllability", () => {
     const euCancellation = retrieveKnowledge(
-      classifyInput(
-        "My Air France flight from Paris was cancelled because of a mechanical issue."
-      ),
+      classifyInput("My Air France flight from Paris was cancelled because of a mechanical issue."),
       policies,
       cases,
       scripts
@@ -215,13 +209,11 @@ describe("retrieval quality controls", () => {
     ]);
     expect(euCancellation.scripts[0]?.script_id).toBe("eu261_claim_email_en");
     expect(
-      euCancellation.scripts.some((script) =>
-        script.applicable_regions.includes("EU_EEA_CH")
-      )
+      euCancellation.scripts.some((script) => script.applicable_regions.includes("EU_EEA_CH"))
     ).toBe(true);
-    expect(
-      usControllableCancellation.officialBasis.map((policy) => policy.policy_id)
-    ).toContain("dot_airline_cancellation_delay_dashboard");
+    expect(usControllableCancellation.officialBasis.map((policy) => policy.policy_id)).toContain(
+      "dot_airline_cancellation_delay_dashboard"
+    );
     expect(
       usControllableCancellation.scripts.every((script) =>
         script.applicable_regions.includes("global")

@@ -160,6 +160,20 @@ export default function Home() {
     setCopiedScriptId(script.script_id);
   }
 
+  let intakeStatus = "Collecting facts";
+  if (isLoading) {
+    intakeStatus = "Reviewing details";
+  } else if (result) {
+    intakeStatus = "Analysis ready";
+  }
+
+  let submitLabel = "Start intake";
+  if (isLoading) {
+    submitLabel = "Reviewing";
+  } else if (facts) {
+    submitLabel = "Continue";
+  }
+
   return (
     <main className="min-h-screen">
       <section className="border-b border-ink/10 bg-paper">
@@ -190,16 +204,16 @@ export default function Home() {
             <div className="flex items-center justify-between border-b border-ink/10 bg-ink px-5 py-3 text-white">
               <p className="text-xs font-semibold uppercase tracking-[0.14em]">Intake transcript</p>
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium">
-                {isLoading ? "Reviewing details" : result ? "Analysis ready" : "Collecting facts"}
+                {intakeStatus}
               </span>
             </div>
 
-            <div className="max-h-96 space-y-4 overflow-y-auto px-5 py-5 md:px-7" aria-live="polite">
+            <div
+              className="max-h-96 space-y-4 overflow-y-auto px-5 py-5 md:px-7"
+              aria-live="polite"
+            >
               {messages.map((item, index) => (
-                <article
-                  className="grid gap-2 md:grid-cols-[92px_1fr]"
-                  key={item.id}
-                >
+                <article className="grid gap-2 md:grid-cols-[92px_1fr]" key={item.id}>
                   <p className="pt-1 text-xs font-semibold uppercase tracking-[0.12em] text-ink/45">
                     {index + 1}. {item.role === "assistant" ? "Copilot" : "You"}
                   </p>
@@ -236,7 +250,7 @@ export default function Home() {
                 type="submit"
                 disabled={isLoading || !draft.trim()}
               >
-                {isLoading ? "Reviewing" : facts ? "Continue" : "Start intake"}
+                {submitLabel}
               </button>
             </form>
           </div>
@@ -251,13 +265,9 @@ export default function Home() {
 
       <section className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-6 md:px-8 lg:grid-cols-[320px_1fr]">
         <aside className="flex flex-col gap-4">
-          <ClaimSnapshot
-            facts={facts}
-            extractionMode={extractionMode}
-            warning={intakeWarning}
-          />
+          <ClaimSnapshot facts={facts} extractionMode={extractionMode} warning={intakeWarning} />
           <SummaryPanel result={result} />
-          {result ? <SuggestedAsks asks={result.suggestedAsks} /> : null}
+          {result ? <SuggestedAsksPanel asks={result.suggestedAsks} /> : null}
         </aside>
 
         <div className="flex flex-col gap-5">
@@ -306,9 +316,7 @@ function ClaimSnapshot({
   return (
     <div className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink/60">
-          Case file
-        </h2>
+        <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink/60">Case file</h2>
         {extractionMode ? (
           <span className="rounded-full bg-paper px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
             {extractionMode === "llm" ? "LLM" : "Local"}
@@ -321,10 +329,7 @@ function ClaimSnapshot({
           <FactRow label="Issue" value={issueLabels[facts.issueType] ?? "Needs more detail"} />
           <FactRow label="Provider" value={facts.provider ?? facts.operatingCarrier ?? "Unknown"} />
           <FactRow label="Route" value={route || "Unknown"} />
-          <FactRow
-            label="Event"
-            value={facts.disruptionType.replaceAll("_", " ")}
-          />
+          <FactRow label="Event" value={facts.disruptionType.replaceAll("_", " ")} />
         </dl>
       ) : (
         <p className="mt-4 text-sm leading-6 text-ink/65">
@@ -395,9 +400,7 @@ function SummaryPanel({ result }: { result: AnalysisResult | null }) {
             </div>
             <div className="flex items-start justify-between gap-3">
               <span className="text-ink/60">Controllability</span>
-              <span className="font-medium capitalize text-ink">
-                {result.controllability}
-              </span>
+              <span className="font-medium capitalize text-ink">{result.controllability}</span>
             </div>
           </div>
         </div>
@@ -410,7 +413,7 @@ function SummaryPanel({ result }: { result: AnalysisResult | null }) {
   );
 }
 
-function SuggestedAsks({ asks }: { asks: SuggestedAsks }) {
+function SuggestedAsksPanel({ asks }: { asks: SuggestedAsks }) {
   const tiers = useMemo(
     () =>
       [
@@ -452,7 +455,10 @@ function PolicySection({ policies }: { policies: Policy[] }) {
       ) : (
         <div className="grid gap-3">
           {policies.map((policy) => (
-            <article className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm" key={policy.policy_id}>
+            <article
+              className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
+              key={policy.policy_id}
+            >
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-ink">{policy.policy_name}</h3>
@@ -487,7 +493,10 @@ function CaseSection({ cases }: { cases: Case[] }) {
       ) : (
         <div className="grid gap-3">
           {cases.map((item) => (
-            <article className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm" key={item.case_id}>
+            <article
+              className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
+              key={item.case_id}
+            >
               <div className="flex flex-col gap-1">
                 <h3 className="text-lg font-semibold text-ink">{item.brand_or_airline}</h3>
                 <p className="text-sm text-ink/60">
@@ -523,7 +532,10 @@ function ScriptSection({
       ) : (
         <div className="grid gap-3">
           {scripts.map((script) => (
-            <article className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm" key={script.script_id}>
+            <article
+              className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
+              key={script.script_id}
+            >
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold capitalize text-ink">
@@ -582,7 +594,10 @@ function TagList({ items }: { items: string[] }) {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
       {items.map((item) => (
-        <span className="rounded-full bg-mint/10 px-3 py-1 text-xs font-medium text-mint" key={item}>
+        <span
+          className="rounded-full bg-mint/10 px-3 py-1 text-xs font-medium text-mint"
+          key={item}
+        >
           {item}
         </span>
       ))}

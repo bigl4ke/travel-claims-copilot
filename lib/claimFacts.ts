@@ -90,11 +90,7 @@ const disruptionReasons: ClaimDisruptionReason[] = [
   "other_controllable",
   "unknown"
 ];
-const deniedBoardingKinds: ClaimDeniedBoardingKind[] = [
-  "voluntary",
-  "involuntary",
-  "unknown"
-];
+const deniedBoardingKinds: ClaimDeniedBoardingKind[] = ["voluntary", "involuntary", "unknown"];
 const bookingChannels: ClaimBookingChannel[] = ["direct", "ota", "portal", "unknown"];
 const confidenceLevels: ClaimFacts["confidence"][] = ["low", "medium", "high"];
 
@@ -233,9 +229,10 @@ function parseLocation(value: unknown, path: string, errors: string[]): ClaimLoc
     return emptyClaimLocation();
   }
 
-  const region = value.region === null
-    ? null
-    : parseEnum(value.region, regions, `${path}.region`, errors) ?? null;
+  const region =
+    value.region === null
+      ? null
+      : (parseEnum(value.region, regions, `${path}.region`, errors) ?? null);
 
   return {
     city: parseNullableString(value.city, `${path}.city`, errors),
@@ -251,32 +248,34 @@ export function parseClaimFacts(value: unknown): ClaimFactsParseResult {
   }
 
   const errors: string[] = [];
-  const arrivalDelayMinutes = value.arrivalDelayMinutes === null
-    ? null
-    : typeof value.arrivalDelayMinutes === "number" &&
-        Number.isInteger(value.arrivalDelayMinutes) &&
-        value.arrivalDelayMinutes >= 0
-      ? value.arrivalDelayMinutes
-      : (errors.push("arrivalDelayMinutes must be a non-negative integer or null"), null);
-  const isOvernight = value.isOvernight === null || typeof value.isOvernight === "boolean"
-    ? value.isOvernight
-    : (errors.push("isOvernight must be a boolean or null"), null);
+  let arrivalDelayMinutes: number | null = null;
+  if (
+    typeof value.arrivalDelayMinutes === "number" &&
+    Number.isInteger(value.arrivalDelayMinutes) &&
+    value.arrivalDelayMinutes >= 0
+  ) {
+    arrivalDelayMinutes = value.arrivalDelayMinutes;
+  } else if (value.arrivalDelayMinutes !== null) {
+    errors.push("arrivalDelayMinutes must be a non-negative integer or null");
+  }
+
+  let isOvernight: boolean | null = null;
+  if (typeof value.isOvernight === "boolean") {
+    isOvernight = value.isOvernight;
+  } else if (value.isOvernight !== null) {
+    errors.push("isOvernight must be a boolean or null");
+  }
 
   const facts: ClaimFacts = {
     issueType: parseEnum(value.issueType, issueTypes, "issueType", errors) ?? "unknown",
-    providerType:
-      parseEnum(value.providerType, providerTypes, "providerType", errors) ?? "unknown",
+    providerType: parseEnum(value.providerType, providerTypes, "providerType", errors) ?? "unknown",
     provider: parseNullableString(value.provider, "provider", errors),
     operatingCarrier: parseNullableString(value.operatingCarrier, "operatingCarrier", errors),
     operatingCarrierRegion:
       value.operatingCarrierRegion === null
         ? null
-        : parseEnum(
-            value.operatingCarrierRegion,
-            regions,
-            "operatingCarrierRegion",
-            errors
-          ) ?? null,
+        : (parseEnum(value.operatingCarrierRegion, regions, "operatingCarrierRegion", errors) ??
+          null),
     origin: parseLocation(value.origin, "origin", errors),
     destination: parseLocation(value.destination, "destination", errors),
     disruptionType:
@@ -306,24 +305,25 @@ export function parseClaimFacts(value: unknown): ClaimFactsParseResult {
 
 export function normalizeClaimFacts(facts: ClaimFacts): ClaimFacts {
   const normalized = enrichClaimJurisdiction(facts);
-  const disruptionType = normalized.disruptionType === "unknown"
-    ? normalized.issueType === "hotel_walk"
-      ? "hotel_walk"
-      : normalized.issueType === "airline_delay"
-        ? "delay"
-        : normalized.issueType === "airline_cancellation"
-          ? "cancellation"
-          : normalized.issueType === "denied_boarding"
-            ? "denied_boarding"
-            : "unknown"
-    : normalized.disruptionType;
-  const providerType = normalized.providerType === "unknown"
-    ? normalized.issueType === "hotel_walk"
-      ? "hotel"
-      : normalized.issueType !== "unknown"
-        ? "airline"
-        : "unknown"
-    : normalized.providerType;
+  let { disruptionType } = normalized;
+  if (disruptionType === "unknown") {
+    const disruptionTypeByIssue: Partial<Record<ClaimIssueType, ClaimDisruptionType>> = {
+      hotel_walk: "hotel_walk",
+      airline_delay: "delay",
+      airline_cancellation: "cancellation",
+      denied_boarding: "denied_boarding"
+    };
+    disruptionType = disruptionTypeByIssue[normalized.issueType] ?? "unknown";
+  }
+
+  let { providerType } = normalized;
+  if (providerType === "unknown") {
+    if (normalized.issueType === "hotel_walk") {
+      providerType = "hotel";
+    } else if (normalized.issueType !== "unknown") {
+      providerType = "airline";
+    }
+  }
 
   return {
     ...normalized,
@@ -352,10 +352,7 @@ export function getMissingClaimFields(facts: ClaimFacts): ClaimFactField[] {
     missing.push("provider");
   }
 
-  if (
-    normalized.issueType === "airline_delay" ||
-    normalized.issueType === "airline_cancellation"
-  ) {
+  if (normalized.issueType === "airline_delay" || normalized.issueType === "airline_cancellation") {
     if (!hasLocation(normalized.origin)) {
       missing.push("origin");
     }

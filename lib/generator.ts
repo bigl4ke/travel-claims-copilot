@@ -562,7 +562,9 @@ function getLegalRegimes(retrieval: RetrievalResult): LegalRegime[] {
 
 function getPrimaryLegalRegime(retrieval: RetrievalResult): LegalRegime | undefined {
   const regimes = getLegalRegimes(retrieval);
-  const preferredByOrigin: Partial<Record<NonNullable<RetrievalResult["query"]["originRegion"]>, LegalRegime[]>> = {
+  const preferredByOrigin: Partial<
+    Record<NonNullable<RetrievalResult["query"]["originRegion"]>, LegalRegime[]>
+  > = {
     EU_EEA_CH: ["EU261"],
     UK: ["UK261"],
     CA: ["CA_APPR"],
@@ -575,16 +577,13 @@ function getPrimaryLegalRegime(retrieval: RetrievalResult): LegalRegime | undefi
     other: []
   };
   const preferred = retrieval.query.originRegion
-    ? preferredByOrigin[retrieval.query.originRegion] ?? []
+    ? (preferredByOrigin[retrieval.query.originRegion] ?? [])
     : [];
 
   return preferred.find((regime) => regimes.includes(regime)) ?? regimes[0];
 }
 
-function getSuggestedAsks(
-  issueType: IssueType,
-  retrieval: RetrievalResult
-): SuggestedAsks {
+function getSuggestedAsks(issueType: IssueType, retrieval: RetrievalResult): SuggestedAsks {
   const regime = getPrimaryLegalRegime(retrieval);
   if (regime && suggestedAsksByRegime[regime]) {
     return suggestedAsksByRegime[regime];
@@ -629,12 +628,12 @@ export function generateAnalysis(
   const hasUnresolvedAirlineControl =
     (facts.issueType === "airline_delay" || facts.issueType === "airline_cancellation") &&
     retrieval.query.controllability !== "controllable";
-  const strength =
-    facts.issueType === "unknown"
-      ? "low"
-      : retrieval.officialBasis.length > 0 && !hasUnresolvedAirlineControl
-        ? "high"
-        : "medium";
+  let strength: AnalysisResult["strength"] = "medium";
+  if (facts.issueType === "unknown") {
+    strength = "low";
+  } else if (retrieval.officialBasis.length > 0 && !hasUnresolvedAirlineControl) {
+    strength = "high";
+  }
 
   return {
     issueType: facts.issueType,

@@ -65,7 +65,10 @@ function findCountry(text: string): string | undefined {
 }
 
 function findBookingChannel(text: string): Case["booking_channel"] | undefined {
-  if (hasAny(text, ["chase travel", "amex fhr", "capital one travel", "portal", "信用卡旅行门户"]).length) {
+  if (
+    hasAny(text, ["chase travel", "amex fhr", "capital one travel", "portal", "信用卡旅行门户"])
+      .length
+  ) {
     return "portal";
   }
 
@@ -99,11 +102,29 @@ function findDisruptionReason(text: string): ExtractedFacts["disruptionReason"] 
     return "weather";
   }
 
-  if (hasAny(text, ["crew issue", "crew timeout", "crew timed out", "crew availability", "机组", "机组超时"]).length) {
+  if (
+    hasAny(text, [
+      "crew issue",
+      "crew timeout",
+      "crew timed out",
+      "crew availability",
+      "机组",
+      "机组超时"
+    ]).length
+  ) {
     return "crew";
   }
 
-  if (hasAny(text, ["mechanical", "maintenance", "equipment issue", "technical issue", "机械故障", "飞机故障"]).length) {
+  if (
+    hasAny(text, [
+      "mechanical",
+      "maintenance",
+      "equipment issue",
+      "technical issue",
+      "机械故障",
+      "飞机故障"
+    ]).length
+  ) {
     return "mechanical";
   }
 
@@ -127,7 +148,15 @@ function findDisruptionReason(text: string): ExtractedFacts["disruptionReason"] 
     return "late_inbound_aircraft";
   }
 
-  if (hasAny(text, ["within the airline's control", "airline control", "controllable", "航司原因", "可控原因"]).length) {
+  if (
+    hasAny(text, [
+      "within the airline's control",
+      "airline control",
+      "controllable",
+      "航司原因",
+      "可控原因"
+    ]).length
+  ) {
     return "other_controllable";
   }
 
@@ -209,7 +238,8 @@ function matchIssue(description: string): MatchResult {
   const disruptionReason = findDisruptionReason(text);
   const deniedBoardingKind = findDeniedBoardingKind(text);
   const isOvernight =
-    hasAny(text, ["overnight", "next morning", "next day", "tomorrow", "过夜", "第二天"]).length > 0;
+    hasAny(text, ["overnight", "next morning", "next day", "tomorrow", "过夜", "第二天"]).length >
+    0;
   const shared = {
     ...provider,
     country,
@@ -342,8 +372,7 @@ function matchIssue(description: string): MatchResult {
   ) {
     return {
       ...shared,
-      issueType:
-        cancellationSignals.length > 0 ? "airline_cancellation" : "airline_delay",
+      issueType: cancellationSignals.length > 0 ? "airline_cancellation" : "airline_delay",
       providerType: "airline",
       confidence: disruptionReason === "unknown" ? "medium" : "high",
       signals: [
@@ -409,8 +438,7 @@ function matchIssue(description: string): MatchResult {
 
     return {
       ...shared,
-      issueType:
-        notCheckedSignals.length > 0 ? "airline_baggage_not_checked" : "baggage_delay",
+      issueType: notCheckedSignals.length > 0 ? "airline_baggage_not_checked" : "baggage_delay",
       providerType: "airline",
       confidence: "high",
       signals: [...baggageSignals, ...notCheckedSignals]
@@ -485,8 +513,14 @@ export interface FactExtractor {
 }
 
 export class DeterministicFactExtractor implements FactExtractor {
+  private readonly classify: typeof classifyInput;
+
+  constructor(classify: typeof classifyInput = classifyInput) {
+    this.classify = classify;
+  }
+
   async extract(description: string, options: AnalyzeOptions = {}): Promise<ExtractedFacts> {
-    return classifyInput(description, options);
+    return this.classify(description, options);
   }
 }
 
@@ -496,10 +530,7 @@ export function classifyIssue(input: string): IssueType {
   return matchIssue(input).issueType;
 }
 
-export function classifyInput(
-  description: string,
-  options: AnalyzeOptions = {}
-): ExtractedFacts {
+export function classifyInput(description: string, options: AnalyzeOptions = {}): ExtractedFacts {
   const selectedIssueType = normalizeIssueType(options.issueType);
   const match = matchIssue(description);
 

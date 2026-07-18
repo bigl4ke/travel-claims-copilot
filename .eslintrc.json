@@ -1,3 +1,45 @@
 {
-  "extends": ["next/core-web-vitals"]
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": { "project": "./tsconfig.json" },
+  "extends": ["airbnb-base", "airbnb-typescript/base", "next/core-web-vitals", "prettier"],
+  "rules": {
+    "camelcase": "off",
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      { "js": "never", "jsx": "never", "ts": "never", "tsx": "never" }
+    ],
+    "import/prefer-default-export": "off",
+    "no-use-before-define": "off",
+    "@typescript-eslint/no-use-before-define": "off",
+    "react/function-component-definition": "off",
+    "react/jsx-props-no-spreading": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/require-default-props": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.mjs"],
+      "parserOptions": { "project": null },
+      "rules": {
+        "dot-notation": "error",
+        "no-implied-eval": "error",
+        "no-new-func": "error",
+        "no-return-await": "error",
+        "no-throw-literal": "error",
+        "@typescript-eslint/dot-notation": "off",
+        "@typescript-eslint/naming-convention": "off",
+        "@typescript-eslint/no-implied-eval": "off",
+        "@typescript-eslint/no-throw-literal": "off",
+        "@typescript-eslint/return-await": "off"
+      }
+    },
+    {
+      "files": ["**/*.config.ts", "tests/**/*.ts"],
+      "rules": {
+        "import/no-extraneous-dependencies": ["error", { "devDependencies": true }]
+      }
+    }
+  ]
 }

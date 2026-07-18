@@ -67,11 +67,7 @@ export function policyRegionsFromCountry(country: string | undefined): PolicyReg
   if (normalized === "au" || normalized === "australia") {
     return ["AU"];
   }
-  if (
-    normalized === "cn" ||
-    normalized === "china" ||
-    normalized === "mainland china"
-  ) {
+  if (normalized === "cn" || normalized === "china" || normalized === "mainland china") {
     return ["CN"];
   }
   return ["other"];
@@ -94,10 +90,7 @@ function includesRouteRegion(
   return Boolean(region && applicableRegions.includes(region));
 }
 
-function coarseRegionMatch(
-  applicableRegions: PolicyRegion[],
-  query: RouteScopeQuery
-): boolean {
+function coarseRegionMatch(applicableRegions: PolicyRegion[], query: RouteScopeQuery): boolean {
   return (
     applicableRegions.includes("global") ||
     applicableRegions.some((region) => query.policyRegions.includes(region))
@@ -115,10 +108,7 @@ export function applicabilityRuleMatches(
 
   const hasExplicitRoute = Boolean(query.originRegion || query.destinationRegion);
   const originMatches = includesRouteRegion(applicableRegions, query.originRegion);
-  const destinationMatches = includesRouteRegion(
-    applicableRegions,
-    query.destinationRegion
-  );
+  const destinationMatches = includesRouteRegion(applicableRegions, query.destinationRegion);
   const carrier = query.operatingCarrier ?? query.provider;
 
   if (rule === "origin_region") {
@@ -136,9 +126,7 @@ export function applicabilityRuleMatches(
       return true;
     }
     if (query.destinationRegion === "EU_EEA_CH") {
-      return (
-        query.operatingCarrierRegion === "EU_EEA_CH" || isEuOperatingCarrier(carrier)
-      );
+      return query.operatingCarrierRegion === "EU_EEA_CH" || isEuOperatingCarrier(carrier);
     }
     return hasExplicitRoute ? false : coarseRegionMatch(applicableRegions, query);
   }
@@ -180,9 +168,5 @@ export function applicabilityRuleMatches(
 }
 
 export function policyAppliesToRoute(policy: Policy, query: RouteScopeQuery): boolean {
-  return applicabilityRuleMatches(
-    policy.applicability_rule,
-    policy.applicable_regions,
-    query
-  );
+  return applicabilityRuleMatches(policy.applicability_rule, policy.applicable_regions, query);
 }

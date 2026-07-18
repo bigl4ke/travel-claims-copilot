@@ -4,19 +4,26 @@ import { emptyClaimFacts, type ClaimFacts } from "../lib/claimFacts";
 import { processIntake, type IntakeResult } from "../lib/intake";
 
 async function runConversation(messages: string[]): Promise<IntakeResult> {
-  let facts: ClaimFacts = emptyClaimFacts();
-  let result: IntakeResult | undefined;
-
-  for (const message of messages) {
-    result = await processIntake(message, facts, { llmClient: null });
-    facts = result.facts;
-  }
-
-  if (!result) {
+  const [message, ...remainingMessages] = messages;
+  if (!message) {
     throw new Error("An evaluation conversation needs at least one user message");
   }
 
-  return result;
+  return runConversationFromFacts(message, remainingMessages, emptyClaimFacts());
+}
+
+async function runConversationFromFacts(
+  message: string,
+  remainingMessages: string[],
+  facts: ClaimFacts
+): Promise<IntakeResult> {
+  const result = await processIntake(message, facts, { llmClient: null });
+  const [nextMessage, ...rest] = remainingMessages;
+  if (!nextMessage) {
+    return result;
+  }
+
+  return runConversationFromFacts(nextMessage, rest, result.facts);
 }
 
 describe("conversational intake evaluations", () => {

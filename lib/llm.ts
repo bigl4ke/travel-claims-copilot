@@ -1,3 +1,7 @@
+import { DeepSeekChatCompletionsClient } from "./deepseek-chat-completions-client";
+
+export { DeepSeekChatCompletionsClient } from "./deepseek-chat-completions-client";
+
 export type StructuredOutputRequest = {
   schemaName: string;
   schema: Record<string, unknown>;
@@ -38,57 +42,22 @@ function extractResponseText(payload: unknown): string | undefined {
     return undefined;
   }
 
-  for (const item of payload.output) {
-    if (!isRecord(item) || !Array.isArray(item.content)) {
-      continue;
-    }
-    for (const content of item.content) {
-      if (isRecord(content) && content.type === "output_text" && typeof content.text === "string") {
-        return content.text;
-      }
-    }
-  }
+  const content = payload.output
+    .flatMap((item) => (isRecord(item) && Array.isArray(item.content) ? item.content : []))
+    .find((item) => isRecord(item) && item.type === "output_text" && typeof item.text === "string");
 
-  return undefined;
-}
-
-function extractDeepSeekMessage(payload: unknown): string | undefined {
-  if (!isRecord(payload) || !Array.isArray(payload.choices)) {
-    return undefined;
-  }
-
-  for (const choice of payload.choices) {
-    if (!isRecord(choice)) {
-      continue;
-    }
-    if (choice.finish_reason === "length") {
-      throw new Error("DeepSeek Chat Completions API truncated the structured output");
-    }
-    if (
-      isRecord(choice.message) &&
-      typeof choice.message.content === "string" &&
-      choice.message.content.trim()
-    ) {
-      return choice.message.content;
-    }
-  }
-
-  return undefined;
-}
-
-function normalizeDeepSeekModel(model: string | undefined): string {
-  const normalized = model?.trim();
-  // The initial V4 release uses tiered API identifiers rather than a bare alias.
-  return normalized === "deepseek-v4"
-    ? "deepseek-v4-flash"
-    : normalized || "deepseek-v4-flash";
+  return isRecord(content) ? (content.text as string) : undefined;
 }
 
 export class OpenAIResponsesClient implements StructuredOutputClient {
   private readonly apiKey: string;
+
   private readonly model: string;
+
   private readonly baseUrl: string;
+
   private readonly timeoutMs: number;
+
   private readonly fetcher: Fetcher;
 
   constructor(options: OpenAIResponsesClientOptions) {
@@ -145,66 +114,6 @@ export class OpenAIResponsesClient implements StructuredOutputClient {
   }
 }
 
-export class DeepSeekChatCompletionsClient implements StructuredOutputClient {
-  private readonly apiKey: string;
-  private readonly model: string;
-  private readonly baseUrl: string;
-  private readonly timeoutMs: number;
-  private readonly fetcher: Fetcher;
-
-  constructor(options: DeepSeekChatCompletionsClientOptions) {
-    this.apiKey = options.apiKey;
-    this.model = normalizeDeepSeekModel(options.model);
-    this.baseUrl = (options.baseUrl ?? "https://api.deepseek.com").replace(/\/+$/, "");
-    this.timeoutMs = options.timeoutMs ?? 12_000;
-    this.fetcher = options.fetcher ?? fetch;
-  }
-
-  async generate<T>(request: StructuredOutputRequest): Promise<T> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
-    const systemPrompt = [
-      request.instructions,
-      "Return only valid JSON matching this JSON Schema exactly:",
-      JSON.stringify(request.schema)
-    ].join("\n\n");
-
-    try {
-      const response = await this.fetcher(`${this.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: request.input }
-          ],
-          thinking: { type: "disabled" },
-          response_format: { type: "json_object" },
-          stream: false
-        }),
-        signal: controller.signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`DeepSeek Chat Completions API returned HTTP ${response.status}`);
-      }
-
-      const content = extractDeepSeekMessage(await response.json());
-      if (!content) {
-        throw new Error("DeepSeek Chat Completions API returned no structured output text");
-      }
-
-      return JSON.parse(content) as T;
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-}
-
 export function createOpenAIClientFromEnv(
   env: LlmEnvironment = process.env
 ): OpenAIResponsesClient | undefined {
@@ -236,14 +145,11 @@ export function createDeepSeekClientFromEnv(
       env.DEEPSEEK_INTAKE_MODEL?.trim() ||
       (!dedicatedApiKey ? env.OPENAI_INTAKE_MODEL?.trim() : undefined),
     baseUrl:
-      env.DEEPSEEK_BASE_URL?.trim() ||
-      (!dedicatedApiKey ? env.OPENAI_BASE_URL?.trim() : undefined)
+      env.DEEPSEEK_BASE_URL?.trim() || (!dedicatedApiKey ? env.OPENAI_BASE_URL?.trim() : undefined)
   });
 }
 
-export function resolveLlmProvider(
-  env: LlmEnvironment = process.env
-): LlmProvider | undefined {
+export function resolveLlmProvider(env: LlmEnvironment = process.env): LlmProvider | undefined {
   const explicitProvider = env.LLM_PROVIDER?.trim().toLowerCase();
   if (explicitProvider === "openai" || explicitProvider === "deepseek") {
     return explicitProvider;
@@ -253,10 +159,14 @@ export function resolveLlmProvider(
   }
 
   const model = (
-    env.DEEPSEEK_INTAKE_MODEL?.trim() || env.OPENAI_INTAKE_MODEL?.trim() || ""
+    env.DEEPSEEK_INTAKE_MODEL?.trim() ||
+    env.OPENAI_INTAKE_MODEL?.trim() ||
+    ""
   ).toLowerCase();
   const baseUrl = (
-    env.DEEPSEEK_BASE_URL?.trim() || env.OPENAI_BASE_URL?.trim() || ""
+    env.DEEPSEEK_BASE_URL?.trim() ||
+    env.OPENAI_BASE_URL?.trim() ||
+    ""
   ).toLowerCase();
 
   if (

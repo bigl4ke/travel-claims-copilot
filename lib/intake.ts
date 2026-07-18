@@ -10,10 +10,7 @@ import {
 import { classifyInput } from "./classifier";
 import { isMvpIssueType } from "./issueTaxonomy";
 import { inferRouteLocations } from "./jurisdiction";
-import {
-  createStructuredOutputClientFromEnv,
-  type StructuredOutputClient
-} from "./llm";
+import { createStructuredOutputClientFromEnv, type StructuredOutputClient } from "./llm";
 import { claimFactsJsonSchema } from "./claimFacts";
 
 export type IntakeStatus = "needs_info" | "ready";
@@ -132,8 +129,7 @@ function mergeDeterministicFacts(message: string, current: ClaimFacts): ClaimFac
         : current.providerType,
     provider: extracted.provider ?? current.provider,
     operatingCarrier: extracted.operatingCarrier ?? current.operatingCarrier,
-    operatingCarrierRegion:
-      extracted.operatingCarrierRegion ?? current.operatingCarrierRegion,
+    operatingCarrierRegion: extracted.operatingCarrierRegion ?? current.operatingCarrierRegion,
     origin: mergeLocation(current.origin, route.origin),
     destination: mergeLocation(current.destination, route.destination),
     disruptionType: disruptionType === "unknown" ? current.disruptionType : disruptionType,
@@ -151,7 +147,6 @@ function mergeDeterministicFacts(message: string, current: ClaimFacts): ClaimFac
     loyaltyStatus: extracted.loyaltyStatus ?? current.loyaltyStatus,
     confidence: extracted.confidence === "high" ? "high" : current.confidence
   });
-
 }
 
 function mergeLlmFactsWithDeterministic(
@@ -160,12 +155,9 @@ function mergeLlmFactsWithDeterministic(
 ): ClaimFacts {
   return normalizeClaimFacts({
     ...deterministicFacts,
-    issueType:
-      llmFacts.issueType === "unknown" ? deterministicFacts.issueType : llmFacts.issueType,
+    issueType: llmFacts.issueType === "unknown" ? deterministicFacts.issueType : llmFacts.issueType,
     providerType:
-      llmFacts.providerType === "unknown"
-        ? deterministicFacts.providerType
-        : llmFacts.providerType,
+      llmFacts.providerType === "unknown" ? deterministicFacts.providerType : llmFacts.providerType,
     provider: llmFacts.provider ?? deterministicFacts.provider,
     operatingCarrier: llmFacts.operatingCarrier ?? deterministicFacts.operatingCarrier,
     operatingCarrierRegion:
@@ -180,8 +172,7 @@ function mergeLlmFactsWithDeterministic(
       llmFacts.disruptionReason === "unknown"
         ? deterministicFacts.disruptionReason
         : llmFacts.disruptionReason,
-    arrivalDelayMinutes:
-      llmFacts.arrivalDelayMinutes ?? deterministicFacts.arrivalDelayMinutes,
+    arrivalDelayMinutes: llmFacts.arrivalDelayMinutes ?? deterministicFacts.arrivalDelayMinutes,
     isOvernight: llmFacts.isOvernight ?? deterministicFacts.isOvernight,
     deniedBoardingKind:
       llmFacts.deniedBoardingKind === "unknown"
@@ -229,9 +220,7 @@ function questionForMissingFields(
   }
   if (selected.includes("provider")) {
     if (facts.providerType === "hotel" || facts.issueType === "hotel_walk") {
-      return chinese
-        ? "是哪家酒店或酒店集团？"
-        : "Which hotel or hotel group was involved?";
+      return chinese ? "是哪家酒店或酒店集团？" : "Which hotel or hotel group was involved?";
     }
     if (facts.providerType === "airline") {
       return chinese
@@ -258,15 +247,17 @@ function questionForMissingFields(
     return chinese ? "你最终晚到多久？" : "How late did you reach your destination?";
   }
   if (needsDisruptionReason) {
-    return chinese
-      ? "航司给出的延误或取消原因是什么？"
-      : "What reason did the airline give?";
+    return chinese ? "航司给出的延误或取消原因是什么？" : "What reason did the airline give?";
   }
   if (selected.includes("disruptionType")) {
-    return chinese ? "航班是延误、取消，还是拒绝登机？" : "Was the flight delayed, cancelled, or denied boarding?";
+    return chinese
+      ? "航班是延误、取消，还是拒绝登机？"
+      : "Was the flight delayed, cancelled, or denied boarding?";
   }
 
-  return chinese ? "请再补充一些事情经过。" : "Please add a little more detail about what happened.";
+  return chinese
+    ? "请再补充一些事情经过。"
+    : "Please add a little more detail about what happened.";
 }
 
 async function extractWithLlm(
@@ -293,9 +284,10 @@ export async function processIntake(
   currentFacts: ClaimFacts = emptyClaimFacts(),
   dependencies: IntakeDependencies = {}
 ): Promise<IntakeResult> {
-  const configuredClient = dependencies.llmClient === undefined
-    ? createStructuredOutputClientFromEnv()
-    : dependencies.llmClient ?? undefined;
+  const configuredClient =
+    dependencies.llmClient === undefined
+      ? createStructuredOutputClientFromEnv()
+      : (dependencies.llmClient ?? undefined);
   const deterministicFacts = mergeDeterministicFacts(message, currentFacts);
   let facts: ClaimFacts;
   let extractionMode: IntakeExtractionMode = "deterministic";

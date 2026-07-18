@@ -37,10 +37,7 @@ describe("ClaimFacts schema", () => {
 
     expect(facts.origin.country).toBe("France");
     expect(facts.origin.region).toBe("EU_EEA_CH");
-    expect(getMissingClaimFields(facts)).toEqual([
-      "destination",
-      "disruptionReason"
-    ]);
+    expect(getMissingClaimFields(facts)).toEqual(["destination", "disruptionReason"]);
   });
 });
 
@@ -115,8 +112,7 @@ describe("structured analyze API", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        description:
-          "My Air France flight from Paris was cancelled and I arrived four hours late.",
+        description: "My Air France flight from Paris was cancelled and I arrived four hours late.",
         facts
       })
     });
@@ -158,17 +154,14 @@ describe("structured analyze API", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        description:
-          "My Air France flight from Paris was cancelled and I arrived four hours late.",
+        description: "My Air France flight from Paris was cancelled and I arrived four hours late.",
         facts
       })
     });
 
     const response = await POST(request);
     const result = await response.json();
-    const policyIds = result.officialBasis.map(
-      (policy: { policy_id: string }) => policy.policy_id
-    );
+    const policyIds = result.officialBasis.map((policy: { policy_id: string }) => policy.policy_id);
 
     expect(response.status).toBe(200);
     expect(result.issueType).toBe("airline_cancellation");

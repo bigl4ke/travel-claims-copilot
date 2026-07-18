@@ -6,7 +6,7 @@
 
 **Architecture:** Transport validation, model failures, outbound privacy, access/limit controls, knowledge validation, and release evidence are independent adapters around the Plan A workflow. Normal verification is entirely offline. Live GPT evaluation and Vercel/GitHub operations are explicit external gates performed only after the runtime tree is frozen.
 
-**Tech Stack:** Node.js 22.14.0, npm 10.9.2, Next.js 15.5.18, TypeScript 5.9.3, ESLint 8.57.1 with Airbnb/Next rules, Prettier 3.6.2, Vitest 4.1.10, Playwright 1.55.0, OpenAI Responses API with GPT-5.6 Luna, GitHub Actions, Vercel.
+**Tech Stack:** Node.js 22.14.0, npm 10.9.2, Next.js 15.5.18, TypeScript 5.5.4, ESLint 8.57.1 with Airbnb/Next rules, Prettier 3.6.2, Vitest 4.1.10, Playwright 1.55.0, OpenAI Responses API with GPT-5.6 Luna, GitHub Actions, Vercel.
 
 ## Global Constraints
 
@@ -165,8 +165,10 @@ Use this exact lint/format baseline:
 Use Node `22.14.0`, then run:
 
 ```bash
-npm install --save-exact --save-dev @playwright/test@1.55.0 @typescript-eslint/eslint-plugin@7.18.0 @typescript-eslint/parser@7.18.0 eslint-config-airbnb-base@15.0.0 eslint-config-airbnb-typescript@18.0.0 eslint-config-prettier@9.1.0 eslint-plugin-import@2.31.0 eslint-plugin-jsx-a11y@6.10.2 eslint-plugin-react@7.37.5 eslint-plugin-react-hooks@5.2.0 prettier@3.6.2 tsx@4.20.3
+npm install --save-exact --save-dev @playwright/test@1.55.0 @typescript-eslint/eslint-plugin@7.18.0 @typescript-eslint/parser@7.18.0 eslint-config-airbnb-base@15.0.0 eslint-config-airbnb-typescript@18.0.0 eslint-config-prettier@9.1.0 eslint-plugin-import@2.31.0 eslint-plugin-jsx-a11y@6.10.2 eslint-plugin-react@7.37.5 eslint-plugin-react-hooks@5.2.0 prettier@3.6.2 tsx@4.20.3 typescript@5.5.4
 ```
+
+Pin TypeScript exactly at `5.5.4`: `@typescript-eslint/typescript-estree@7.18.0` supports TypeScript `>=4.7.4 <5.6.0`, and the approved Airbnb TypeScript configuration requires the 7.x parser/plugin line. Do not widen this pin without requalifying the lint architecture.
 
 Then run:
 
