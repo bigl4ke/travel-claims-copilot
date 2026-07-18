@@ -14,14 +14,33 @@ const safeOutOfScopeEnvelope = {
   nextActions: []
 };
 
-async function analyzeBody(body: Record<string, unknown>) {
-  const response = await analyze(
+function canonicalStructuredFacts() {
+  return normalizeClaimFacts({
+    ...emptyClaimFacts(),
+    issueType: "airline_cancellation",
+    provider: "Delta",
+    operatingCarrier: "Delta",
+    origin: { city: "New York", airport: "JFK", country: null, region: null },
+    destination: { city: "Los Angeles", airport: "LAX", country: null, region: null },
+    disruptionType: "cancellation",
+    disruptionReason: "mechanical",
+    arrivalDelayMinutes: 180,
+    confidence: "high"
+  });
+}
+
+function analyzeRequest(body: Record<string, unknown>) {
+  return analyze(
     new Request("http://local/api/analyze", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)
     })
   );
+}
+
+async function analyzeBody(body: Record<string, unknown>) {
+  const response = await analyzeRequest(body);
 
   return response.json();
 }
@@ -109,21 +128,39 @@ describe("public scenario scope", () => {
   );
 
   it("does not reclassify validated structured facts from the description", async () => {
-    const facts = normalizeClaimFacts({
-      ...emptyClaimFacts(),
-      issueType: "airline_cancellation",
-      provider: "Delta",
-      operatingCarrier: "Delta",
-      origin: { city: "New York", airport: "JFK", country: null, region: null },
-      destination: { city: "Los Angeles", airport: "LAX", country: null, region: null },
-      disruptionType: "cancellation",
-      disruptionReason: "mechanical",
-      arrivalDelayMinutes: 180,
-      confidence: "high"
+    const body = await analyzeBody({
+      description: "My baggage has not arrived.",
+      facts: canonicalStructuredFacts()
     });
-    const body = await analyzeBody({ description: "My baggage has not arrived.", facts });
 
     expect(body).toMatchObject({ issueType: "airline_cancellation" });
     expect(body).not.toHaveProperty("status", "out_of_scope");
+  });
+
+  it.each([
+    ["issueType", "baggage_delay"],
+    ["issueType", "eu261_delay_or_cancellation"],
+    ["selectedIssueType", "baggage_delay"],
+    ["selectedIssueType", "eu261_delay_or_cancellation"]
+  ] as const)(
+    "keeps valid structured facts authoritative over outer %s=%s",
+    async (selector, value) => {
+      const body = await analyzeBody({ facts: canonicalStructuredFacts(), [selector]: value });
+
+      expect(body).toMatchObject({ issueType: "airline_cancellation" });
+      expect(body).not.toHaveProperty("status");
+    }
+  );
+
+  it.each([
+    ["issueType", "baggage_delay"],
+    ["issueType", "eu261_delay_or_cancellation"],
+    ["selectedIssueType", "baggage_delay"],
+    ["selectedIssueType", "eu261_delay_or_cancellation"]
+  ] as const)("validates invalid facts before outer %s=%s", async (selector, value) => {
+    const response = await analyzeRequest({ facts: {}, [selector]: value });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "Invalid structured claim facts." });
   });
 });

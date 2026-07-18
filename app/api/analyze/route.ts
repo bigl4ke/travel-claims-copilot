@@ -44,10 +44,12 @@ export async function POST(request: Request) {
   } | null;
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const caseId = typeof body?.caseId === "string" ? body.caseId.trim() : "";
-  const incidentInput = body?.issueType ?? body?.selectedIssueType;
+  const isStructuredFactsRequest = body?.facts !== undefined;
+  const incidentInput = isStructuredFactsRequest
+    ? undefined
+    : (body?.issueType ?? body?.selectedIssueType);
   const incidentNormalization = normalizeIncidentInput(incidentInput);
   const issueType = incidentNormalization?.incident ?? normalizeIssueType(incidentInput);
-  const isStructuredFactsRequest = body?.facts !== undefined;
   const selectedCaseIssueType =
     !isStructuredFactsRequest && caseId
       ? normalizeIssueType(
