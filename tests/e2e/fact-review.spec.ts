@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test";
 
 import type { AnalyzeClaimResponse } from "../../lib/api/analyze-contract";
 import type { FactConflict } from "../../lib/domain/claim-contract";

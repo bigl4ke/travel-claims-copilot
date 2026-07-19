@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test";
 
 import { syntheticOnlyFixture } from "../fixtures/analysis-view-model";
 import { runReadyClaim } from "./helpers/claim-driver";

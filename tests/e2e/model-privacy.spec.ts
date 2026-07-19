@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./offline-test";
 
 import type { AnalyzeClaimResponse } from "../../lib/api/analyze-contract";
 import type { ExtractionMetadata } from "../../lib/domain/claim-contract";

@@ -3,6 +3,7 @@ import type {
   StructuredOutputClient,
   StructuredOutputRequest
 } from "./llm";
+import { assertExternalModelCallAllowed } from "./external-model-call-policy";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -58,6 +59,7 @@ export class DeepSeekChatCompletionsClient implements StructuredOutputClient {
   }
 
   async generate<T>(request: StructuredOutputRequest): Promise<T> {
+    assertExternalModelCallAllowed();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     const systemPrompt = [

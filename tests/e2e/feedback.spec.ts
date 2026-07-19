@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "./offline-test";
 
 import type { AnalyzeClaimResponse } from "../../lib/api/analyze-contract";
 import type { FactConflict } from "../../lib/domain/claim-contract";

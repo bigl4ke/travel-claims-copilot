@@ -1,8 +1,10 @@
 import { DeepSeekChatCompletionsClient } from "./deepseek-chat-completions-client";
 import { INPUT_LIMITS } from "./api/input-limits";
 import { classifyModelFailure, ModelFailure } from "./model/model-error";
+import { assertExternalModelCallAllowed } from "./external-model-call-policy";
 
 export { DeepSeekChatCompletionsClient } from "./deepseek-chat-completions-client";
+export { assertExternalModelCallAllowed } from "./external-model-call-policy";
 
 export type StructuredOutputRequest = {
   schemaName: string;
@@ -82,6 +84,7 @@ export class OpenAIResponsesClient implements StructuredOutputClient {
   }
 
   async generate<T>(request: StructuredOutputRequest): Promise<T> {
+    assertExternalModelCallAllowed();
     if (request.maxOutputTokens !== INPUT_LIMITS.modelOutputTokens) {
       throw new Error("invalid_model_output_token_limit");
     }

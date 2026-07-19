@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "./offline-test";
 
 import type { AnalyzeClaimResponse } from "../../lib/api/analyze-contract";
 import type { ScenarioId, WorkflowStatus } from "../../lib/domain/claim-contract";

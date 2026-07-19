@@ -4,17 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:offline": "node scripts/run-offline-next.mjs dev",
     "build": "next build",
+    "build:offline": "node scripts/run-offline-next.mjs build",
     "start": "next start",
     "lint": "eslint . --ext .js,.mjs,.ts,.tsx --max-warnings 0",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "validate:data": "tsx scripts/validate-data.ts",
     "test": "vitest run --config vitest.config.ts",
+    "test:offline": "vitest run --config vitest.config.ts tests/offline",
     "test:e2e": "playwright test",
     "scan:secrets": "node scripts/scan-secrets.mjs",
     "validate:evidence": "node scripts/validate-build-week-evidence.mjs --scope all",
-    "verify": "npm run validate:data && npm run lint && npm run typecheck && npm test && npm run scan:secrets && npm run build"
+    "verify": "npm run validate:data && npm run lint && npm run typecheck && npm test && npm run scan:secrets && npm run build:offline"
   },
   "dependencies": {
     "next": "^15.0.0",
