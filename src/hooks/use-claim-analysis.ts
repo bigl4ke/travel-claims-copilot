@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import type { AnalyzeClaimRequest } from "../../lib/api/analyze-contract";
-import type { ExtractionMode, UserFactEdit } from "../../lib/domain/claim-contract";
+import type { ExtractionMode, RawFactPath, UserFactEdit } from "../../lib/domain/claim-contract";
+import {
+  createFeedbackRecord,
+  downloadFeedback,
+  type FeedbackDraft,
+  type FeedbackRecord
+} from "../../lib/feedback";
 import {
   analyzeClaim,
   type AnalysisApiError,
@@ -24,6 +30,10 @@ export type UseClaimAnalysisResult = {
   mode: ExtractionMode;
   privacyAcknowledged: boolean;
   accessCode: string;
+  feedbackDraft: FeedbackDraft | null;
+  feedbackRecords: readonly FeedbackRecord[];
+  feedbackFactPaths: readonly RawFactPath[];
+  feedbackSourceIds: readonly string[];
   canSubmit: boolean;
   submitMessage(message: string): Promise<void>;
   submitCorrection(correction: UserFactEdit): Promise<void>;
@@ -32,6 +42,9 @@ export type UseClaimAnalysisResult = {
   setMode(mode: ExtractionMode): void;
   setPrivacyAcknowledged(value: boolean): void;
   setAccessCode(value: string): void;
+  setFeedbackDraft(draft: FeedbackDraft | null): void;
+  submitFeedback(): void;
+  downloadFeedbackRecords(): void;
   reset(): void;
 };
 
@@ -82,10 +95,14 @@ export function useClaimAnalysis(options: UseClaimAnalysisOptions = {}): UseClai
     undefined,
     createInitialClaimWorkflowState
   );
+  const { result } = workflow;
   const [mode, setModeState] = useState<ExtractionMode>("local");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [accessCode, setAccessCode] = useState("");
+  const [feedbackDraft, setFeedbackDraft] = useState<FeedbackDraft | null>(null);
+  const [feedbackRecords, setFeedbackRecords] = useState<FeedbackRecord[]>([]);
   const tokenRef = useRef(0);
+  const feedbackSequenceRef = useRef(0);
   const activeControllerRef = useRef<ActiveController | null>(null);
   const { fetcher } = options;
 
@@ -165,6 +182,56 @@ export function useClaimAnalysis(options: UseClaimAnalysisOptions = {}): UseClai
   const startFactReview = useCallback(() => dispatch({ type: "review_started" }), []);
   const cancelFactReview = useCallback(() => dispatch({ type: "review_cancelled" }), []);
 
+  const feedbackFactPaths = useMemo(() => {
+    if (!result) return [];
+    return [
+      ...new Set<RawFactPath>([
+        ...result.factsUsed.map(({ path }) => path),
+        ...result.missingFacts.map(({ path }) => path)
+      ])
+    ];
+  }, [result]);
+
+  const feedbackSourceIds = useMemo(() => {
+    if (!result) return [];
+    return [
+      ...new Set([
+        ...result.officialSources.map(({ id }) => id),
+        ...result.providerCommitments.map(({ id }) => id),
+        ...result.similarCases.map(({ id }) => id)
+      ])
+    ];
+  }, [result]);
+
+  const submitFeedback = useCallback(() => {
+    if (!result || !feedbackDraft) return;
+    feedbackSequenceRef.current += 1;
+    try {
+      const next = createFeedbackRecord(
+        {
+          draft: feedbackDraft,
+          factsRevision: result.factsRevision,
+          scenarioIds: [...result.scenarioIds],
+          feedbackId: `feedback-${feedbackSequenceRef.current}`,
+          createdAt: new Date().toISOString()
+        },
+        {
+          allowedFactPaths: new Set(feedbackFactPaths),
+          allowedSourceIds: new Set(feedbackSourceIds)
+        }
+      );
+      setFeedbackRecords((records) => [...records, next]);
+      setFeedbackDraft(null);
+    } catch {
+      setFeedbackDraft(null);
+    }
+  }, [feedbackDraft, feedbackFactPaths, feedbackSourceIds, result]);
+
+  const downloadFeedbackRecords = useCallback(() => {
+    if (feedbackRecords.length === 0) return;
+    downloadFeedback(feedbackRecords, document);
+  }, [feedbackRecords]);
+
   const setMode = useCallback(
     (nextMode: ExtractionMode) => {
       if (nextMode === mode) return;
@@ -194,12 +261,19 @@ export function useClaimAnalysis(options: UseClaimAnalysisOptions = {}): UseClai
     []
   );
 
+  const factsRevision = result?.factsRevision ?? null;
+  useEffect(() => setFeedbackDraft(null), [factsRevision]);
+
   return useMemo(
     () => ({
       workflow,
       mode,
       privacyAcknowledged,
       accessCode,
+      feedbackDraft,
+      feedbackRecords,
+      feedbackFactPaths,
+      feedbackSourceIds,
       canSubmit:
         workflow.activeRequest === null &&
         (mode === "local" || (privacyAcknowledged && accessCode.trim().length > 0)),
@@ -210,16 +284,25 @@ export function useClaimAnalysis(options: UseClaimAnalysisOptions = {}): UseClai
       setMode,
       setPrivacyAcknowledged,
       setAccessCode,
+      setFeedbackDraft,
+      submitFeedback,
+      downloadFeedbackRecords,
       reset
     }),
     [
       accessCode,
       cancelFactReview,
+      downloadFeedbackRecords,
+      feedbackDraft,
+      feedbackFactPaths,
+      feedbackRecords,
+      feedbackSourceIds,
       mode,
       privacyAcknowledged,
       reset,
       setMode,
       startFactReview,
+      submitFeedback,
       submitCorrection,
       submitMessage,
       workflow

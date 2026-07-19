@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useClaimAnalysis } from "../hooks/use-claim-analysis";
 import { AnalysisOverview } from "./analysis-overview";
 import { FactReviewPanel } from "./fact-review-panel";
+import { FeedbackPanel } from "./feedback-panel";
 import { IntakePanel } from "./intake-panel";
 import { ModelPrivacyControls } from "./model-privacy-controls";
 import { RemedyAssessmentList } from "./remedy-assessment-list";
@@ -128,6 +129,15 @@ export function ClaimWorkspace() {
                       />
                     </>
                   ) : null}
+                  <FeedbackPanel
+                    allowedFactPaths={analysis.feedbackFactPaths}
+                    allowedSourceIds={analysis.feedbackSourceIds}
+                    draft={analysis.feedbackDraft}
+                    onDownload={analysis.downloadFeedbackRecords}
+                    onDraftChange={analysis.setFeedbackDraft}
+                    onSubmit={analysis.submitFeedback}
+                    records={analysis.feedbackRecords}
+                  />
                 </>
               )}
             </div>
