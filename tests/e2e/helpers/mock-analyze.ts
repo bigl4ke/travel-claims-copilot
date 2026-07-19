@@ -5,11 +5,15 @@ import {
   type AnalyzeClaimRequest,
   type AnalyzeClaimResponse
 } from "../../../lib/api/analyze-contract";
+import type { ApiErrorEnvelope } from "../../../lib/api/api-response";
 
 const MAX_MOCK_DELAY_MS = 10_000;
 
-export type MockAnalyzeStep = {
-  response: AnalyzeClaimResponse;
+type MockAnalyzeResult =
+  | { response: AnalyzeClaimResponse; error?: never }
+  | { response?: never; error: { status: number; envelope: ApiErrorEnvelope } };
+
+export type MockAnalyzeStep = MockAnalyzeResult & {
   delayMs?: number;
   assertRequest?: (request: AnalyzeClaimRequest) => void | Promise<void>;
 };
@@ -71,6 +75,14 @@ export async function mockAnalysis(
         await new Promise<void>((resolve) => {
           setTimeout(resolve, step.delayMs);
         });
+      }
+      if (step.error) {
+        await route.fulfill({
+          status: step.error.status,
+          contentType: "application/json",
+          body: JSON.stringify(step.error.envelope)
+        });
+        return;
       }
       await route.fulfill({
         status: 200,
