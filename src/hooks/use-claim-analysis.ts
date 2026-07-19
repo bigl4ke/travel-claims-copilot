@@ -200,7 +200,9 @@ export function useClaimAnalysis(options: UseClaimAnalysisOptions = {}): UseClai
       mode,
       privacyAcknowledged,
       accessCode,
-      canSubmit: workflow.activeRequest === null,
+      canSubmit:
+        workflow.activeRequest === null &&
+        (mode === "local" || (privacyAcknowledged && accessCode.trim().length > 0)),
       submitMessage,
       submitCorrection,
       startFactReview,

@@ -6,6 +6,7 @@ import { useClaimAnalysis } from "../hooks/use-claim-analysis";
 import { AnalysisOverview } from "./analysis-overview";
 import { FactReviewPanel } from "./fact-review-panel";
 import { IntakePanel } from "./intake-panel";
+import { ModelPrivacyControls } from "./model-privacy-controls";
 import { RemedyAssessmentList } from "./remedy-assessment-list";
 import { ScriptList } from "./script-list";
 import { SourceSections } from "./source-sections";
@@ -57,7 +58,17 @@ export function ClaimWorkspace() {
       </section>
 
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-8 md:px-8 lg:grid-cols-[320px_1fr]">
-        <aside>
+        <aside className="space-y-4">
+          <ModelPrivacyControls
+            accessCode={analysis.accessCode}
+            acknowledged={analysis.privacyAcknowledged}
+            actualExtraction={result?.extraction ?? null}
+            disabled={workflow.activeRequest !== null}
+            mode={analysis.mode}
+            onAccessCodeChange={analysis.setAccessCode}
+            onAcknowledgedChange={analysis.setPrivacyAcknowledged}
+            onModeChange={analysis.setMode}
+          />
           <IntakePanel
             canSubmit={analysis.canSubmit}
             error={workflow.error}
