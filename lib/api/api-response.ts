@@ -121,7 +121,10 @@ export function toApiErrorResponse(code: ApiErrorCode, requestId: string): Respo
       retryable: spec.retryable
     }
   };
-  return Response.json(envelope, { status: spec.status });
+  return Response.json(envelope, {
+    status: spec.status,
+    headers: { "Cache-Control": "no-store" }
+  });
 }
 
 export function toCaughtApiErrorResponse(error: unknown, requestId: string): Response {

@@ -12,8 +12,9 @@
     "validate:data": "tsx scripts/validate-data.ts",
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "playwright test",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
     "validate:evidence": "node scripts/validate-build-week-evidence.mjs --scope all",
-    "verify": "npm run validate:data && npm run lint && npm run typecheck && npm test && npm run build"
+    "verify": "npm run validate:data && npm run lint && npm run typecheck && npm test && npm run scan:secrets && npm run build"
   },
   "dependencies": {
     "next": "^15.0.0",
@@ -21,7 +22,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.55.0",
+    "@playwright/test": "1.55.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

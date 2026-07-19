@@ -6,6 +6,7 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 .release/
+evals/raw-responses/
 
 .env
 .env.*
