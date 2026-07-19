@@ -148,6 +148,11 @@ function CaseCard({ source }: { source: CaseSourceViewModel }) {
           Outcome completeness: {source.outcomeComplete ? "Complete" : "Incomplete"}
         </p>
       </div>
+      {source.category === "synthetic_example" ? (
+        <p className="mt-3 rounded-lg border border-coral/30 bg-coral/5 p-3 font-medium text-ink">
+          Illustrative outcome — not a reported user result
+        </p>
+      ) : null}
       <p className="mt-4 text-sm leading-6 text-ink/75">
         <span className="font-semibold text-ink">Reusable lesson:</span> {source.reusableLesson}
       </p>
