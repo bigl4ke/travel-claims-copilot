@@ -225,11 +225,11 @@ function fixtureState(): ClaimState {
       evidence: ["Cancellation notice"],
       userGoal: "Request documented expenses"
     },
-    2,
+    1,
     {
       provenance: {
         incidentType: { source: "deterministic_extraction", factsRevision: 1 },
-        operatingCarrier: { source: "user_correction", factsRevision: 2 }
+        operatingCarrier: { source: "user_correction", factsRevision: 1 }
       },
       conflicts: [
         {
@@ -400,7 +400,7 @@ function fixtureAssessment(): AssessmentResult {
     status: "needs_information",
     primaryScenario: "us_airline_disruption",
     scenarioIds: ["us_airline_disruption"],
-    factsRevision: 2,
+    factsRevision: 1,
     factsUsed: [
       {
         path: "incidentType",
@@ -412,7 +412,7 @@ function fixtureAssessment(): AssessmentResult {
         path: "evidence",
         label: "evidence",
         value: ["Cancellation notice"],
-        provenance: { source: "user_message", factsRevision: 2 }
+        provenance: { source: "user_message", factsRevision: 1 }
       }
     ],
     missingFacts: ["isOvernight"],
@@ -465,7 +465,7 @@ export function presentationFixture(): AnalysisPresentationInput {
 export function sourceTransparencyFixture(): AnalyzeClaimResponse {
   const input = presentationFixture();
   return {
-    baseRevision: 1,
+    baseRevision: 0,
     claimState: input.claimState,
     result: buildAnalysisViewModel(input)
   } satisfies AnalyzeClaimResponse;
