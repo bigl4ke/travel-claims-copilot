@@ -3,12 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { processClaimTurn } from "../../lib/claim-workflow";
 import type { KnowledgeRepository } from "../../lib/knowledge/knowledge-contract";
 import { OpenAIResponsesClient, type StructuredOutputClient } from "../../lib/llm";
-import {
-  OpenAIRawFactExtractor,
-  type RawFactExtractionInput,
-  type RawFactExtractor
-} from "../../lib/model/raw-fact-extractor";
-import { emptyRawClaimFacts } from "../../lib/domain/raw-fact-schema";
+import { OpenAIRawFactExtractor, type RawFactExtractor } from "../../lib/model/raw-fact-extractor";
+import { buildOutboundExtractionInput } from "../../lib/privacy/outbound-payload";
 import { knowledgeSnapshotFixture } from "../fixtures/knowledge";
 import { claimState } from "../fixtures/raw-claims";
 
@@ -21,22 +17,8 @@ function responseWithOutputText(text: string): Response {
   );
 }
 
-function extractionInput(message = "A current bounded message."): RawFactExtractionInput {
-  const facts = emptyRawClaimFacts();
-  return {
-    message,
-    prior: {
-      incidentType: facts.incidentType,
-      provider: facts.provider,
-      operatingCarrier: facts.operatingCarrier,
-      origin: facts.origin,
-      destination: facts.destination,
-      reasonCategory: facts.reasonCategory,
-      finalArrivalDelayMinutes: facts.finalArrivalDelayMinutes,
-      deniedBoardingKind: facts.deniedBoardingKind
-    },
-    unresolvedFields: []
-  };
+function extractionInput(message = "A current bounded message.") {
+  return buildOutboundExtractionInput({ message, claimState: claimState() });
 }
 
 describe("OpenAI structured-output bounds", () => {

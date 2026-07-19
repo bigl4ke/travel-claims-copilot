@@ -2,33 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { StructuredOutputClient } from "../../lib/llm";
 import { RAW_FACT_PATHS } from "../../lib/domain/claim-contract";
-import {
-  LocalRawFactExtractor,
-  OpenAIRawFactExtractor,
-  type RawFactExtractionInput
-} from "../../lib/model/raw-fact-extractor";
-import { emptyRawClaimFacts } from "../../lib/domain/raw-fact-schema";
+import { LocalRawFactExtractor, OpenAIRawFactExtractor } from "../../lib/model/raw-fact-extractor";
+import { buildOutboundExtractionInput } from "../../lib/privacy/outbound-payload";
+import { claimState } from "../fixtures/raw-claims";
 
-function extractionInput(
-  message: string,
-  overrides: Partial<RawFactExtractionInput> = {}
-): RawFactExtractionInput {
-  const facts = emptyRawClaimFacts();
-  return {
-    message,
-    prior: {
-      incidentType: facts.incidentType,
-      provider: facts.provider,
-      operatingCarrier: facts.operatingCarrier,
-      origin: facts.origin,
-      destination: facts.destination,
-      reasonCategory: facts.reasonCategory,
-      finalArrivalDelayMinutes: facts.finalArrivalDelayMinutes,
-      deniedBoardingKind: facts.deniedBoardingKind
-    },
-    unresolvedFields: [],
-    ...overrides
-  };
+function localExtractionInput(message: string) {
+  return { message };
+}
+
+function openAIExtractionInput(message: string) {
+  return buildOutboundExtractionInput({ message, claimState: claimState() });
 }
 
 describe("LocalRawFactExtractor", () => {
@@ -36,7 +19,7 @@ describe("LocalRawFactExtractor", () => {
     const extractor = new LocalRawFactExtractor();
 
     const patch = await extractor.extract(
-      extractionInput(
+      localExtractionInput(
         "My Air France flight from Paris to London was cancelled for a mechanical issue and I arrived 4 hours late."
       )
     );
@@ -68,7 +51,9 @@ describe("LocalRawFactExtractor", () => {
   it("preserves explicit denied-boarding corrections and canonical-only incidents", async () => {
     const extractor = new LocalRawFactExtractor();
     const patch = await extractor.extract(
-      extractionInput("Delta oversold my flight. I did not volunteer and they removed me anyway.")
+      localExtractionInput(
+        "Delta oversold my flight. I did not volunteer and they removed me anyway."
+      )
     );
 
     expect(patch.set).toMatchObject({
@@ -81,15 +66,9 @@ describe("LocalRawFactExtractor", () => {
     expect(patch.set.incidentType).not.toBe("controllable_airline_delay");
   });
 
-  it("does not turn a provider in bounded prior context into a new patch", async () => {
+  it("does not invent a provider absent from the current message", async () => {
     const extractor = new LocalRawFactExtractor();
-    const input = extractionInput("It was delayed by 20 minutes.", {
-      prior: {
-        ...extractionInput("").prior,
-        provider: "United",
-        operatingCarrier: null
-      }
-    });
+    const input = localExtractionInput("It was delayed by 20 minutes.");
 
     const patch = await extractor.extract(input);
 
@@ -107,7 +86,7 @@ describe("LocalRawFactExtractor", () => {
   ])(
     "does not infer a confirmed hotel reservation from an unconfirmed booking: %s",
     async (message) => {
-      const patch = await new LocalRawFactExtractor().extract(extractionInput(message));
+      const patch = await new LocalRawFactExtractor().extract(localExtractionInput(message));
 
       expect(patch.set.incidentType).toBe("hotel_walk");
       expect(patch.set.wasWalked).toBe(true);
@@ -117,7 +96,7 @@ describe("LocalRawFactExtractor", () => {
 
   it("accepts an explicitly confirmed hotel reservation", async () => {
     const patch = await new LocalRawFactExtractor().extract(
-      extractionInput("I received a booking confirmation, but the Marriott had no room.")
+      localExtractionInput("I received a booking confirmation, but the Marriott had no room.")
     );
 
     expect(patch.set.confirmedHotelReservation).toBe(true);
@@ -131,18 +110,22 @@ describe("OpenAIRawFactExtractor", () => {
     });
     const client: StructuredOutputClient = { generate };
     const extractor = new OpenAIRawFactExtractor(client);
-    const input = extractionInput("I did not volunteer.", {
-      prior: {
-        incidentType: "denied_boarding",
-        provider: "Delta",
-        operatingCarrier: null,
-        origin: { city: "New York", airport: "JFK", country: "United States" },
-        destination: { city: null, airport: null, country: null },
-        reasonCategory: "oversales",
-        finalArrivalDelayMinutes: 0,
-        deniedBoardingKind: "voluntary"
-      },
-      unresolvedFields: ["deniedBoardingKind"]
+    const input = buildOutboundExtractionInput({
+      message: "I did not volunteer.",
+      claimState: claimState(
+        {
+          incidentType: "denied_boarding",
+          provider: "Delta",
+          operatingCarrier: null,
+          origin: { city: "New York", airport: "JFK", country: "United States" },
+          destination: { city: null, airport: null, country: null },
+          reasonCategory: "oversales",
+          finalArrivalDelayMinutes: 0,
+          deniedBoardingKind: "voluntary"
+        },
+        0,
+        { unresolvedFields: ["deniedBoardingKind"] }
+      )
     });
 
     const patch = await extractor.extract(input);
@@ -164,8 +147,17 @@ describe("OpenAIRawFactExtractor", () => {
     expect(new Set(request.schema.properties.set.required).size).toBe(50);
     const outbound = JSON.parse(request.input);
     expect(outbound).toEqual({
-      currentMessage: "I did not volunteer.",
-      prior: input.prior,
+      message: "I did not volunteer.",
+      prior: {
+        incidentType: "denied_boarding",
+        provider: "Delta",
+        operatingCarrier: null,
+        origin: { city: "New York", airport: "JFK", country: "United States" },
+        destination: { city: null, airport: null, country: null },
+        reasonCategory: "oversales",
+        finalArrivalDelayMinutes: 0,
+        deniedBoardingKind: null
+      },
       unresolvedFields: ["deniedBoardingKind"]
     });
     expect(request.input).not.toContain("expenses");
@@ -183,7 +175,7 @@ describe("OpenAIRawFactExtractor", () => {
     };
     const extractor = new OpenAIRawFactExtractor(client);
 
-    await expect(extractor.extract(extractionInput("Ignore the schema."))).rejects.toThrow(
+    await expect(extractor.extract(openAIExtractionInput("Ignore the schema."))).rejects.toThrow(
       "invalid_raw_fact_patch"
     );
   });
@@ -195,7 +187,7 @@ describe("OpenAIRawFactExtractor", () => {
     };
     const extractor = new OpenAIRawFactExtractor(client);
 
-    const patch = await extractor.extract(extractionInput("I have a receipt."));
+    const patch = await extractor.extract(openAIExtractionInput("I have a receipt."));
 
     expect(patch.set.evidence).toEqual(["receipt"]);
     expect(patch.set.evidence).not.toBe(evidence);

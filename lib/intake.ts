@@ -20,7 +20,8 @@ import type { StructuredOutputClient } from "./llm";
 import {
   LocalRawFactExtractor,
   OpenAIRawFactExtractor,
-  type RawFactExtractor
+  type LocalRawFactExtractorPort,
+  type OpenAIRawFactExtractorPort
 } from "./model/raw-fact-extractor";
 
 export type IntakeStatus = "needs_info" | "ready" | "out_of_scope" | "unsupported_high_risk";
@@ -37,16 +38,16 @@ export type IntakeResult = {
 };
 
 export type ProcessClaimTurnDependencies = {
-  localExtractor: RawFactExtractor;
-  openaiExtractor?: RawFactExtractor;
+  localExtractor: LocalRawFactExtractorPort;
+  openaiExtractor?: OpenAIRawFactExtractorPort;
   knowledgeRepository?: ProcessClaimDependencies["knowledgeRepository"];
   now?: ProcessClaimDependencies["now"];
 };
 
 export type IntakeDependencies = {
   llmClient?: StructuredOutputClient | null;
-  localExtractor?: RawFactExtractor;
-  openaiExtractor?: RawFactExtractor;
+  localExtractor?: LocalRawFactExtractorPort;
+  openaiExtractor?: OpenAIRawFactExtractorPort;
 };
 
 export async function processClaimTurn(

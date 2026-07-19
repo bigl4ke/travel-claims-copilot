@@ -5,6 +5,7 @@ import type {
   ExtractionMetadata,
   FactDisplayItem,
   RawClaimFacts,
+  RawFactPatch,
   RawFactPath,
   RawFactValue,
   RemedyAssessment,
@@ -19,36 +20,104 @@ import { postMergeGuard, preflightGuard } from "./domain/safety-guard";
 import { buildRetrievalTrace, regimesFromApplicability } from "./domain/policy-applicability";
 import { evaluatorFor } from "./domain/scenario-evaluator";
 import type { KnowledgeRepository, KnowledgeSnapshot } from "./knowledge/knowledge-contract";
-import type { RawFactExtractionInput, RawFactExtractor } from "./model/raw-fact-extractor";
+import type {
+  LocalRawFactExtractionInput,
+  LocalRawFactExtractorPort,
+  OpenAIRawFactExtractorPort
+} from "./model/raw-fact-extractor";
+import { buildOutboundExtractionInput } from "./privacy/outbound-payload";
+import {
+  createSafeTelemetryEvent,
+  type SafeExtractionTelemetry,
+  type SafeTelemetryEvent,
+  type TelemetrySink
+} from "./privacy/safe-telemetry";
 import { resolveRetrievalLimits } from "./retrieval-limits";
 import type { RetrievalLimits } from "./types";
 
 export type ProcessClaimTurnInput = AnalyzeClaimRequest;
 
 export type ProcessClaimDependencies = {
-  localExtractor: RawFactExtractor;
-  openaiExtractor?: RawFactExtractor;
+  localExtractor: LocalRawFactExtractorPort;
+  openaiExtractor?: OpenAIRawFactExtractorPort;
   knowledgeRepository: KnowledgeRepository;
   now: () => string;
   retrievalLimits?: RetrievalLimits;
+  telemetry?: {
+    sink: TelemetrySink;
+    requestId: string;
+    nowMs: () => number;
+  };
 };
 
-function extractionInput(request: AnalyzeClaimRequest): RawFactExtractionInput {
-  const { facts } = request.prior;
+function localExtractionInput(request: AnalyzeClaimRequest): LocalRawFactExtractionInput {
+  return { message: request.message };
+}
+
+function extractionTelemetry(metadata: ExtractionMetadata): SafeExtractionTelemetry {
+  if (!metadata.performed) {
+    return {
+      extractionPerformed: false,
+      requestedMode: metadata.requestedMode,
+      provider: null,
+      model: null,
+      notRunReason: metadata.notRunReason
+    };
+  }
+  if (metadata.provider === "openai") {
+    return {
+      extractionPerformed: true,
+      requestedMode: "gpt",
+      provider: "openai",
+      model: "gpt-5.6-luna"
+    };
+  }
+  if (metadata.requestedMode === "local") {
+    return {
+      extractionPerformed: true,
+      requestedMode: "local",
+      provider: "local",
+      model: null
+    };
+  }
   return {
-    message: request.message,
-    prior: {
-      incidentType: facts.incidentType,
-      provider: facts.provider,
-      operatingCarrier: facts.operatingCarrier,
-      origin: { ...facts.origin },
-      destination: { ...facts.destination },
-      reasonCategory: facts.reasonCategory,
-      finalArrivalDelayMinutes: facts.finalArrivalDelayMinutes,
-      deniedBoardingKind: facts.deniedBoardingKind
-    },
-    unresolvedFields: [...request.prior.unresolvedFields]
+    extractionPerformed: true,
+    requestedMode: "gpt",
+    provider: "local",
+    model: null,
+    fallbackReason: metadata.fallbackReason
   };
+}
+
+function beginTelemetry(dependencies: ProcessClaimDependencies): number | undefined {
+  if (!dependencies.telemetry) return undefined;
+  try {
+    return dependencies.telemetry.nowMs();
+  } catch {
+    return undefined;
+  }
+}
+
+function recordTelemetry(
+  dependencies: ProcessClaimDependencies,
+  startedAt: number | undefined,
+  extraction: ExtractionMetadata,
+  category: SafeTelemetryEvent["category"],
+  workflowStatus?: SafeTelemetryEvent["workflowStatus"]
+): void {
+  if (!dependencies.telemetry || startedAt === undefined) return;
+  try {
+    const event = createSafeTelemetryEvent({
+      requestId: dependencies.telemetry.requestId,
+      category,
+      durationMs: dependencies.telemetry.nowMs() - startedAt,
+      ...(workflowStatus ? { workflowStatus } : {}),
+      ...extractionTelemetry(extraction)
+    });
+    dependencies.telemetry.sink.record(event);
+  } catch {
+    // Telemetry is best-effort and must never change claim processing.
+  }
 }
 
 function readFact(facts: RawClaimFacts, path: RawFactPath): RawFactValue | null {
@@ -150,10 +219,11 @@ export function evaluateActiveScenarios(input: {
 
 async function extractPatches(
   request: AnalyzeClaimRequest,
-  dependencies: ProcessClaimDependencies
+  dependencies: ProcessClaimDependencies,
+  providerArmFailed: (metadata: ExtractionMetadata) => void
 ): Promise<{
-  deterministicPatch: Awaited<ReturnType<RawFactExtractor["extract"]>>;
-  openaiPatch?: Awaited<ReturnType<RawFactExtractor["extract"]>>;
+  deterministicPatch: RawFactPatch;
+  openaiPatch?: RawFactPatch;
   extraction: ExtractionMetadata;
 }> {
   const requestedMode = request.requestedMode ?? "local";
@@ -169,8 +239,20 @@ async function extractPatches(
       }
     };
   }
-  const input = extractionInput(request);
-  const deterministicPatch = await dependencies.localExtractor.extract(input);
+  let deterministicPatch: RawFactPatch;
+  try {
+    deterministicPatch = await dependencies.localExtractor.extract(localExtractionInput(request));
+  } catch (error) {
+    if (requestedMode === "local") {
+      providerArmFailed({
+        performed: true,
+        requestedMode: "local",
+        provider: "local",
+        model: null
+      });
+    }
+    throw error;
+  }
   if (requestedMode === "local") {
     return {
       deterministicPatch,
@@ -194,7 +276,22 @@ async function extractPatches(
       }
     };
   }
-  const openaiPatch = await dependencies.openaiExtractor.extract(input);
+  const outbound = buildOutboundExtractionInput({
+    message: request.message,
+    claimState: request.prior
+  });
+  let openaiPatch: RawFactPatch;
+  try {
+    openaiPatch = await dependencies.openaiExtractor.extract(outbound);
+  } catch (error) {
+    providerArmFailed({
+      performed: true,
+      requestedMode: "gpt",
+      provider: "openai",
+      model: "gpt-5.6-luna"
+    });
+    throw error;
+  }
   return {
     deterministicPatch,
     openaiPatch,
@@ -207,36 +304,33 @@ async function extractPatches(
   };
 }
 
-export async function processClaimTurn(
-  input: ProcessClaimTurnInput,
-  dependencies: ProcessClaimDependencies
+async function processParsedClaimTurn(
+  request: AnalyzeClaimRequest,
+  dependencies: ProcessClaimDependencies,
+  providerArmFailed: (metadata: ExtractionMetadata) => void
 ): Promise<AnalyzeClaimDomainResponse> {
-  const parsed = parseAnalyzeClaimRequest(input);
-  if (!parsed.success) {
-    throw new Error(`invalid_analyze_claim_request: ${parsed.errors.join("; ")}`);
-  }
-  const request = parsed.data;
   const preflight = preflightGuard(request.message);
   if (preflight.status !== "pass") {
+    const extraction: ExtractionMetadata = {
+      performed: false,
+      requestedMode: request.requestedMode ?? "local",
+      provider: null,
+      model: null,
+      notRunReason: "preflight_guard"
+    };
     return {
       baseRevision: request.baseRevision,
       claimState: request.prior,
       result: blockedResult({
         status: preflight.status,
         revision: request.prior.revision,
-        extraction: {
-          performed: false,
-          requestedMode: request.requestedMode ?? "local",
-          provider: null,
-          model: null,
-          notRunReason: "preflight_guard"
-        },
+        extraction,
         caution: preflight.message
       }),
       context: null
     };
   }
-  const extracted = await extractPatches(request, dependencies);
+  const extracted = await extractPatches(request, dependencies, providerArmFailed);
   const merged = mergeRawFacts({
     prior: request.prior,
     baseRevision: request.baseRevision,
@@ -307,4 +401,29 @@ export async function processClaimTurn(
     result,
     context
   };
+}
+
+export async function processClaimTurn(
+  input: ProcessClaimTurnInput,
+  dependencies: ProcessClaimDependencies
+): Promise<AnalyzeClaimDomainResponse> {
+  const telemetryStartedAt = beginTelemetry(dependencies);
+  const parsed = parseAnalyzeClaimRequest(input);
+  if (!parsed.success) {
+    throw new Error(`invalid_analyze_claim_request: ${parsed.errors.join("; ")}`);
+  }
+  const response = await processParsedClaimTurn(parsed.data, dependencies, (extraction) => {
+    recordTelemetry(dependencies, telemetryStartedAt, extraction, "upstream_failure");
+  });
+  const { extraction } = response.result;
+  const isFallback =
+    extraction.performed && extraction.requestedMode === "gpt" && extraction.provider === "local";
+  recordTelemetry(
+    dependencies,
+    telemetryStartedAt,
+    extraction,
+    isFallback ? "fallback" : "success",
+    response.result.status
+  );
+  return response;
 }

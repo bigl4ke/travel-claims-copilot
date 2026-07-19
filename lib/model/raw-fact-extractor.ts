@@ -7,33 +7,24 @@ import {
   RAW_FACT_PATHS,
   type ExtractionProvider,
   type RawClaimFacts,
-  type RawFactPatch,
-  type RawFactPath
+  type RawFactPatch
 } from "../domain/claim-contract";
 import { parseRawFactPatch, rawFactPatchJsonSchema } from "../domain/raw-fact-schema";
 import type { StructuredOutputClient } from "../llm";
+import type { OutboundExtractionPayload } from "../privacy/outbound-payload";
 
-export interface RawFactExtractionInput {
+export type LocalRawFactExtractionInput = {
   message: string;
-  prior: Pick<
-    RawClaimFacts,
-    | "incidentType"
-    | "provider"
-    | "operatingCarrier"
-    | "origin"
-    | "destination"
-    | "reasonCategory"
-    | "finalArrivalDelayMinutes"
-    | "deniedBoardingKind"
-  >;
-  unresolvedFields: RawFactPath[];
-}
+};
 
-export interface RawFactExtractor {
+export interface RawFactExtractor<Input = LocalRawFactExtractionInput> {
   readonly provider: ExtractionProvider;
   readonly model: "gpt-5.6-luna" | null;
-  extract(input: RawFactExtractionInput): Promise<RawFactPatch>;
+  extract(input: Input): Promise<RawFactPatch>;
 }
+
+export type LocalRawFactExtractorPort = RawFactExtractor<LocalRawFactExtractionInput>;
+export type OpenAIRawFactExtractorPort = RawFactExtractor<OutboundExtractionPayload>;
 
 const numberWords: Record<string, number> = {
   one: 1,
@@ -95,14 +86,14 @@ function hasExplicitConfirmedHotelReservation(message: string): boolean {
   );
 }
 
-export class LocalRawFactExtractor implements RawFactExtractor {
+export class LocalRawFactExtractor implements LocalRawFactExtractorPort {
   readonly provider = "local" as const;
 
   readonly model = null;
 
   private readonly classify = classifyInput;
 
-  async extract(input: RawFactExtractionInput): Promise<RawFactPatch> {
+  async extract(input: LocalRawFactExtractionInput): Promise<RawFactPatch> {
     const extracted = this.classify(input.message);
     const route = inferRouteLocationsValue(input.message);
     const set: RawFactPatch["set"] = {};
@@ -164,7 +155,7 @@ const rawFactPatchStructuredOutputJsonSchema = {
   }
 } as const;
 
-export class OpenAIRawFactExtractor implements RawFactExtractor {
+export class OpenAIRawFactExtractor implements OpenAIRawFactExtractorPort {
   readonly provider = "openai" as const;
 
   readonly model = "gpt-5.6-luna" as const;
@@ -175,16 +166,12 @@ export class OpenAIRawFactExtractor implements RawFactExtractor {
     this.client = client;
   }
 
-  async extract(input: RawFactExtractionInput): Promise<RawFactPatch> {
+  async extract(input: OutboundExtractionPayload): Promise<RawFactPatch> {
     const value = await this.client.generate<unknown>({
       schemaName: "raw_fact_patch",
       schema: rawFactPatchStructuredOutputJsonSchema as unknown as Record<string, unknown>,
       instructions: rawFactExtractionInstructions,
-      input: JSON.stringify({
-        currentMessage: input.message,
-        prior: input.prior,
-        unresolvedFields: [...input.unresolvedFields]
-      }),
+      input: JSON.stringify(input),
       maxOutputTokens: INPUT_LIMITS.modelOutputTokens
     });
     const parsed = parseRawFactPatch(value);
