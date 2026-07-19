@@ -10,7 +10,8 @@ export function verifyDemoAccess(input: {
   const configured = input.configuredCode ?? "";
   const suppliedDigest = createHash("sha256").update(supplied, "utf8").digest();
   const configuredDigest = createHash("sha256").update(configured, "utf8").digest();
-  return Boolean(
-    input.suppliedCode && input.configuredCode && timingSafeEqual(suppliedDigest, configuredDigest)
-  );
+  const matches = timingSafeEqual(suppliedDigest, configuredDigest);
+  const hasSuppliedCode = supplied.trim().length > 0;
+  const hasConfiguredCode = configured.trim().length > 0;
+  return hasSuppliedCode && hasConfiguredCode && matches;
 }
