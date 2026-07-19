@@ -1,5 +1,6 @@
-import { getIssueAliases, normalizeIssueType } from "./issueTaxonomy";
+import { getIssueAliases } from "./issueTaxonomy";
 import { controllabilityFromReason, policyRegionsFromCountry } from "./policyScope";
+import { resolveRetrievalLimits } from "./retrieval-limits";
 import { rankCases, rankPolicies, rankScripts } from "./retrievalScoring";
 import type {
   Case,
@@ -11,35 +12,8 @@ import type {
   Script
 } from "./types";
 
-const defaultLimits: Required<RetrievalLimits> = {
-  policyLimit: 3,
-  caseLimit: 3,
-  scriptLimit: 2
-};
-
 function isApprovedCase(item: Case): boolean {
   return item.review_status === "approved";
-}
-
-function withSelectedCaseFacts(facts: ExtractedFacts, selectedCase?: Case): ExtractedFacts {
-  if (!selectedCase) {
-    return facts;
-  }
-
-  const selectedIssueType = normalizeIssueType(selectedCase.issue_type);
-
-  return {
-    ...facts,
-    description: facts.description || selectedCase.facts,
-    issueType: selectedIssueType ?? facts.issueType,
-    provider: selectedCase.provider,
-    providerType: selectedCase.provider_type,
-    country: selectedCase.location_country,
-    bookingChannel: selectedCase.booking_channel,
-    loyaltyStatus: selectedCase.loyalty_status,
-    confidence: selectedIssueType ? "high" : facts.confidence,
-    source: "selected_case"
-  };
 }
 
 export function buildRetrievalQuery(facts: ExtractedFacts): RetrievalQuery {
@@ -69,30 +43,25 @@ export function buildRetrievalQuery(facts: ExtractedFacts): RetrievalQuery {
 export function searchPolicies(
   query: RetrievalQuery,
   policies: Policy[],
-  limit = defaultLimits.policyLimit
+  limit?: number
 ): Policy[] {
+  const { policyLimit } = resolveRetrievalLimits({ policyLimit: limit });
   return rankPolicies(query, policies)
-    .slice(0, limit)
+    .slice(0, policyLimit)
     .map((result) => result.item);
 }
 
-export function searchCases(
-  query: RetrievalQuery,
-  cases: Case[],
-  limit = defaultLimits.caseLimit
-): Case[] {
+export function searchCases(query: RetrievalQuery, cases: Case[], limit?: number): Case[] {
+  const { caseLimit } = resolveRetrievalLimits({ caseLimit: limit });
   return rankCases(query, cases)
-    .slice(0, limit)
+    .slice(0, caseLimit)
     .map((result) => result.item);
 }
 
-export function searchScripts(
-  query: RetrievalQuery,
-  scripts: Script[],
-  limit = defaultLimits.scriptLimit
-): Script[] {
+export function searchScripts(query: RetrievalQuery, scripts: Script[], limit?: number): Script[] {
+  const { scriptLimit } = resolveRetrievalLimits({ scriptLimit: limit });
   return rankScripts(query, scripts)
-    .slice(0, limit)
+    .slice(0, scriptLimit)
     .map((result) => result.item);
 }
 
@@ -103,19 +72,22 @@ export function retrieveKnowledge(
   scripts: Script[],
   limits: RetrievalLimits = {}
 ): RetrievalResult {
+  const resolvedLimits = resolveRetrievalLimits(limits);
   const selectedCase = facts.caseId
     ? cases.find((item) => isApprovedCase(item) && item.case_id === facts.caseId)
     : undefined;
-  const resolvedFacts = withSelectedCaseFacts(facts, selectedCase);
-  const query = buildRetrievalQuery(resolvedFacts);
+  const query = buildRetrievalQuery(facts);
 
   return {
-    facts: resolvedFacts,
+    facts,
     query,
-    issueAliases: getIssueAliases(resolvedFacts.issueType),
-    officialBasis: searchPolicies(query, policies, limits.policyLimit ?? defaultLimits.policyLimit),
-    similarCases: searchCases(query, cases, limits.caseLimit ?? defaultLimits.caseLimit),
-    scripts: searchScripts(query, scripts, limits.scriptLimit ?? defaultLimits.scriptLimit),
+    issueAliases: getIssueAliases(facts.issueType),
+    officialBasis: searchPolicies(query, policies, resolvedLimits.policyLimit),
+    similarCases: searchCases(query, cases, resolvedLimits.caseLimit),
+    scripts: searchScripts(query, scripts, resolvedLimits.scriptLimit),
+    legalRegimes: Array.from(
+      new Set(rankPolicies(query, policies).map(({ item }) => item.legal_regime))
+    ),
     selectedCase
   };
 }

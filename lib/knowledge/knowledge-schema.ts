@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { findProviderMatch } from "../provider";
 import type { Case, Policy, Script } from "../types";
+import { caseSourceDisclosureError } from "./case-source-disclosure";
 import type {
   CarrierCommitment,
   CarrierCommitmentPredicate,
@@ -79,27 +80,6 @@ const POLICY_SOURCE_TYPES = [
 const REMEDY_IDS = ["us_rerouting", "us_meal", "us_hotel", "us_ground_transport"] as const;
 const FRESHNESS_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const SYNTHETIC_PROVENANCE_MARKER =
-  /\b(?:synthetic|fabricated)\b|\bdemo(?:-only|\s+(?:case|data|scenario|record|fixture|example|report|content))\b|合成/i;
-const NEGATED_SYNTHETIC_PREFIX =
-  /\b(?:(?:not|never)\s+(?:(?:a|an)\s+)?|(?:no|without)\s+)(?:synthetic|fabricated)\s+(?:demo|example|case|fixture|report|data|dataset|scenario|record|content|account)\b/i;
-const NEGATED_SYNTHETIC_SUFFIX =
-  /\b(?:synthetic|fabricated)\s+(?:identifiers?|data|datasets?|content|facts?|records?|scenarios?|cases?|reports?|fixtures?|examples?|accounts?)\s+(?:were?|was|are|is|have\s+been|has\s+been)\s+not\s+(?:used|included|generated|fabricated|present)\b/i;
-
-function removeAllMatches(value: string, pattern: RegExp): string {
-  let result = value;
-  while (pattern.test(result)) result = result.replace(pattern, " ");
-  return result;
-}
-
-function hasSyntheticProvenanceMarker(value: string): boolean {
-  return value
-    .split(/[.!?\n]+/)
-    .map((sentence) => removeAllMatches(sentence, NEGATED_SYNTHETIC_PREFIX))
-    .map((sentence) => removeAllMatches(sentence, NEGATED_SYNTHETIC_SUFFIX))
-    .some((sentence) => SYNTHETIC_PROVENANCE_MARKER.test(sentence));
-}
-
 function objectValue(value: unknown, label: string): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${label} must be an object.`);
@@ -315,7 +295,7 @@ function parseCases(value: unknown): Case[] {
       ["community_dp", "user_submitted", "synthetic_example"],
       `${label}.source_type`
     );
-    const sourceName = stringValue(record.source_name, `${label}.source_name`);
+    stringValue(record.source_name, `${label}.source_name`);
     const sourceUrl = stringValue(
       record.source_url,
       `${label}.source_url`,
@@ -358,12 +338,9 @@ function parseCases(value: unknown): Case[] {
       stringArray(record[field], `${label}.${field}`)
     );
     if (sourceType === "community_dp") {
-      validateHttps(sourceUrl, `${label}.source_url`);
       if (communityUrls.has(sourceUrl))
         throw new Error(`${label} has a duplicate community source URL.`);
       communityUrls.add(sourceUrl);
-    } else if (sourceUrl) {
-      validateHttps(sourceUrl, `${label}.source_url`);
     }
     if (reviewStatus !== "approved" && reviewNotes.length === 0) {
       throw new Error(`${label} must explain why it is not approved.`);
@@ -378,25 +355,21 @@ function parseCases(value: unknown): Case[] {
     ) {
       throw new Error(`${label} cannot be approved with an unknown issue type.`);
     }
-    const disclosureValues = [
-      sourceName,
-      String(record.facts),
-      String(record.actual_outcome),
-      String(record.reusable_lesson),
-      String(record.notes),
-      ...reviewNotes,
-      ...stringArray(record.requested_compensation, `${label}.requested_compensation`),
-      ...stringArray(record.evidence_used, `${label}.evidence_used`),
-      ...stringArray(record.escalation_path, `${label}.escalation_path`)
-    ];
-    const hasSyntheticMarker = disclosureValues.some(hasSyntheticProvenanceMarker);
-    if (sourceType === "synthetic_example" && !hasSyntheticMarker) {
+    const parsed = structuredClone(record) as Case;
+    const disclosureError = caseSourceDisclosureError(parsed);
+    if (disclosureError === "source_url") {
+      throw new Error(`${label}.source_url must be an HTTPS URL.`);
+    }
+    if (disclosureError === "synthetic_label") {
       throw new Error(`${label} synthetic source requires an unmistakable synthetic label.`);
     }
-    if (sourceType !== "synthetic_example" && hasSyntheticMarker) {
+    if (disclosureError === "masquerade") {
       throw new Error(`${label} is a synthetic case masquerading as a real report.`);
     }
-    return structuredClone(record) as Case;
+    if (disclosureError !== null) {
+      throw new Error(`${label}.source_type has invalid value.`);
+    }
+    return parsed;
   });
 }
 

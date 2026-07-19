@@ -36,7 +36,7 @@ describe("canonical regional policy applicability", () => {
     expect(buildAnalysisFromFacts).toBe(processClaimTurn);
   });
 
-  it("resolves route direction and leaves display ranking empty", async () => {
+  it("resolves route direction and keeps display ranking separate from applicability", async () => {
     const response = await analyzeRoute({
       operatingCarrier: "British Airways",
       origin: { airport: "JFK" },
@@ -46,9 +46,10 @@ describe("canonical regional policy applicability", () => {
     expect(response.context?.jurisdiction.originRegion.value).toBe("US");
     expect(response.context?.jurisdiction.destinationRegion.value).toBe("UK");
     expect(response.context?.jurisdiction.operatingCarrierRegion.value).toBe("UK");
-    expect(response.result.retrieval.displayedPolicies).toEqual([]);
-    expect(response.result.retrieval.displayedCases).toEqual([]);
-    expect(response.result.retrieval.displayedScripts).toEqual([]);
+    expect(response.result.retrieval.displayedPolicies.length).toBeGreaterThan(0);
+    expect(response.result.retrieval.displayedPolicies.length).toBeLessThanOrEqual(3);
+    expect(response.result.retrieval.displayedScripts.length).toBeGreaterThan(0);
+    expect(response.result.retrieval.displayedScripts.length).toBeLessThanOrEqual(2);
   });
 
   it("applies UK261 to a UK departure through complete applicability", async () => {

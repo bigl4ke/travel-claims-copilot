@@ -16,13 +16,12 @@ import { resolveClaimContext } from "./domain/context-resolver";
 import { mergeRawFacts } from "./domain/fact-merge";
 import { buildRemedyAssessment, topLevelStatus } from "./domain/remedy-assessment";
 import { postMergeGuard, preflightGuard } from "./domain/safety-guard";
-import {
-  buildUnrankedRetrievalTrace,
-  regimesFromApplicability
-} from "./domain/policy-applicability";
+import { buildRetrievalTrace, regimesFromApplicability } from "./domain/policy-applicability";
 import { evaluatorFor } from "./domain/scenario-evaluator";
 import type { KnowledgeRepository, KnowledgeSnapshot } from "./knowledge/knowledge-contract";
 import type { RawFactExtractionInput, RawFactExtractor } from "./model/raw-fact-extractor";
+import { resolveRetrievalLimits } from "./retrieval-limits";
+import type { RetrievalLimits } from "./types";
 
 export type ProcessClaimTurnInput = AnalyzeClaimRequest;
 
@@ -31,6 +30,7 @@ export type ProcessClaimDependencies = {
   openaiExtractor?: RawFactExtractor;
   knowledgeRepository: KnowledgeRepository;
   now: () => string;
+  retrievalLimits?: RetrievalLimits;
 };
 
 function extractionInput(request: AnalyzeClaimRequest): RawFactExtractionInput {
@@ -276,7 +276,11 @@ export async function processClaimTurn(
   const asOf = dependencies.now();
   const knowledge = await dependencies.knowledgeRepository.load();
   const assessments = evaluateActiveScenarios({ context, knowledge, asOf });
-  const retrieval = buildUnrankedRetrievalTrace(context, knowledge);
+  const retrieval = buildRetrievalTrace(
+    context,
+    knowledge,
+    resolveRetrievalLimits(dependencies.retrievalLimits)
+  );
   const unresolvedScenario =
     context.scenarios.status === "needs_information" ||
     context.raw.unresolvedFields.length > 0 ||

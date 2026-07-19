@@ -209,6 +209,8 @@ export type RetrievalResult = {
   officialBasis: Policy[];
   similarCases: Case[];
   scripts: Script[];
+  /** Complete legacy applicability-derived regimes, independent of display slices. */
+  legalRegimes: LegalRegime[];
   selectedCase?: Case;
 };
 

@@ -26,6 +26,7 @@ export { generateAnalysis } from "./generator";
 export { evaluateActiveScenarios, processClaimTurn } from "./claim-workflow";
 export {
   assessPolicyApplicability,
+  buildRetrievalTrace,
   buildUnrankedRetrievalTrace,
   regimesFromApplicability
 } from "./domain/policy-applicability";
@@ -44,7 +45,14 @@ export {
   searchPolicies,
   searchScripts
 } from "./retrieval";
-export { rankCases, rankPolicies, rankScripts } from "./retrievalScoring";
+export {
+  caseComparabilityKey,
+  rankApplicablePolicies,
+  rankCases,
+  rankPolicies,
+  rankScripts,
+  scenariosForIncident
+} from "./retrievalScoring";
 export { buildScenarioSummaries } from "./scenarios";
 
 function policyRegionsFromClaimFacts(facts: ClaimFacts): PolicyRegion[] {

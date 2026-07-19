@@ -1,10 +1,19 @@
 import { getIssueAliases } from "./issueTaxonomy";
+import { normalizeIncidentInput } from "./domain/incident-taxonomy";
+import { hasValidCaseSourceDisclosure } from "./knowledge/case-source-disclosure";
 import {
   applicabilityRuleMatches,
   policyAppliesToRoute,
   policyRegionsFromCountry
 } from "./policyScope";
 import { canonicalHotelGroup, providerMatchKey, providersMatch } from "./provider";
+import { resolveRetrievalLimits } from "./retrieval-limits";
+import type {
+  PolicyApplicability,
+  RankedDisplayItem,
+  ResolvedClaimContext,
+  ScenarioId
+} from "./domain/claim-contract";
 import type {
   Case,
   Policy,
@@ -249,11 +258,16 @@ function jurisdictionScore(
   return 15;
 }
 
-export function rankCases(query: RetrievalQuery, cases: Case[]): ScoredRetrievalItem<Case>[] {
+function legacyRankCases(
+  query: RetrievalQuery,
+  cases: readonly Case[],
+  skipEligibility = false
+): ScoredRetrievalItem<Case>[] {
   const aliases = new Set<string>(getIssueAliases(query.issueType));
   const queryHotelGroup =
     query.providerType === "hotel" ? canonicalHotelGroup(query.provider) : undefined;
   const candidates = cases.filter((item) => {
+    if (skipEligibility) return true;
     if (item.review_status !== "approved" || !aliases.has(item.issue_type)) {
       return false;
     }
@@ -351,7 +365,14 @@ export function rankPolicies(
 
     return incidentMatches && regionMatches && providerMatches && controllabilityMatches;
   });
-  const scored = candidates.map((policy) => {
+  return scorePolicies(query, candidates);
+}
+
+function scorePolicies(
+  query: RetrievalQuery,
+  policies: readonly Policy[]
+): ScoredRetrievalItem<Policy>[] {
+  const scored = policies.map((policy) => {
     let result: ScoredRetrievalItem<Policy> = { item: policy, score: 0, reasons: [] };
     const candidateText = [
       policy.provider,
@@ -391,11 +412,13 @@ export function rankPolicies(
   return sortScoredItems(scored, (item) => item.policy_id);
 }
 
-export function rankScripts(
+function legacyRankScripts(
   query: RetrievalQuery,
-  scripts: Script[]
+  scripts: readonly Script[],
+  skipEligibility = false
 ): ScoredRetrievalItem<Script>[] {
   const candidates = scripts.filter((script) => {
+    if (skipEligibility) return true;
     const incidentMatches = script.incident_types.some(
       (incidentType) => incidentType === query.issueType
     );
@@ -443,4 +466,181 @@ export function rankScripts(
   });
 
   return sortScoredItems(scored, (item) => item.script_id);
+}
+
+function currentProviderForRetrieval(context: ResolvedClaimContext): string | undefined {
+  return context.normalizedOperatingCarrier.value ?? context.normalizedProvider.value ?? undefined;
+}
+
+function queryFromContext(context: ResolvedClaimContext): RetrievalQuery {
+  const origin = context.jurisdiction.originRegion.value ?? undefined;
+  const destination = context.jurisdiction.destinationRegion.value ?? undefined;
+  return {
+    description: "",
+    issueType: context.resolutionFacts.incidentType ?? "unknown",
+    provider: currentProviderForRetrieval(context),
+    providerType: context.resolutionFacts.providerType ?? undefined,
+    country:
+      context.resolutionFacts.origin.country ??
+      context.resolutionFacts.destination.country ??
+      undefined,
+    bookingChannel: context.resolutionFacts.bookingChannel ?? undefined,
+    loyaltyStatus: context.resolutionFacts.loyaltyStatus ?? undefined,
+    disruptionReason:
+      context.resolutionFacts.reasonCategory === "other_uncontrollable"
+        ? "unknown"
+        : (context.resolutionFacts.reasonCategory ?? undefined),
+    isOvernight: context.resolutionFacts.isOvernight ?? undefined,
+    deniedBoardingKind: context.resolutionFacts.deniedBoardingKind ?? undefined,
+    operatingCarrier: context.normalizedOperatingCarrier.value ?? undefined,
+    operatingCarrierRegion: context.jurisdiction.operatingCarrierRegion.value ?? undefined,
+    originRegion: origin,
+    destinationRegion: destination,
+    policyRegions: [
+      ...new Set(
+        [origin, destination].filter((item): item is NonNullable<typeof item> => Boolean(item))
+      )
+    ],
+    controllability: context.controllability.value
+  };
+}
+
+export function scenariosForIncident(value: string): readonly ScenarioId[] {
+  const normalized = normalizeIncidentInput(value)?.incident;
+  if (normalized === "hotel_walk") return ["marriott_hotel_walk"];
+  if (normalized === "denied_boarding") return ["us_denied_boarding"];
+  if (normalized === "airline_delay" || normalized === "airline_cancellation") {
+    return ["us_airline_disruption", "eu_uk_air_disruption"];
+  }
+  return [];
+}
+
+const GENERIC_PROVIDER_SENTINELS = new Set([
+  "generic us airline",
+  "european union",
+  "generic_airline",
+  "generic_hotel"
+]);
+
+function comparableProviderKey(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toLocaleLowerCase("en-US");
+  if (!normalized || GENERIC_PROVIDER_SENTINELS.has(normalized)) return null;
+  return providerMatchKey(value);
+}
+
+export function caseComparabilityKey(context: ResolvedClaimContext, item: Case): string | null {
+  const scenario = context.scenarios.scenarioIds.find((active) =>
+    scenariosForIncident(item.issue_type).includes(active)
+  );
+  if (!scenario) return null;
+  const provider = comparableProviderKey(item.provider);
+  const currentProvider = comparableProviderKey(currentProviderForRetrieval(context));
+  if (provider && currentProvider && provider !== currentProvider) return null;
+  return `${scenario}:${provider && currentProvider ? provider : "any"}`;
+}
+
+function caseSourceTier(item: Case): number {
+  if (item.source_type === "community_dp") return 0;
+  if (item.source_type === "user_submitted") return 1;
+  return 2;
+}
+
+export function rankCases(query: RetrievalQuery, cases: Case[]): ScoredRetrievalItem<Case>[];
+export function rankCases(
+  context: ResolvedClaimContext,
+  cases: readonly Case[],
+  limit: number
+): RankedDisplayItem<Case>[];
+export function rankCases(
+  queryOrContext: RetrievalQuery | ResolvedClaimContext,
+  cases: readonly Case[],
+  limit?: number
+): ScoredRetrievalItem<Case>[] | RankedDisplayItem<Case>[] {
+  if (!("resolutionFacts" in queryOrContext)) return legacyRankCases(queryOrContext, cases);
+  const context = queryOrContext;
+  const candidates = cases.flatMap((item) => {
+    const comparabilityKey = caseComparabilityKey(context, item);
+    if (
+      !comparabilityKey ||
+      item.review_status !== "approved" ||
+      !hasValidCaseSourceDisclosure(item)
+    ) {
+      return [];
+    }
+    return [{ item, comparabilityKey }];
+  });
+  const scores = new Map(
+    legacyRankCases(
+      queryFromContext(context),
+      candidates.map(({ item }) => item),
+      true
+    ).map((item) => [item.item.case_id, item])
+  );
+  const { caseLimit } = resolveRetrievalLimits({ caseLimit: limit });
+  return candidates
+    .map(({ item, comparabilityKey }) => ({ ...scores.get(item.case_id)!, comparabilityKey }))
+    .sort((left, right) =>
+      left.comparabilityKey === right.comparabilityKey
+        ? caseSourceTier(left.item) - caseSourceTier(right.item) ||
+          right.score - left.score ||
+          left.item.case_id.localeCompare(right.item.case_id)
+        : right.score - left.score ||
+          left.comparabilityKey.localeCompare(right.comparabilityKey) ||
+          left.item.case_id.localeCompare(right.item.case_id)
+    )
+    .slice(0, caseLimit)
+    .map(({ item, score, reasons }) => ({ item, score, reasons }));
+}
+
+export function rankApplicablePolicies(
+  context: ResolvedClaimContext,
+  assessments: readonly PolicyApplicability[],
+  limit: number
+): RankedDisplayItem<Policy>[] {
+  const { policyLimit } = resolveRetrievalLimits({ policyLimit: limit });
+  const query = queryFromContext(context);
+  const scored = assessments
+    .filter(({ status }) => status === "applicable" || status === "conditional")
+    .map(({ policy }) => scorePolicies(query, [policy])[0]!);
+  return sortScoredItems(scored, (item) => item.policy_id).slice(0, policyLimit);
+}
+
+function scriptProviderMatches(context: ResolvedClaimContext, script: Script): boolean {
+  const scriptProvider = comparableProviderKey(script.provider);
+  if (scriptProvider === null) return true;
+  const currentProvider = comparableProviderKey(currentProviderForRetrieval(context));
+  return currentProvider !== null && scriptProvider === currentProvider;
+}
+
+export function rankScripts(
+  query: RetrievalQuery,
+  scripts: Script[]
+): ScoredRetrievalItem<Script>[];
+export function rankScripts(
+  context: ResolvedClaimContext,
+  scripts: readonly Script[],
+  admissiblePolicyIds: ReadonlySet<string>,
+  limit: number
+): RankedDisplayItem<Script>[];
+export function rankScripts(
+  queryOrContext: RetrievalQuery | ResolvedClaimContext,
+  scripts: readonly Script[],
+  admissiblePolicyIds?: ReadonlySet<string>,
+  limit?: number
+): ScoredRetrievalItem<Script>[] | RankedDisplayItem<Script>[] {
+  if (!("resolutionFacts" in queryOrContext)) return legacyRankScripts(queryOrContext, scripts);
+  const context = queryOrContext;
+  const query = queryFromContext(context);
+  const candidates = scripts.filter(
+    (script) =>
+      script.source_ids.length > 0 &&
+      script.source_ids.every((sourceId) => admissiblePolicyIds?.has(sourceId)) &&
+      script.incident_types.includes(query.issueType as Script["incident_types"][number]) &&
+      applicabilityRuleMatches(script.applicability_rule, script.applicable_regions, query) &&
+      scriptProviderMatches(context, script) &&
+      (script.required_controllability === "any" ||
+        script.required_controllability === query.controllability)
+  );
+  const { scriptLimit } = resolveRetrievalLimits({ scriptLimit: limit });
+  return legacyRankScripts(query, candidates, true).slice(0, scriptLimit);
 }

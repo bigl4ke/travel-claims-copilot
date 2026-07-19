@@ -5,7 +5,9 @@ import type {
   ScenarioId
 } from "./claim-contract";
 import type { KnowledgeSnapshot } from "../knowledge/knowledge-contract";
-import type { LegalRegime, Policy, PolicyRouteRegion } from "../types";
+import { resolveRetrievalLimits } from "../retrieval-limits";
+import { rankApplicablePolicies, rankCases, rankScripts } from "../retrievalScoring";
+import type { LegalRegime, Policy, PolicyRouteRegion, RetrievalLimits } from "../types";
 
 type DimensionResult = "matched" | "missing" | "excluded";
 type Dimension = "scenario" | "incident" | "route" | "provider_scope" | "controllability";
@@ -174,5 +176,34 @@ export function buildUnrankedRetrievalTrace(
     displayedPolicies: [],
     displayedCases: [],
     displayedScripts: []
+  };
+}
+
+export function buildRetrievalTrace(
+  context: ResolvedClaimContext,
+  knowledge: KnowledgeSnapshot,
+  limits: RetrievalLimits
+): RetrievalTrace {
+  const resolvedLimits = resolveRetrievalLimits(limits);
+  const policyApplicability = assessPolicyApplicability(context, knowledge.policies);
+  const admissiblePolicyIds = new Set(
+    policyApplicability
+      .filter(({ status }) => status === "applicable" || status === "conditional")
+      .map(({ policy }) => policy.policy_id)
+  );
+  return {
+    policyApplicability,
+    displayedPolicies: rankApplicablePolicies(
+      context,
+      policyApplicability,
+      resolvedLimits.policyLimit
+    ),
+    displayedCases: rankCases(context, knowledge.cases, resolvedLimits.caseLimit),
+    displayedScripts: rankScripts(
+      context,
+      knowledge.scripts,
+      admissiblePolicyIds,
+      resolvedLimits.scriptLimit
+    )
   };
 }

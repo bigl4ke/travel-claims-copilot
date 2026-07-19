@@ -3,6 +3,7 @@ import { processClaimTurn } from "../../lib/claim-workflow";
 import type { RawClaimFacts, RemedyAssessment } from "../../lib/domain/claim-contract";
 import type { CarrierCommitment, KnowledgeSnapshot } from "../../lib/knowledge/knowledge-contract";
 import type { RawFactExtractor } from "../../lib/model/raw-fact-extractor";
+import type { RetrievalLimits } from "../../lib/types";
 import { claimState, type DeepPartial } from "./raw-claims";
 import { knowledgeSnapshotFixture } from "./knowledge";
 
@@ -11,6 +12,7 @@ type WorkflowFixtureInput = {
   commitments?: CarrierCommitment[];
   knowledge?: Partial<KnowledgeSnapshot>;
   asOf?: string;
+  retrievalLimits?: RetrievalLimits;
 };
 
 const emptyExtractor: RawFactExtractor = {
@@ -33,7 +35,8 @@ export async function runWorkflowFixture(input: WorkflowFixtureInput = {}) {
         return knowledge;
       }
     },
-    now: () => input.asOf ?? "2026-07-18"
+    now: () => input.asOf ?? "2026-07-18",
+    retrievalLimits: input.retrievalLimits
   };
   const prior = claimState({
     incidentType: "airline_cancellation",

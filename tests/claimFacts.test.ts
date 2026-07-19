@@ -154,8 +154,8 @@ describe("structured analyze API", () => {
     expect(result.context.controllability.value).toBe("unknown");
     expect(policyIds).toContain("eu261_air_passenger_rights");
     expect(policyIds).toContain("eu261_regulation_261_2004");
-    expect(result.result.retrieval.displayedPolicies).toEqual([]);
-    expect(result.result.retrieval.displayedScripts).toEqual([]);
+    expect(result.result.retrieval.displayedPolicies.length).toBeGreaterThan(0);
+    expect(result.result.retrieval.displayedScripts.length).toBeGreaterThan(0);
   });
 
   it("returns actionable missing facts for incomplete canonical state", async () => {

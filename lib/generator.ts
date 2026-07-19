@@ -556,12 +556,8 @@ const cautionsByIssue: Partial<Record<IssueType, string[]>> = {
   ]
 };
 
-function getLegalRegimes(retrieval: RetrievalResult): LegalRegime[] {
-  return Array.from(new Set(retrieval.officialBasis.map((policy) => policy.legal_regime)));
-}
-
-function getPrimaryLegalRegime(retrieval: RetrievalResult): LegalRegime | undefined {
-  const regimes = getLegalRegimes(retrieval);
+function primaryApplicableRegime(retrieval: RetrievalResult): LegalRegime | undefined {
+  const regimes = retrieval.legalRegimes;
   const preferredByOrigin: Partial<
     Record<NonNullable<RetrievalResult["query"]["originRegion"]>, LegalRegime[]>
   > = {
@@ -584,7 +580,7 @@ function getPrimaryLegalRegime(retrieval: RetrievalResult): LegalRegime | undefi
 }
 
 function getSuggestedAsks(issueType: IssueType, retrieval: RetrievalResult): SuggestedAsks {
-  const regime = getPrimaryLegalRegime(retrieval);
+  const regime = primaryApplicableRegime(retrieval);
   if (regime && suggestedAsksByRegime[regime]) {
     return suggestedAsksByRegime[regime];
   }
@@ -592,7 +588,7 @@ function getSuggestedAsks(issueType: IssueType, retrieval: RetrievalResult): Sug
 }
 
 function getEvidence(issueType: IssueType, retrieval: RetrievalResult): string[] {
-  const regime = getPrimaryLegalRegime(retrieval);
+  const regime = primaryApplicableRegime(retrieval);
   if (regime && evidenceByRegime[regime]) {
     return evidenceByRegime[regime];
   }
@@ -600,7 +596,7 @@ function getEvidence(issueType: IssueType, retrieval: RetrievalResult): string[]
 }
 
 function getCautions(issueType: IssueType, retrieval: RetrievalResult): string[] {
-  const regime = getPrimaryLegalRegime(retrieval);
+  const regime = primaryApplicableRegime(retrieval);
   if (regime && cautionsByRegime[regime]) {
     return cautionsByRegime[regime];
   }
@@ -609,7 +605,7 @@ function getCautions(issueType: IssueType, retrieval: RetrievalResult): string[]
 
 function buildSummary(facts: ExtractedFacts, retrieval: RetrievalResult): string {
   if (retrieval.selectedCase) {
-    return `Selected scenario: ${retrieval.selectedCase.brand_or_airline}. This result is based on the selected local case and matching knowledge-base records.`;
+    return `Selected reference: ${retrieval.selectedCase.brand_or_airline}. This case is presentation-only; the analysis remains based on the supplied facts and matching knowledge-base records.`;
   }
 
   if (facts.issueType === "unknown") {
@@ -617,7 +613,7 @@ function buildSummary(facts: ExtractedFacts, retrieval: RetrievalResult): string
   }
 
   const regions = retrieval.query.policyRegions.join(", ") || "no resolved jurisdiction";
-  const regimes = getLegalRegimes(retrieval).join(", ") || "no matched legal regime";
+  const regimes = retrieval.legalRegimes.join(", ") || "no matched legal regime";
   return `Matched incident: ${issueLabels[facts.issueType]}. Official sources were selected using route regions ${regions}, legal regimes ${regimes}, provider scope, and controllability; results remain a first-pass assessment.`;
 }
 
@@ -628,7 +624,7 @@ export function generateAnalysis(
   return {
     issueType: facts.issueType,
     policyRegions: retrieval.query.policyRegions,
-    legalRegimes: getLegalRegimes(retrieval),
+    legalRegimes: retrieval.legalRegimes,
     controllability: retrieval.query.controllability,
     summary: buildSummary(facts, retrieval),
     officialBasis: retrieval.officialBasis,

@@ -4,6 +4,7 @@ import casesJson from "../data/cases.json";
 import policiesJson from "../data/policies.json";
 import scriptsJson from "../data/scripts.json";
 import { classifyInput } from "../lib/classifier";
+import { generateAnalysis } from "../lib/generator";
 import { MVP_ISSUE_TYPES } from "../lib/issueTaxonomy";
 import { retrieveKnowledge } from "../lib/retrieval";
 import { rankCases } from "../lib/retrievalScoring";
@@ -243,6 +244,26 @@ describe("retrieval quality controls", () => {
 
     expect(retrieval.selectedCase).toBeUndefined();
     expect(retrieval.similarCases).toEqual([]);
+  });
+
+  it("keeps an approved selected case presentation-only and preserves unsliced legal regimes", () => {
+    const facts = {
+      ...classifyInput("United cancelled my flight because the crew timed out."),
+      caseId: "united_crew_delay_synthetic_001"
+    };
+    const selected = retrieveKnowledge(facts, policies, cases, scripts, { policyLimit: 0 });
+    const displayed = retrieveKnowledge(facts, policies, cases, scripts, { policyLimit: 3 });
+
+    expect(selected.selectedCase?.case_id).toBe("united_crew_delay_synthetic_001");
+    expect(selected.facts).toEqual(facts);
+    expect(selected.query).toEqual(displayed.query);
+    expect(selected.facts.issueType).toBe(displayed.facts.issueType);
+    expect(selected.facts.provider).toBe(displayed.facts.provider);
+    expect(selected.legalRegimes).toEqual(displayed.legalRegimes);
+    expect(generateAnalysis(selected.facts, selected).legalRegimes).toEqual(
+      generateAnalysis(displayed.facts, displayed).legalRegimes
+    );
+    expect(generateAnalysis(selected.facts, selected).summary).toContain("presentation-only");
   });
 
   it("publishes only the four incident-based MVP scenarios", () => {
