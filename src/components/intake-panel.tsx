@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { FormEvent, Ref } from "react";
 
 import type { AnalysisApiError } from "../lib/analysis-api-client";
 
@@ -7,6 +7,8 @@ export type IntakePanelProps = {
   isSubmitting: boolean;
   canSubmit: boolean;
   error: AnalysisApiError | null;
+  errorHeadingRef?: Ref<HTMLHeadingElement>;
+  intakeRef?: Ref<HTMLTextAreaElement>;
   onMessageChange(message: string): void;
   onSubmit(message: string): Promise<void>;
   onReset(): void;
@@ -17,6 +19,8 @@ export function IntakePanel({
   isSubmitting,
   canSubmit,
   error,
+  errorHeadingRef,
+  intakeRef,
   onMessageChange,
   onSubmit,
   onReset
@@ -42,6 +46,7 @@ export function IntakePanel({
           id="claim-message"
           onChange={(event) => onMessageChange(event.target.value)}
           placeholder="Describe the disruption without personal identifiers."
+          ref={intakeRef}
           value={message}
         />
         <button
@@ -61,7 +66,14 @@ export function IntakePanel({
       </button>
       {error ? (
         <div className="rounded-lg border border-coral/30 bg-coral/5 p-3" role="alert">
-          <p className="text-sm font-semibold text-coral">{error.message}</p>
+          <h2
+            className="text-sm font-semibold text-coral outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            data-testid="analysis-error-heading"
+            ref={errorHeadingRef}
+            tabIndex={-1}
+          >
+            {error.message}
+          </h2>
           {error.requestId ? (
             <p className="mt-1 text-xs text-ink/55">Request ID: {error.requestId}</p>
           ) : null}

@@ -1,26 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import type { AnalysisViewModel } from "../../lib/analysis-view-model";
 import { useClaimAnalysis } from "../hooks/use-claim-analysis";
+import { AnalysisOverview } from "./analysis-overview";
 import { FactReviewPanel } from "./fact-review-panel";
 import { IntakePanel } from "./intake-panel";
+import { RemedyAssessmentList } from "./remedy-assessment-list";
+import { ScriptList } from "./script-list";
 import { SourceSections } from "./source-sections";
 
 const exampleText = "My flight was cancelled, and I arrived the next day after paying for a hotel.";
-
-function ResultSummary({ result }: { result: AnalysisViewModel }) {
-  return (
-    <header className="rounded-xl border border-mint/20 bg-mint/5 p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-mint">
-        Analysis ready · facts revision {result.factsRevision}
-      </p>
-      <h2 className="mt-2 text-2xl font-semibold text-ink">{result.summary}</h2>
-      <p className="mt-3 text-sm leading-6 text-ink/65">{result.disclaimer}</p>
-    </header>
-  );
-}
 
 export function ClaimWorkspace() {
   const [message, setMessage] = useState(exampleText);
@@ -30,10 +20,23 @@ export function ClaimWorkspace() {
   const isSubmitting = workflow.phase === "submitting";
   const isUpdating = workflow.phase === "revising";
   const isReviewing = workflow.phase === "reviewing_facts";
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+  const errorHeadingRef = useRef<HTMLHeadingElement>(null);
+  const intakeRef = useRef<HTMLTextAreaElement>(null);
+  const blocked = result?.status === "out_of_scope" || result?.status === "unsupported_high_risk";
+
+  useEffect(() => {
+    if (result && !isReviewing) resultHeadingRef.current?.focus();
+  }, [isReviewing, result]);
+
+  useEffect(() => {
+    if (workflow.error) errorHeadingRef.current?.focus();
+  }, [workflow.error]);
 
   function resetClaim() {
     setMessage("");
     analysis.reset();
+    requestAnimationFrame(() => intakeRef.current?.focus());
   }
 
   return (
@@ -58,6 +61,8 @@ export function ClaimWorkspace() {
           <IntakePanel
             canSubmit={analysis.canSubmit}
             error={workflow.error}
+            errorHeadingRef={errorHeadingRef}
+            intakeRef={intakeRef}
             isSubmitting={isSubmitting}
             message={message}
             onMessageChange={setMessage}
@@ -66,7 +71,7 @@ export function ClaimWorkspace() {
           />
         </aside>
 
-        <section aria-label="Claim analysis">
+        <section aria-busy={workflow.activeRequest ? "true" : "false"} aria-label="Claim analysis">
           {result ? (
             <div
               aria-busy={workflow.activeRequest ? "true" : "false"}
@@ -87,8 +92,8 @@ export function ClaimWorkspace() {
                 />
               ) : (
                 <>
-                  <ResultSummary result={result} />
-                  {result.factReview ? (
+                  <AnalysisOverview headingRef={resultHeadingRef} result={result} />
+                  {!blocked && result.factReview ? (
                     <button
                       className="rounded-lg border border-ink/15 bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:border-mint hover:text-mint"
                       disabled={isUpdating}
@@ -98,11 +103,20 @@ export function ClaimWorkspace() {
                       Review facts
                     </button>
                   ) : null}
-                  <SourceSections
-                    officialSources={result.officialSources}
-                    providerCommitments={result.providerCommitments}
-                    similarCases={result.similarCases}
-                  />
+                  {!blocked ? (
+                    <>
+                      <RemedyAssessmentList assessments={result.assessments} />
+                      <ScriptList
+                        scripts={result.scripts}
+                        sources={[...result.officialSources, ...result.providerCommitments]}
+                      />
+                      <SourceSections
+                        officialSources={result.officialSources}
+                        providerCommitments={result.providerCommitments}
+                        similarCases={result.similarCases}
+                      />
+                    </>
+                  ) : null}
                 </>
               )}
             </div>
