@@ -12,10 +12,17 @@ import {
   type UserFactEdit,
   type WorkflowStatus
 } from "../domain/claim-contract";
+import type { AnalysisViewModel } from "../analysis-view-model";
 import { parseRawClaimFacts, parseRawFactPatch } from "../domain/raw-fact-schema";
 import { INPUT_LIMITS } from "./input-limits";
 
 export type { AnalyzeClaimDomainResponse } from "../domain/claim-contract";
+
+export type AnalyzeClaimResponse = {
+  baseRevision: number;
+  claimState: ClaimState;
+  result: AnalysisViewModel;
+};
 
 export type AnalyzeClaimRequest = {
   message: string;
@@ -76,8 +83,8 @@ const rawLocationKeys = RAW_FACT_PATHS.filter((path) => path.startsWith("origin.
 const rawAssistanceKeys = RAW_FACT_PATHS.filter((path) => path.startsWith("assistance.")).map(
   (path) => path.split(".")[1]
 );
-const canonicalResponseKeys = ["baseRevision", "claimState", "result", "context"] as const;
-const canonicalResultKeys = [
+const domainProcessorResponseKeys = ["baseRevision", "claimState", "result", "context"] as const;
+const domainAssessmentResultKeys = [
   "status",
   "primaryScenario",
   "scenarioIds",
@@ -130,12 +137,12 @@ function validatePublicRawFactKeys(value: unknown, errors: string[]): void {
   }
 }
 
-export function hasExactCanonicalResponseKeys(value: unknown): boolean {
+export function hasExactDomainProcessorResponseKeys(value: unknown): boolean {
   return (
     isRecord(value) &&
     isRecord(value.result) &&
-    hasExactKeys(value, canonicalResponseKeys) &&
-    hasExactKeys(value.result, canonicalResultKeys)
+    hasExactKeys(value, domainProcessorResponseKeys) &&
+    hasExactKeys(value.result, domainAssessmentResultKeys)
   );
 }
 

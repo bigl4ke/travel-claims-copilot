@@ -16,7 +16,7 @@ import type { ConcurrencyLimiter } from "../limits/concurrency-limiter";
 import type { RateLimiter } from "../limits/rate-limiter";
 import { runtimeGptControls } from "./gpt-runtime";
 import {
-  hasExactCanonicalResponseKeys,
+  hasExactDomainProcessorResponseKeys,
   parseAnalyzeClaimRequest,
   parseAnalyzeRequest,
   parseExtractionMetadata,
@@ -257,7 +257,7 @@ export function createIntakeRouteHandler(overrides: IntakeRouteDependencies = {}
         ? await overrides.processRequest(compatibleRequest.data, dependencies)
         : canonicalIntakeResponse(await processClaimTurn(compatibleRequest.data, dependencies));
       if (
-        !hasExactCanonicalResponseKeys(response) ||
+        !hasExactDomainProcessorResponseKeys(response) ||
         !hasValidExtractionMetadata(response, parsed.data)
       ) {
         return toApiErrorResponse("upstream_failure", requestId);

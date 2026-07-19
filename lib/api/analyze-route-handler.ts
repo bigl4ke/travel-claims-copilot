@@ -1,4 +1,5 @@
 import { processClaimTurn, type ProcessClaimDependencies } from "../claim-workflow";
+import { buildAnalysisViewModel } from "../analysis-view-model";
 import { createKnowledgeRepository } from "../knowledge/knowledge-repository";
 import { LocalRawFactExtractor, OpenAIRawFactExtractor } from "../model/raw-fact-extractor";
 import { createPublicOpenAIClientFromEnv } from "../llm";
@@ -13,10 +14,11 @@ import type { RateLimiter } from "../limits/rate-limiter";
 import { runtimeGptControls } from "./gpt-runtime";
 import { preflightGuard } from "../domain/safety-guard";
 import {
-  hasExactCanonicalResponseKeys,
+  hasExactDomainProcessorResponseKeys,
   parseAnalyzeClaimRequest,
   parseAnalyzeRequest,
   parseExtractionMetadata,
+  type AnalyzeClaimResponse,
   type ParsedAnalyzeRequest
 } from "./analyze-contract";
 import {
@@ -156,9 +158,12 @@ export function createAnalyzeRouteHandler(overrides: AnalyzeRouteDependencies = 
       const processRequest = overrides.processRequest ?? processClaimTurn;
       const response = await processRequest(compatibleRequest.data, dependencies);
       if (
-        !hasExactCanonicalResponseKeys(response) ||
+        !hasExactDomainProcessorResponseKeys(response) ||
         !hasValidExtractionMetadata(response, parsed.data)
       ) {
+        return toApiErrorResponse("upstream_failure", requestId);
+      }
+      if (response.baseRevision !== parsed.data.baseRevision) {
         return toApiErrorResponse("upstream_failure", requestId);
       }
       if (!isClaimStateReplayable(response.claimState)) {
@@ -167,7 +172,19 @@ export function createAnalyzeRouteHandler(overrides: AnalyzeRouteDependencies = 
           requestId
         );
       }
-      return Response.json(response);
+      if (response.claimState.revision !== response.result.factsRevision) {
+        return toApiErrorResponse("upstream_failure", requestId);
+      }
+      const publicResponse = {
+        baseRevision: response.baseRevision,
+        claimState: response.claimState,
+        result: buildAnalysisViewModel({
+          assessment: response.result,
+          context: response.context,
+          claimState: response.claimState
+        })
+      } satisfies AnalyzeClaimResponse;
+      return Response.json(publicResponse);
     } catch (error) {
       return toCaughtApiErrorResponse(error, requestId);
     } finally {

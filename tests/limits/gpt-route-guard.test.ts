@@ -95,7 +95,7 @@ function canonicalGptResponse(extraction: ExtractionMetadata = localFallbackExtr
     baseRevision: 0,
     claimState: state,
     result: {
-      status: "needs_information",
+      status: "out_of_scope",
       primaryScenario: null,
       scenarioIds: [],
       factsRevision: state.revision,

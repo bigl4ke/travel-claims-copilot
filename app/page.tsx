@@ -2,16 +2,14 @@
 
 import { useMemo, useState } from "react";
 
+import type { AnalyzeClaimResponse } from "../lib/api/analyze-contract";
+import type { ApiErrorEnvelope } from "../lib/api/api-response";
 import type { ClaimFacts } from "../lib/claimFacts";
-import type {
-  AnalyzeClaimDomainResponse,
-  ClaimState,
-  RawClaimFacts
-} from "../lib/domain/claim-contract";
+import type { ClaimState, RawClaimFacts } from "../lib/domain/claim-contract";
 import { emptyRawClaimFacts } from "../lib/domain/raw-fact-schema";
 import { isBlockedWorkflowStatus } from "../lib/domain/workflow-status";
 import type { IntakeExtractionMode, IntakeResult } from "../lib/intake";
-import type { AnalysisResult, Case, Policy, Script, SuggestedAsks } from "../lib/types";
+import type { LegalRegime, PolicyRouteRegion } from "../lib/types";
 
 const exampleText =
   "My Air France flight from Paris was cancelled. I was rerouted and arrived at my final destination four hours late.";
@@ -20,6 +18,50 @@ type ConversationMessage = {
   id: string;
   role: "assistant" | "user";
   content: string;
+};
+
+type PageSuggestedAsks = {
+  conservative: string[];
+  standard: string[];
+  assertive: string[];
+};
+
+type PagePolicy = {
+  id: string;
+  title: string;
+  provider: string;
+  legalRegime: string;
+  url: string;
+  rights: string[];
+};
+
+type PageCase = {
+  id: string;
+  title: string;
+  sourceName: string;
+  facts: string;
+  outcome: string;
+  reusableLesson: string;
+};
+
+type PageScript = {
+  id: string;
+  title: string;
+  channel: string;
+  text: string;
+};
+
+type PageAnalysisResult = {
+  issueType: NonNullable<RawClaimFacts["incidentType"]> | "unknown";
+  policyRegions: PolicyRouteRegion[];
+  legalRegimes: LegalRegime[];
+  controllability: "controllable" | "uncontrollable" | "unknown";
+  officialBasis: PagePolicy[];
+  similarCases: PageCase[];
+  suggestedAsks: PageSuggestedAsks;
+  evidenceChecklist: string[];
+  scripts: PageScript[];
+  cautions: string[];
 };
 
 const initialMessages: ConversationMessage[] = [
@@ -31,21 +73,11 @@ const initialMessages: ConversationMessage[] = [
   }
 ];
 
-const issueLabels: Partial<Record<AnalysisResult["issueType"], string>> = {
+const issueLabels: Partial<Record<PageAnalysisResult["issueType"], string>> = {
   hotel_walk: "Hotel walk",
   airline_cancellation: "Airline cancellation",
   airline_delay: "Airline delay",
   denied_boarding: "Denied boarding or voluntary bump",
-  baggage_delay: "Baggage delay",
-  airline_delay_trip_insurance: "Airline delay and trip insurance",
-  airline_baggage_not_checked: "Baggage not accepted at check-in",
-  airline_rebooking_mixed_carrier_delay: "Mixed-carrier rebooking delay",
-  hotel_billing_dispute: "Hotel billing dispute",
-  hotel_service_issue: "Hotel service issue",
-  hotel_property_loss: "Hotel property loss",
-  hotel_relocation_before_opening: "Hotel relocation before opening",
-  hotel_room_feature_mismatch: "Hotel room feature mismatch",
-  hotel_elite_benefit_closure: "Hotel elite benefit closure",
   unknown: "Needs more detail"
 };
 
@@ -80,32 +112,63 @@ function claimStateFromIntake(facts: ClaimFacts): ClaimState {
   return { facts: raw, provenance: {}, revision: 0, conflicts: [], unresolvedFields: [] };
 }
 
-function pageResultFromDomain(response: AnalyzeClaimDomainResponse): AnalysisResult {
+function pageResultFromResponse(response: AnalyzeClaimResponse): PageAnalysisResult {
   const { assessments } = response.result;
   const requestOptions = assessments.flatMap(({ requestOptions: options }) => options);
   const optionsFor = (tone: "conservative" | "standard" | "assertive") =>
     requestOptions.filter((option) => option.tone === tone).map(({ text }) => text);
-  const originRegion = response.context?.jurisdiction.originRegion.value;
-  const destinationRegion = response.context?.jurisdiction.destinationRegion.value;
+  const originRegion = response.result.derivedContext?.originRegion.value;
+  const destinationRegion = response.result.derivedContext?.destinationRegion.value;
+  const sources = [...response.result.officialSources, ...response.result.providerCommitments];
   return {
     issueType: response.claimState.facts.incidentType ?? "unknown",
     policyRegions: [
       ...new Set([originRegion, destinationRegion].filter(Boolean))
-    ] as AnalysisResult["policyRegions"],
-    legalRegimes: response.result.legalRegimes,
-    controllability: response.context?.controllability.value ?? "unknown",
-    summary: `Workflow status: ${response.result.status.replaceAll("_", " ")}.`,
-    officialBasis: response.result.retrieval.displayedPolicies.map(({ item }) => item),
-    similarCases: response.result.retrieval.displayedCases.map(({ item }) => item),
+    ] as PolicyRouteRegion[],
+    legalRegimes: [...(response.result.derivedContext?.legalRegimes ?? [])],
+    controllability: response.result.derivedContext?.controllability.value ?? "unknown",
+    officialBasis: sources.map((source) => ({
+      id: source.id,
+      title: source.title,
+      provider: source.provider,
+      legalRegime: source.legalRegime,
+      url: source.url,
+      rights: [...source.rights]
+    })),
+    similarCases: response.result.similarCases.map((item) => ({
+      id: item.id,
+      title: item.title,
+      sourceName: item.sourceName,
+      facts: item.facts,
+      outcome: item.outcome,
+      reusableLesson: item.reusableLesson
+    })),
     suggestedAsks: {
       conservative: optionsFor("conservative"),
       standard: optionsFor("standard"),
-      aggressive: optionsFor("assertive")
+      assertive: optionsFor("assertive")
     },
     evidenceChecklist: [...new Set(assessments.flatMap(({ evidence }) => evidence.missing))],
-    scripts: response.result.retrieval.displayedScripts.map(({ item }) => item),
-    cautions: response.result.cautions
+    scripts: response.result.scripts.map((script) => ({
+      id: script.id,
+      title: script.title,
+      channel: script.channel,
+      text: script.text
+    })),
+    cautions: [...response.result.cautions]
   };
+}
+
+function isApiErrorEnvelope(value: unknown): value is ApiErrorEnvelope {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "error" in value &&
+    typeof value.error === "object" &&
+    value.error !== null &&
+    "message" in value.error &&
+    typeof value.error.message === "string"
+  );
 }
 
 export default function Home() {
@@ -114,7 +177,7 @@ export default function Home() {
   const [facts, setFacts] = useState<ClaimFacts | null>(null);
   const [extractionMode, setExtractionMode] = useState<IntakeExtractionMode | null>(null);
   const [intakeWarning, setIntakeWarning] = useState<IntakeResult["warning"]>();
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<PageAnalysisResult | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
@@ -198,15 +261,14 @@ export default function Home() {
           requestedMode: "local"
         })
       });
-      const domain = (await analyzeResponse.json()) as AnalyzeClaimDomainResponse & {
-        error?: string;
-      };
+      const payload: unknown = await analyzeResponse.json();
 
       if (!analyzeResponse.ok) {
-        throw new Error(domain.error ?? "Analysis failed.");
+        throw new Error(isApiErrorEnvelope(payload) ? payload.error.message : "Analysis failed.");
       }
+      const analysis = payload as AnalyzeClaimResponse;
 
-      if (isBlockedWorkflowStatus(domain.result.status)) {
+      if (isBlockedWorkflowStatus(analysis.result.status)) {
         setResult(null);
         setMessages([
           ...nextMessages,
@@ -214,13 +276,13 @@ export default function Home() {
             id: `assistant-${Date.now()}`,
             role: "assistant",
             content:
-              domain.result.cautions[0] ?? "This request cannot receive ordinary claim analysis."
+              analysis.result.cautions[0] ?? "This request cannot receive ordinary claim analysis."
           }
         ]);
         return;
       }
 
-      setResult(pageResultFromDomain(domain));
+      setResult(pageResultFromResponse(analysis));
       setMessages([
         ...nextMessages,
         {
@@ -249,9 +311,9 @@ export default function Home() {
     setCopiedScriptId(null);
   }
 
-  async function copyScript(script: Script) {
-    await navigator.clipboard.writeText(script.template);
-    setCopiedScriptId(script.script_id);
+  async function copyScript(script: PageScript) {
+    await navigator.clipboard.writeText(script.text);
+    setCopiedScriptId(script.id);
   }
 
   let intakeStatus = "Collecting facts";
@@ -455,7 +517,7 @@ function formatLocation(location: ClaimFacts["origin"]): string {
   return location.airport ?? location.city ?? location.country ?? "";
 }
 
-function SummaryPanel({ result }: { result: AnalysisResult | null }) {
+function SummaryPanel({ result }: { result: PageAnalysisResult | null }) {
   return (
     <div className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm">
       <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink/60">Result</h2>
@@ -499,13 +561,13 @@ function SummaryPanel({ result }: { result: AnalysisResult | null }) {
   );
 }
 
-function SuggestedAsksPanel({ asks }: { asks: SuggestedAsks }) {
+function SuggestedAsksPanel({ asks }: { asks: PageSuggestedAsks }) {
   const tiers = useMemo(
     () =>
       [
         ["Conservative", asks.conservative],
         ["Standard", asks.standard],
-        ["Aggressive", asks.aggressive]
+        ["Assertive", asks.assertive]
       ] as const,
     [asks]
   );
@@ -533,7 +595,7 @@ function SuggestedAsksPanel({ asks }: { asks: SuggestedAsks }) {
   );
 }
 
-function PolicySection({ policies }: { policies: Policy[] }) {
+function PolicySection({ policies }: { policies: PagePolicy[] }) {
   return (
     <Section title="Official basis">
       {policies.length === 0 ? (
@@ -543,26 +605,25 @@ function PolicySection({ policies }: { policies: Policy[] }) {
           {policies.map((policy) => (
             <article
               className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
-              key={policy.policy_id}
+              key={policy.id}
             >
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-ink">{policy.policy_name}</h3>
+                  <h3 className="text-lg font-semibold text-ink">{policy.title}</h3>
                   <p className="text-sm text-ink/60">
-                    {policy.provider} · {policy.legal_regime.replaceAll("_", " ")}
+                    {policy.provider} · {policy.legalRegime.replaceAll("_", " ")}
                   </p>
                 </div>
                 <a
                   className="text-sm font-semibold text-mint hover:text-coral"
-                  href={policy.source_url}
+                  href={policy.url}
                   rel="noreferrer"
                   target="_blank"
                 >
                   Source
                 </a>
               </div>
-              <p className="mt-3 text-sm leading-6 text-ink/75">{policy.summary}</p>
-              <TagList items={policy.compensation_or_rights} />
+              <TagList items={policy.rights} />
             </article>
           ))}
         </div>
@@ -571,7 +632,7 @@ function PolicySection({ policies }: { policies: Policy[] }) {
   );
 }
 
-function CaseSection({ cases }: { cases: Case[] }) {
+function CaseSection({ cases }: { cases: PageCase[] }) {
   return (
     <Section title="Similar cases">
       {cases.length === 0 ? (
@@ -581,19 +642,17 @@ function CaseSection({ cases }: { cases: Case[] }) {
           {cases.map((item) => (
             <article
               className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
-              key={item.case_id}
+              key={item.id}
             >
               <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-semibold text-ink">{item.brand_or_airline}</h3>
-                <p className="text-sm text-ink/60">
-                  {item.provider} · {item.booking_channel} · {item.confidence} confidence
-                </p>
+                <h3 className="text-lg font-semibold text-ink">{item.title}</h3>
+                <p className="text-sm text-ink/60">{item.sourceName}</p>
               </div>
               <p className="mt-3 text-sm leading-6 text-ink/75">{item.facts}</p>
               <p className="mt-3 text-sm leading-6 text-ink">
-                <span className="font-semibold">Outcome:</span> {item.actual_outcome}
+                <span className="font-semibold">Outcome:</span> {item.outcome}
               </p>
-              <p className="mt-2 text-sm leading-6 text-ink/75">{item.reusable_lesson}</p>
+              <p className="mt-2 text-sm leading-6 text-ink/75">{item.reusableLesson}</p>
             </article>
           ))}
         </div>
@@ -607,9 +666,9 @@ function ScriptSection({
   copiedScriptId,
   onCopy
 }: {
-  scripts: Script[];
+  scripts: PageScript[];
   copiedScriptId: string | null;
-  onCopy: (script: Script) => Promise<void>;
+  onCopy: (script: PageScript) => Promise<void>;
 }) {
   return (
     <Section title="Scripts">
@@ -620,27 +679,25 @@ function ScriptSection({
           {scripts.map((script) => (
             <article
               className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
-              key={script.script_id}
+              key={script.id}
             >
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold capitalize text-ink">
                     {script.channel.replaceAll("_", " ")}
                   </h3>
-                  <p className="text-sm text-ink/60">
-                    {script.tone.replaceAll("_", " ")} · {script.when_to_use}
-                  </p>
+                  <p className="text-sm text-ink/60">{script.title}</p>
                 </div>
                 <button
                   className="h-10 rounded-lg border border-ink/15 px-4 text-sm font-semibold text-ink transition hover:border-mint hover:text-mint"
                   type="button"
                   onClick={() => onCopy(script)}
                 >
-                  {copiedScriptId === script.script_id ? "Copied" : "Copy"}
+                  {copiedScriptId === script.id ? "Copied" : "Copy"}
                 </button>
               </div>
               <p className="mt-4 rounded-lg bg-paper p-4 text-sm leading-6 text-ink/80">
-                {script.template}
+                {script.text}
               </p>
             </article>
           ))}

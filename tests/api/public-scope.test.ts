@@ -134,9 +134,10 @@ describe("public scenario scope", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(body).not.toHaveProperty("context");
     expect(body.result.scenarioIds).toEqual(["us_airline_disruption"]);
     expect(body.result.primaryScenario).toBe("us_airline_disruption");
-    expect(body.context.scenarios.scenarioIds).toEqual(body.result.scenarioIds);
+    expect(body.result.derivedContext.originRegion.value).toBe("US");
   });
 
   it("keeps a needs-information context while preserving its published empty scenario set", async () => {
@@ -153,13 +154,12 @@ describe("public scenario scope", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.context).not.toBeNull();
+    expect(body).not.toHaveProperty("context");
+    expect(body.result.derivedContext).not.toBeNull();
     expect(body.result.status).toBe("needs_information");
     expect(body.result.scenarioIds).toEqual([]);
     expect(body.result.primaryScenario).toBeNull();
-    expect(body.result.assessments).toEqual(
-      expect.arrayContaining([expect.objectContaining({ scenarioId: "us_airline_disruption" })])
-    );
+    expect(body.result.assessments.length).toBeGreaterThan(0);
   });
 
   it("returns a fully empty blocked domain result and no derived context", async () => {
@@ -178,26 +178,26 @@ describe("public scenario scope", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.context).toBeNull();
+    expect(body).not.toHaveProperty("context");
     expect(body.result).toMatchObject({
       status: "out_of_scope",
       primaryScenario: null,
       scenarioIds: [],
-      legalRegimes: [],
+      factReview: null,
+      derivedContext: null,
+      policyApplicability: [],
       assessments: [],
-      retrieval: {
-        policyApplicability: [],
-        displayedPolicies: [],
-        displayedCases: [],
-        displayedScripts: []
-      }
+      officialSources: [],
+      providerCommitments: [],
+      similarCases: [],
+      scripts: []
     });
   });
 
   it.each([
     ["analyze", analyzeRequest],
     ["canonical intake", intakeRequest]
-  ] as const)("returns an HTTP 200 high-risk result from the %s route", async (_route, send) => {
+  ] as const)("returns an HTTP 200 high-risk result from the %s route", async (route, send) => {
     const response = await send({
       message: "There is an active fire and I need emergency help",
       prior: claimState(),
@@ -207,7 +207,13 @@ describe("public scenario scope", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.context).toBeNull();
+    if (route === "analyze") {
+      expect(body).not.toHaveProperty("context");
+      expect(body.result.factReview).toBeNull();
+      expect(body.result.derivedContext).toBeNull();
+    } else {
+      expect(body.context).toBeNull();
+    }
     expect(body.result.status).toBe("unsupported_high_risk");
     expect(body.result.extraction.notRunReason).toBe("preflight_guard");
   });

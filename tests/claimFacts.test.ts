@@ -117,10 +117,13 @@ describe("structured analyze API", () => {
 
     expect(response.status).toBe(200);
     expect(result.claimState.facts.incidentType).toBe("airline_cancellation");
-    expect(result.context.jurisdiction.originRegion.value).toBe("EU_EEA_CH");
-    expect(result.context.jurisdiction.destinationRegion.value).toBe("US");
-    expect(result.context.controllability.value).toBe("controllable");
-    expect(result.result.legalRegimes).toEqual(expect.arrayContaining(["EU261", "US_DOT_REFUND"]));
+    expect(result).not.toHaveProperty("context");
+    expect(result.result.derivedContext.originRegion.value).toBe("EU_EEA_CH");
+    expect(result.result.derivedContext.destinationRegion.value).toBe("US");
+    expect(result.result.derivedContext.controllability.value).toBe("controllable");
+    expect(result.result.derivedContext.legalRegimes).toEqual(
+      expect.arrayContaining(["EU261", "US_DOT_REFUND"])
+    );
   });
 
   it("keeps complete EU261 applicability even before display ranking", async () => {
@@ -146,16 +149,16 @@ describe("structured analyze API", () => {
 
     const response = await POST(request);
     const result = await response.json();
-    const policyIds = result.result.retrieval.policyApplicability
+    const policyIds = result.result.policyApplicability
       .filter(({ status }: { status: string }) => status !== "not_applicable")
-      .map(({ policy }: { policy: { policy_id: string } }) => policy.policy_id);
+      .map(({ policyId }: { policyId: string }) => policyId);
 
     expect(response.status).toBe(200);
-    expect(result.context.controllability.value).toBe("unknown");
+    expect(result.result.derivedContext.controllability.value).toBe("unknown");
     expect(policyIds).toContain("eu261_air_passenger_rights");
     expect(policyIds).toContain("eu261_regulation_261_2004");
-    expect(result.result.retrieval.displayedPolicies.length).toBeGreaterThan(0);
-    expect(result.result.retrieval.displayedScripts.length).toBeGreaterThan(0);
+    expect(result.result.officialSources.length).toBeGreaterThan(0);
+    expect(result.result.scripts.length).toBeGreaterThan(0);
   });
 
   it("returns actionable missing facts for incomplete canonical state", async () => {
@@ -179,6 +182,8 @@ describe("structured analyze API", () => {
 
     expect(response.status).toBe(200);
     expect(result.result.status).toBe("needs_information");
-    expect(result.result.missingFacts).toContain("origin.airport");
+    expect(result.result.missingFacts).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "origin.airport" })])
+    );
   });
 });
