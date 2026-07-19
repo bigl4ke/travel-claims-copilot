@@ -19,6 +19,11 @@
     "test:e2e:rehearsals": "node scripts/run-e2e-rehearsals.mjs",
     "eval:live": "tsx evals/run-live-eval.ts",
     "scan:secrets": "node scripts/scan-secrets.mjs",
+    "release:source-review": "node scripts/check-source-reachability.mjs",
+    "release:security-review": "node scripts/check-release-security.mjs",
+    "release:verify": "node scripts/run-release-verify.mjs",
+    "release:record": "node scripts/record-release-input.mjs",
+    "release:evidence": "node scripts/assemble-release-evidence.mjs",
     "validate:evidence": "node scripts/validate-build-week-evidence.mjs --scope all",
     "verify": "npm run validate:data && npm run lint && npm run typecheck && npm test && npm run scan:secrets && npm run build:offline"
   },

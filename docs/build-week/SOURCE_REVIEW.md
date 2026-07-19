@@ -86,10 +86,12 @@ fresh record does not match.
 After separate release-time network approval, run:
 
 ```bash
-node scripts/check-source-reachability.mjs --network-approved
+npm run release:source-review -- --network-approved --release-sha "$release_sha"
+npm run release:record -- --kind source --release-sha "$release_sha" --input .release/inputs/source.json
 ```
 
 This transport check must be within 48 hours of release. A 403 from a `HEAD` request is not by itself
 proof that browser-readable official content is unavailable; any non-success result requires manual
-reinspection and a recorded disposition. The release remains blocked by stale or genuinely
-unreachable critical sources.
+reinspection and a recorded disposition. The first command writes a fixed, ignored machine export;
+the second validates it and atomically records the exact release input. The release remains blocked
+by stale or genuinely unreachable critical sources.

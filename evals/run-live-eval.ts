@@ -67,6 +67,7 @@ export type LiveEvalReport = {
   releaseSha: string;
   model: typeof MODEL;
   recordedAt: string;
+  status: "passed" | "failed";
   attempted: number;
   metrics: EvalMetrics;
   thresholdsPassed: boolean;
@@ -446,6 +447,7 @@ export async function runLiveEval({
     results.push(await runCase(item, extractor, now));
   }
   const metrics = scoreEvalRun(cases, results);
+  const thresholdsPassed = evalThresholdsPassed(metrics);
   const report: LiveEvalReport = {
     schemaVersion: 1,
     datasetVersion: DATASET_VERSION,
@@ -453,9 +455,10 @@ export async function runLiveEval({
     releaseSha,
     model: MODEL,
     recordedAt: now(),
+    status: thresholdsPassed ? "passed" : "failed",
     attempted: cases.length,
     metrics,
-    thresholdsPassed: evalThresholdsPassed(metrics),
+    thresholdsPassed,
     storesPromptsOrResponses: false,
     cases: cases.map((item) =>
       safeCaseRecord(item, results.find(({ caseId }) => caseId === item.id)!)

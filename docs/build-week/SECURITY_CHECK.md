@@ -33,3 +33,16 @@ values and is not a substitute for the later frozen-release security evidence.
   resolution for the latter and proposes a breaking forced change, so no automatic or force fix was
   run. These moderate findings do not block the plan's high/critical release gate and must be
   rechecked at the frozen release audit.
+
+## Frozen-release procedure
+
+After separate dependency-registry approval, run the precommitted exporter and then validate its
+fixed ignored machine record:
+
+```bash
+npm run release:security-review -- --network-approved --release-sha "$release_sha"
+npm run release:record -- --kind security --release-sha "$release_sha" --input .release/inputs/security.json
+```
+
+The export contains only exit codes, high/critical counts, document hashes, the lock hash, and the
+frozen release SHA. It does not retain registry output, environment values, or credentials.
