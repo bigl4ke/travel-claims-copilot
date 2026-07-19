@@ -15,6 +15,7 @@ import { RAW_FACT_PATHS } from "./domain/claim-contract";
 import { resolveClaimContext } from "./domain/context-resolver";
 import { mergeRawFacts } from "./domain/fact-merge";
 import { buildRemedyAssessment, topLevelStatus } from "./domain/remedy-assessment";
+import { postMergeGuard, preflightGuard } from "./domain/safety-guard";
 import {
   buildUnrankedRetrievalTrace,
   regimesFromApplicability
@@ -108,6 +109,7 @@ function blockedResult(input: {
   status: "out_of_scope" | "unsupported_high_risk";
   revision: number;
   extraction: ExtractionMetadata;
+  caution: string;
 }): AssessmentResult {
   return {
     status: input.status,
@@ -120,7 +122,7 @@ function blockedResult(input: {
     extraction: input.extraction,
     assessments: [],
     retrieval: emptyRetrieval(),
-    cautions: ["This competition build cannot assess this journey."],
+    cautions: [input.caution],
     nextActions: []
   };
 }
@@ -214,6 +216,26 @@ export async function processClaimTurn(
     throw new Error(`invalid_analyze_claim_request: ${parsed.errors.join("; ")}`);
   }
   const request = parsed.data;
+  const preflight = preflightGuard(request.message);
+  if (preflight.status !== "pass") {
+    return {
+      baseRevision: request.baseRevision,
+      claimState: request.prior,
+      result: blockedResult({
+        status: preflight.status,
+        revision: request.prior.revision,
+        extraction: {
+          performed: false,
+          requestedMode: request.requestedMode ?? "local",
+          provider: null,
+          model: null,
+          notRunReason: "preflight_guard"
+        },
+        caution: preflight.message
+      }),
+      context: null
+    };
+  }
   const extracted = await extractPatches(request, dependencies);
   const merged = mergeRawFacts({
     prior: request.prior,
@@ -222,6 +244,20 @@ export async function processClaimTurn(
     deterministicPatch: extracted.deterministicPatch,
     ...(extracted.openaiPatch ? { openaiPatch: extracted.openaiPatch } : {})
   });
+  const postMerge = postMergeGuard(request.message, merged.state.facts);
+  if (postMerge.status !== "pass") {
+    return {
+      baseRevision: merged.baseRevision,
+      claimState: merged.state,
+      result: blockedResult({
+        status: postMerge.status,
+        revision: merged.state.revision,
+        extraction: extracted.extraction,
+        caution: postMerge.message
+      }),
+      context: null
+    };
+  }
   const context = resolveClaimContext({ state: merged.state });
   if (context.scenarios.status === "out_of_scope") {
     return {
@@ -230,7 +266,8 @@ export async function processClaimTurn(
       result: blockedResult({
         status: "out_of_scope",
         revision: merged.state.revision,
-        extraction: extracted.extraction
+        extraction: extracted.extraction,
+        caution: "This competition build cannot assess this journey."
       }),
       context: null
     };

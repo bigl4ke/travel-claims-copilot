@@ -8,7 +8,8 @@ import {
   type FactSource,
   type RawFactPath,
   type RawFactValue,
-  type UserFactEdit
+  type UserFactEdit,
+  type WorkflowStatus
 } from "../domain/claim-contract";
 import { parseRawClaimFacts, parseRawFactPatch } from "../domain/raw-fact-schema";
 
@@ -24,7 +25,7 @@ export type AnalyzeClaimRequest = {
 };
 
 export type AnalyzeClaimIntakeResponse = AnalyzeClaimDomainResponse & {
-  status: "needs_information" | "ready";
+  status: WorkflowStatus;
 };
 
 export type AnalyzeClaimRequestParseResult =

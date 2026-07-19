@@ -4,6 +4,7 @@ import { POST } from "../app/api/intake/route";
 import { emptyClaimFacts, normalizeClaimFacts } from "../lib/claimFacts";
 import { parseAnalyzeClaimRequest } from "../lib/api/analyze-contract";
 import { createIntakePostHandler, processClaimTurn, processIntake } from "../lib/intake";
+import { isBlockedWorkflowStatus } from "../lib/domain/workflow-status";
 import { LocalRawFactExtractor, type RawFactExtractor } from "../lib/model/raw-fact-extractor";
 import {
   createStructuredOutputClientFromEnv,
@@ -17,6 +18,18 @@ import { claimState } from "./fixtures/raw-claims";
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
+});
+
+describe("workflow status safety predicate", () => {
+  it.each([
+    ["unsupported_high_risk", true],
+    ["out_of_scope", true],
+    ["ready", false],
+    ["needs_information", false],
+    ["needs_info", false]
+  ] as const)("classifies %s blocked=%s", (status, blocked) => {
+    expect(isBlockedWorkflowStatus(status)).toBe(blocked);
+  });
 });
 
 describe("deterministic intake fallback", () => {
@@ -334,6 +347,76 @@ describe("intake API", () => {
     expect(result.question).toBe(
       "Where did the flight fly to? A city name or airport code is enough."
     );
+    expect(result.cautions).toEqual([
+      "This is an informational condition assessment, not legal advice or a promise of compensation."
+    ]);
+  });
+
+  it("preserves a legacy high-risk block without calling either extractor", async () => {
+    const localExtractor: RawFactExtractor = {
+      provider: "local",
+      model: null,
+      extract: vi.fn().mockResolvedValue({ set: {} })
+    };
+    const openaiExtractor: RawFactExtractor = {
+      provider: "openai",
+      model: "gpt-5.6-luna",
+      extract: vi.fn().mockResolvedValue({ set: {} })
+    };
+    const handler = createIntakePostHandler({ localExtractor, openaiExtractor });
+    const response = await handler(
+      new Request("http://localhost/api/intake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "There is an active fire and I need emergency help",
+          facts: null
+        })
+      })
+    );
+    const result = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result.status).toBe("unsupported_high_risk");
+    expect(result.question).toBeNull();
+    expect(result.missingFields).toEqual([]);
+    expect(result.cautions).toEqual([
+      "This may require immediate emergency or medical help; this tool cannot analyze it as an ordinary travel claim."
+    ]);
+    expect(localExtractor.extract).not.toHaveBeenCalled();
+    expect(openaiExtractor.extract).not.toHaveBeenCalled();
+  });
+
+  it("preserves a legacy out-of-scope block without returning an ordinary ask", async () => {
+    const currentFacts = normalizeClaimFacts({
+      ...emptyClaimFacts(),
+      issueType: "hotel_walk",
+      providerType: "hotel",
+      provider: "Hyatt",
+      disruptionType: "hotel_walk",
+      confidence: "high"
+    });
+    const handler = createIntakePostHandler({
+      localExtractor: {
+        provider: "local",
+        model: null,
+        extract: vi.fn().mockResolvedValue({ set: {} })
+      }
+    });
+    const response = await handler(
+      new Request("http://localhost/api/intake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "No additional facts.", facts: currentFacts })
+      })
+    );
+    const result = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result.status).toBe("out_of_scope");
+    expect(result.question).toBeNull();
+    expect(result.missingFields).toEqual([]);
+    expect(result.cautions).toEqual(["This competition build cannot assess this journey."]);
   });
 });
 
@@ -345,6 +428,55 @@ describe("canonical revision-safe intake", () => {
       { value: "Air France", source: "openai_extraction" }
     ]
   };
+
+  it.each([
+    [
+      "high-risk",
+      {
+        message: "There is an active fire and I need emergency help",
+        prior: claimState(),
+        baseRevision: 0,
+        requestedMode: "local"
+      },
+      "unsupported_high_risk"
+    ],
+    [
+      "out-of-scope",
+      {
+        message: "No additional facts.",
+        prior: claimState({
+          incidentType: "hotel_walk",
+          providerType: "hotel",
+          provider: "Hyatt",
+          confirmedHotelReservation: true,
+          wasWalked: true
+        }),
+        baseRevision: 0,
+        requestedMode: "local"
+      },
+      "out_of_scope"
+    ]
+  ] as const)("preserves the canonical top-level status for %s", async (_label, body, status) => {
+    const handler = createIntakePostHandler({
+      localExtractor: {
+        provider: "local",
+        model: null,
+        extract: vi.fn().mockResolvedValue({ set: {} })
+      }
+    });
+    const response = await handler(
+      new Request("http://localhost/api/intake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      })
+    );
+    const result = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(result.result.status).toBe(status);
+    expect(result.status).toBe(result.result.status);
+  });
 
   it.each([
     ["stale base revision", { message: "new facts", prior: claimState({}, 2), baseRevision: 1 }],

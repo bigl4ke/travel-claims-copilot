@@ -9,6 +9,7 @@ import type {
   RawClaimFacts
 } from "../lib/domain/claim-contract";
 import { emptyRawClaimFacts } from "../lib/domain/raw-fact-schema";
+import { isBlockedWorkflowStatus } from "../lib/domain/workflow-status";
 import type { IntakeExtractionMode, IntakeResult } from "../lib/intake";
 import type { AnalysisResult, Case, Policy, Script, SuggestedAsks } from "../lib/types";
 
@@ -153,6 +154,19 @@ export default function Home() {
       }
 
       setFacts(intake.facts);
+      if (isBlockedWorkflowStatus(intake.status)) {
+        setExtractionMode(null);
+        setIntakeWarning(undefined);
+        setMessages([
+          ...nextMessages,
+          {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content: intake.cautions[0] ?? "This request cannot receive ordinary claim analysis."
+          }
+        ]);
+        return;
+      }
       setExtractionMode(intake.extractionMode);
       setIntakeWarning(intake.warning);
 
@@ -190,6 +204,20 @@ export default function Home() {
 
       if (!analyzeResponse.ok) {
         throw new Error(domain.error ?? "Analysis failed.");
+      }
+
+      if (isBlockedWorkflowStatus(domain.result.status)) {
+        setResult(null);
+        setMessages([
+          ...nextMessages,
+          {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content:
+              domain.result.cautions[0] ?? "This request cannot receive ordinary claim analysis."
+          }
+        ]);
+        return;
       }
 
       setResult(pageResultFromDomain(domain));

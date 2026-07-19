@@ -1,12 +1,23 @@
 import { describe, expect, it } from "vitest";
 
 import { POST as analyze } from "../../app/api/analyze/route";
+import { POST as intake } from "../../app/api/intake/route";
 import { GET as getScenarios } from "../../app/api/scenarios/route";
 import { claimState } from "../fixtures/raw-claims";
 
 function analyzeRequest(body: Record<string, unknown>) {
   return analyze(
     new Request("http://local/api/analyze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    })
+  );
+}
+
+function intakeRequest(body: Record<string, unknown>) {
+  return intake(
+    new Request("http://local/api/intake", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)
@@ -174,5 +185,23 @@ describe("public scenario scope", () => {
         displayedScripts: []
       }
     });
+  });
+
+  it.each([
+    ["analyze", analyzeRequest],
+    ["canonical intake", intakeRequest]
+  ] as const)("returns an HTTP 200 high-risk result from the %s route", async (_route, send) => {
+    const response = await send({
+      message: "There is an active fire and I need emergency help",
+      prior: claimState(),
+      baseRevision: 0,
+      requestedMode: "local"
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.context).toBeNull();
+    expect(body.result.status).toBe("unsupported_high_risk");
+    expect(body.result.extraction.notRunReason).toBe("preflight_guard");
   });
 });

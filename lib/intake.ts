@@ -14,6 +14,7 @@ import {
 } from "./claimFacts";
 import type { ClaimState, RawClaimFacts } from "./domain/claim-contract";
 import { buildResolutionFacts, emptyRawClaimFacts } from "./domain/raw-fact-schema";
+import { isBlockedWorkflowStatus } from "./domain/workflow-status";
 import { createKnowledgeRepository } from "./knowledge/knowledge-repository";
 import type { StructuredOutputClient } from "./llm";
 import {
@@ -22,7 +23,7 @@ import {
   type RawFactExtractor
 } from "./model/raw-fact-extractor";
 
-export type IntakeStatus = "needs_info" | "ready";
+export type IntakeStatus = "needs_info" | "ready" | "out_of_scope" | "unsupported_high_risk";
 export type IntakeExtractionMode = "llm" | "deterministic";
 
 export type IntakeResult = {
@@ -31,6 +32,7 @@ export type IntakeResult = {
   missingFields: ClaimFactField[];
   question: string | null;
   extractionMode: IntakeExtractionMode;
+  cautions: string[];
   warning?: "llm_not_configured" | "llm_fallback_used";
 };
 
@@ -65,7 +67,7 @@ export async function processClaimTurn(
   });
   return {
     ...response,
-    status: response.result.status === "ready" ? "ready" : "needs_information"
+    status: response.result.status
   };
 }
 
@@ -245,6 +247,16 @@ export async function processIntake(
     warning = "llm_fallback_used";
   }
   const facts = rawFactsToLegacyFacts(buildResolutionFacts(response.claimState));
+  if (isBlockedWorkflowStatus(response.result.status)) {
+    return {
+      status: response.result.status,
+      facts,
+      missingFields: [],
+      question: null,
+      extractionMode,
+      cautions: [...response.result.cautions]
+    };
+  }
   const missingFields = getMissingClaimFields(facts);
   const needsInformation =
     missingFields.length > 0 || response.claimState.unresolvedFields.length > 0;
@@ -256,6 +268,7 @@ export async function processIntake(
       ? questionForMissingFields(missingFields, isChinese(message), facts)
       : null,
     extractionMode,
+    cautions: [...response.result.cautions],
     ...(warning ? { warning } : {})
   };
 }
