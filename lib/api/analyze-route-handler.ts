@@ -12,9 +12,15 @@ import {
 import { toApiErrorResponse, withRequestId, type RequestIdFactory } from "./api-response";
 import { isClaimStateReplayable, readJsonBody } from "./request-body";
 
-export type AnalyzeRouteDependencies = Partial<ProcessClaimDependencies> & {
+type RouteTelemetryDependencies = Omit<
+  NonNullable<ProcessClaimDependencies["telemetry"]>,
+  "requestId"
+>;
+
+export type AnalyzeRouteDependencies = Omit<Partial<ProcessClaimDependencies>, "telemetry"> & {
   processRequest?: typeof processClaimTurn;
   requestIdFactory?: RequestIdFactory;
+  telemetry?: RouteTelemetryDependencies;
 };
 
 function currentUtcDate(): string {
@@ -65,7 +71,8 @@ export function createAnalyzeRouteHandler(overrides: AnalyzeRouteDependencies = 
       ...(overrides.openaiExtractor ? { openaiExtractor: overrides.openaiExtractor } : {}),
       knowledgeRepository: overrides.knowledgeRepository ?? createKnowledgeRepository({ asOf }),
       now: () => asOf,
-      ...(overrides.retrievalLimits ? { retrievalLimits: overrides.retrievalLimits } : {})
+      ...(overrides.retrievalLimits ? { retrievalLimits: overrides.retrievalLimits } : {}),
+      ...(overrides.telemetry ? { telemetry: { ...overrides.telemetry, requestId } } : {})
     };
     try {
       const processRequest = overrides.processRequest ?? processClaimTurn;

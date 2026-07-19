@@ -16,9 +16,15 @@ import { toApiErrorResponse, withRequestId, type RequestIdFactory } from "./api-
 import { INPUT_LIMITS } from "./input-limits";
 import { isClaimStateReplayable, readJsonBody } from "./request-body";
 
-export type IntakeRouteDependencies = Partial<ProcessClaimTurnDependencies> & {
+type RouteTelemetryDependencies = Omit<
+  NonNullable<ProcessClaimTurnDependencies["telemetry"]>,
+  "requestId"
+>;
+
+export type IntakeRouteDependencies = Omit<Partial<ProcessClaimTurnDependencies>, "telemetry"> & {
   processRequest?: typeof processClaimTurn;
   requestIdFactory?: RequestIdFactory;
+  telemetry?: RouteTelemetryDependencies;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -104,14 +110,18 @@ function replayJsonRequest(request: Request, body: unknown): Request {
   });
 }
 
-function claimDependencies(overrides: IntakeRouteDependencies): ProcessClaimTurnDependencies {
+function claimDependencies(
+  overrides: IntakeRouteDependencies,
+  requestId: string
+): ProcessClaimTurnDependencies {
   return {
     localExtractor: overrides.localExtractor ?? new LocalRawFactExtractor(),
     ...(overrides.openaiExtractor ? { openaiExtractor: overrides.openaiExtractor } : {}),
     ...(overrides.knowledgeRepository
       ? { knowledgeRepository: overrides.knowledgeRepository }
       : {}),
-    ...(overrides.now ? { now: overrides.now } : {})
+    ...(overrides.now ? { now: overrides.now } : {}),
+    ...(overrides.telemetry ? { telemetry: { ...overrides.telemetry, requestId } } : {})
   };
 }
 
@@ -144,7 +154,7 @@ export function createIntakeRouteHandler(overrides: IntakeRouteDependencies = {}
       } catch {
         return toApiErrorResponse("unprocessable_request", requestId);
       }
-      const dependencies = claimDependencies(overrides);
+      const dependencies = claimDependencies(overrides, requestId);
       return createIntakePostHandler(dependencies, { requestId })(replayedRequest);
     }
 
@@ -157,7 +167,7 @@ export function createIntakeRouteHandler(overrides: IntakeRouteDependencies = {}
       return toApiErrorResponse("unprocessable_request", requestId);
     }
 
-    const dependencies = claimDependencies(overrides);
+    const dependencies = claimDependencies(overrides, requestId);
     try {
       const response = overrides.processRequest
         ? await overrides.processRequest(compatibleRequest.data, dependencies)

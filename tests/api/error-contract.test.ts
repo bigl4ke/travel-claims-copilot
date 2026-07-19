@@ -10,6 +10,8 @@ import {
   type ApiErrorEnvelope
 } from "../../lib/api/api-response";
 import { ModelFailure } from "../../lib/model/model-error";
+import type { SafeTelemetryEvent } from "../../lib/privacy/safe-telemetry";
+import { knowledgeSnapshotFixture } from "../fixtures/knowledge";
 import { claimState } from "../fixtures/raw-claims";
 
 const fixedMessages: Record<ApiErrorCode, string> = {
@@ -49,6 +51,29 @@ function expectExactEnvelope(
     "requestId",
     "retryable"
   ]);
+}
+
+export function compileTimeRouteTelemetryFixtures() {
+  const telemetry = {
+    sink: { record: (event: SafeTelemetryEvent) => Boolean(event) },
+    nowMs: () => 0
+  };
+  createAnalyzeRouteHandler({ telemetry });
+  createIntakeRouteHandler({ telemetry });
+  createAnalyzeRouteHandler({
+    telemetry: {
+      ...telemetry,
+      // @ts-expect-error Route telemetry receives its server request ID from the handler.
+      requestId: "caller-supplied-request-id"
+    }
+  });
+  createIntakeRouteHandler({
+    telemetry: {
+      ...telemetry,
+      // @ts-expect-error Route telemetry receives its server request ID from the handler.
+      requestId: "caller-supplied-request-id"
+    }
+  });
 }
 
 describe("unified API error serializer", () => {
@@ -150,6 +175,87 @@ describe("route error contract", () => {
       expect(JSON.stringify(body)).not.toContain("attacker-controlled-request-id");
     }
   );
+
+  it.each([
+    ["analyze", createAnalyzeRouteHandler],
+    ["intake", createIntakeRouteHandler]
+  ] as const)(
+    "injects the same server request ID into one terminal %s telemetry event",
+    async (route, createHandler) => {
+      const record = vi.fn<(event: SafeTelemetryEvent) => void>();
+      const nowMs = vi.fn().mockReturnValueOnce(100).mockReturnValueOnce(125);
+      const handler = createHandler({
+        requestIdFactory: () => "req-route-telemetry-001",
+        telemetry: { sink: { record }, nowMs },
+        localExtractor: {
+          provider: "local",
+          model: null,
+          extract: vi.fn().mockResolvedValue({ set: {} })
+        },
+        knowledgeRepository: { load: async () => knowledgeSnapshotFixture() },
+        now: () => "2026-07-20"
+      } as never);
+      const response = await handler(
+        new Request(`http://localhost/api/${route}`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-request-id": "attacker-controlled-request-id"
+          },
+          body: JSON.stringify({
+            message: "A bounded claim message.",
+            prior: claimState(),
+            baseRevision: 0,
+            requestedMode: "local"
+          })
+        })
+      );
+
+      expect(response.status).toBe(200);
+      expect(record).toHaveBeenCalledOnce();
+      expect(record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: "req-route-telemetry-001",
+          category: "success",
+          requestedMode: "local",
+          provider: "local"
+        })
+      );
+      expect(JSON.stringify(record.mock.calls)).not.toContain("attacker-controlled-request-id");
+    }
+  );
+
+  it("preserves the outer intake request ID through the legacy adapter telemetry", async () => {
+    const record = vi.fn<(event: SafeTelemetryEvent) => void>();
+    const nowMs = vi.fn().mockReturnValueOnce(100).mockReturnValueOnce(125);
+    const handler = createIntakeRouteHandler({
+      requestIdFactory: () => "req-legacy-telemetry-001",
+      telemetry: { sink: { record }, nowMs },
+      localExtractor: {
+        provider: "local",
+        model: null,
+        extract: vi.fn().mockResolvedValue({ set: {} })
+      }
+    });
+    const response = await handler(
+      new Request("http://localhost/api/intake", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: "A bounded legacy claim message.", facts: null })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(record).toHaveBeenCalledOnce();
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "req-legacy-telemetry-001",
+        category: "success",
+        requestedMode: "local",
+        provider: "local"
+      })
+    );
+  });
 
   it.each([
     [new ModelFailure("model_refusal", false, false), 422, "model_refusal", false],

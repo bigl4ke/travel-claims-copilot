@@ -43,12 +43,14 @@ export type ProcessClaimTurnDependencies = {
   openaiExtractor?: OpenAIRawFactExtractorPort;
   knowledgeRepository?: ProcessClaimDependencies["knowledgeRepository"];
   now?: ProcessClaimDependencies["now"];
+  telemetry?: ProcessClaimDependencies["telemetry"];
 };
 
 export type IntakeDependencies = {
   llmClient?: StructuredOutputClient | null;
   localExtractor?: LocalRawFactExtractorPort;
   openaiExtractor?: OpenAIRawFactExtractorPort;
+  telemetry?: ProcessClaimDependencies["telemetry"];
 };
 
 export async function processClaimTurn(
@@ -65,7 +67,8 @@ export async function processClaimTurn(
     ...(dependencies.openaiExtractor ? { openaiExtractor: dependencies.openaiExtractor } : {}),
     knowledgeRepository:
       dependencies.knowledgeRepository ?? createKnowledgeRepository({ asOf: now() }),
-    now
+    now,
+    ...(dependencies.telemetry ? { telemetry: dependencies.telemetry } : {})
   });
   return {
     ...response,
@@ -238,7 +241,8 @@ export async function processIntake(
     : "llm_not_configured";
   const response: AnalyzeClaimIntakeResponse = await processClaimTurn(request, {
     localExtractor,
-    ...(configuredOpenAIExtractor ? { openaiExtractor: configuredOpenAIExtractor } : {})
+    ...(configuredOpenAIExtractor ? { openaiExtractor: configuredOpenAIExtractor } : {}),
+    ...(dependencies.telemetry ? { telemetry: dependencies.telemetry } : {})
   });
   if (
     configuredOpenAIExtractor &&
@@ -335,7 +339,8 @@ export function createIntakePostHandler(
       return Response.json(
         await processIntake(message, currentFacts, {
           llmClient: null,
-          localExtractor: dependencies.localExtractor
+          localExtractor: dependencies.localExtractor,
+          ...(dependencies.telemetry ? { telemetry: dependencies.telemetry } : {})
         })
       );
     } catch (error) {
