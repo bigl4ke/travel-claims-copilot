@@ -9,7 +9,7 @@
     "lint": "eslint . --ext .js,.mjs,.ts,.tsx --max-warnings 0",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "validate:data": "node scripts/validate-data.mjs",
+    "validate:data": "tsx scripts/validate-data.ts",
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "playwright test",
     "validate:evidence": "node scripts/validate-build-week-evidence.mjs --scope all",

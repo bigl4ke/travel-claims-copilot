@@ -1,0 +1,124 @@
+[
+  {
+    "commitment_id": "united_dot_controllable_disruption_commitments_2026_07_19",
+    "normalized_carrier": "United",
+    "applicable_carrier_role": "operating_carrier",
+    "source_title": "Airline Cancellation and Delay Dashboard",
+    "source_provider": "U.S. Department of Transportation",
+    "source_url": "https://www.transportation.gov/airconsumer/airline-cancellation-delay-dashboard?carrier_target_id=29861",
+    "source_type": "official_dashboard",
+    "legal_regime": "US_AIRLINE_COMMITMENT",
+    "authority": "medium",
+    "last_checked": "2026-07-19",
+    "reviewer_note": "Reviewed on the United-filtered U.S. DOT dashboard with project-owner network authorization. Mapping is conservative: rerouting covers cancellations only because significant delay is not computable, and the 180-minute meal wait remains missing in the frozen fact contract.",
+    "remedies": [
+      {
+        "remedy_id": "us_rerouting",
+        "committed": true,
+        "predicates": [
+          {
+            "kind": "event",
+            "field": "incidentType",
+            "operator": "one_of",
+            "values": ["airline_cancellation"]
+          },
+          {
+            "kind": "controllability",
+            "field": "controllability",
+            "operator": "equals",
+            "value": "controllable"
+          }
+        ],
+        "display_conditions": [
+          "Controllable cancellation; delay rerouting is not evaluated because significant delay is not computable"
+        ],
+        "rights": [
+          "Rebooking on United at no additional cost",
+          "Rebooking on an agreement partner at no additional cost"
+        ]
+      },
+      {
+        "remedy_id": "us_meal",
+        "committed": true,
+        "predicates": [
+          {
+            "kind": "event",
+            "field": "incidentType",
+            "operator": "one_of",
+            "values": ["airline_delay", "airline_cancellation"]
+          },
+          {
+            "kind": "controllability",
+            "field": "controllability",
+            "operator": "equals",
+            "value": "controllable"
+          },
+          {
+            "kind": "minimum_wait_minutes",
+            "field": "waitMinutes",
+            "operator": "at_least",
+            "value": 180
+          }
+        ],
+        "display_conditions": [
+          "Controllable delay or cancellation with at least 180 minutes of passenger wait"
+        ],
+        "rights": ["Meal, meal cash, or meal voucher"]
+      },
+      {
+        "remedy_id": "us_hotel",
+        "committed": true,
+        "predicates": [
+          {
+            "kind": "event",
+            "field": "incidentType",
+            "operator": "one_of",
+            "values": ["airline_delay", "airline_cancellation"]
+          },
+          {
+            "kind": "controllability",
+            "field": "controllability",
+            "operator": "equals",
+            "value": "controllable"
+          },
+          {
+            "kind": "overnight",
+            "field": "isOvernight",
+            "operator": "equals",
+            "value": true
+          }
+        ],
+        "display_conditions": ["Controllable overnight delay or cancellation"],
+        "rights": ["Complimentary hotel accommodations"]
+      },
+      {
+        "remedy_id": "us_ground_transport",
+        "committed": true,
+        "predicates": [
+          {
+            "kind": "event",
+            "field": "incidentType",
+            "operator": "one_of",
+            "values": ["airline_delay", "airline_cancellation"]
+          },
+          {
+            "kind": "controllability",
+            "field": "controllability",
+            "operator": "equals",
+            "value": "controllable"
+          },
+          {
+            "kind": "overnight",
+            "field": "isOvernight",
+            "operator": "equals",
+            "value": true
+          }
+        ],
+        "display_conditions": [
+          "Controllable overnight delay or cancellation with hotel accommodation"
+        ],
+        "rights": ["Complimentary transportation to and from the hotel"]
+      }
+    ]
+  }
+]

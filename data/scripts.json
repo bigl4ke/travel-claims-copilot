@@ -1,6 +1,7 @@
 [
   {
     "script_id": "marriott_walk_frontdesk_en",
+    "source_ids": ["marriott_ultimate_reservation_guarantee"],
     "incident_types": ["hotel_walk"],
     "applicable_regions": ["global"],
     "applicability_rule": "listed_provider",
@@ -14,6 +15,7 @@
   },
   {
     "script_id": "airline_controllable_delay_hotel_en",
+    "source_ids": ["dot_airline_cancellation_delay_dashboard"],
     "incident_types": ["airline_delay", "airline_cancellation"],
     "applicable_regions": ["global"],
     "applicability_rule": "any_route",
@@ -27,6 +29,7 @@
   },
   {
     "script_id": "hotel_walk_escalation_email_en",
+    "source_ids": ["marriott_ultimate_reservation_guarantee"],
     "incident_types": ["hotel_walk"],
     "applicable_regions": ["global"],
     "applicability_rule": "any_route",
@@ -40,6 +43,7 @@
   },
   {
     "script_id": "airline_controllable_cancellation_email_en",
+    "source_ids": ["dot_airline_cancellation_delay_dashboard"],
     "incident_types": ["airline_cancellation"],
     "applicable_regions": ["global"],
     "applicability_rule": "any_route",
@@ -53,6 +57,7 @@
   },
   {
     "script_id": "denied_boarding_volunteer_gate_en",
+    "source_ids": ["dot_bumping_oversales"],
     "incident_types": ["denied_boarding"],
     "applicable_regions": ["global"],
     "applicability_rule": "any_route",
@@ -66,6 +71,7 @@
   },
   {
     "script_id": "denied_boarding_involuntary_email_en",
+    "source_ids": ["dot_bumping_oversales"],
     "incident_types": ["denied_boarding"],
     "applicable_regions": ["US"],
     "applicability_rule": "origin_region",
@@ -79,6 +85,7 @@
   },
   {
     "script_id": "eu261_claim_email_en",
+    "source_ids": ["eu261_regulation_261_2004", "eu261_air_passenger_rights"],
     "incident_types": ["airline_delay", "airline_cancellation"],
     "applicable_regions": ["EU_EEA_CH"],
     "applicability_rule": "eu261_route",
@@ -92,6 +99,7 @@
   },
   {
     "script_id": "eu261_authority_escalation_en",
+    "source_ids": ["eu261_regulation_261_2004", "eu261_air_passenger_rights"],
     "incident_types": ["airline_delay", "airline_cancellation"],
     "applicable_regions": ["EU_EEA_CH"],
     "applicability_rule": "eu261_route",
@@ -105,6 +113,7 @@
   },
   {
     "script_id": "uk261_claim_email_en",
+    "source_ids": ["uk261_assimilated_regulation_261_2004"],
     "incident_types": ["airline_delay", "airline_cancellation"],
     "applicable_regions": ["UK"],
     "applicability_rule": "uk261_route",
@@ -118,6 +127,7 @@
   },
   {
     "script_id": "ca_appr_disruption_claim_en",
+    "source_ids": ["ca_appr_sor_2019_150"],
     "incident_types": ["airline_delay", "airline_cancellation"],
     "applicable_regions": ["CA"],
     "applicability_rule": "origin_or_destination_region",
@@ -131,6 +141,7 @@
   },
   {
     "script_id": "us_dot_refund_request_en",
+    "source_ids": ["us_dot_automatic_ticket_refunds"],
     "incident_types": ["airline_delay", "airline_cancellation"],
     "applicable_regions": ["US"],
     "applicability_rule": "origin_or_destination_region",
@@ -144,6 +155,7 @@
   },
   {
     "script_id": "au_acl_travel_disruption_en",
+    "source_ids": ["au_accc_travel_delays_consumer_guarantees"],
     "incident_types": ["airline_delay", "airline_cancellation"],
     "applicable_regions": ["AU"],
     "applicability_rule": "australia_consumer_law",
@@ -157,6 +169,10 @@
   },
   {
     "script_id": "cn_flight_disruption_request_zh",
+    "source_ids": [
+      "cn_flight_normality_regulation_2016",
+      "cn_public_air_transport_passenger_service_2021"
+    ],
     "incident_types": ["airline_delay", "airline_cancellation"],
     "applicable_regions": ["CN"],
     "applicability_rule": "china_flight_regulation",
@@ -170,6 +186,7 @@
   },
   {
     "script_id": "cn_oversales_denied_boarding_zh",
+    "source_ids": ["cn_public_air_transport_passenger_service_2021"],
     "incident_types": ["denied_boarding"],
     "applicable_regions": ["CN"],
     "applicability_rule": "china_flight_regulation",

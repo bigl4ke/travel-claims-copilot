@@ -97,6 +97,7 @@ export type Case = {
 
 export type Script = {
   script_id: string;
+  source_ids: string[];
   incident_types: MvpIssueType[];
   applicable_regions: PolicyRegion[];
   applicability_rule: PolicyApplicabilityRule;
