@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "validate:data": "tsx scripts/validate-data.ts",
     "test": "vitest run --config vitest.config.ts",
+    "test:ci": "vitest run --config vitest.config.ts tests/ci",
     "test:offline": "vitest run --config vitest.config.ts tests/offline",
     "test:e2e": "playwright test",
     "test:e2e:rehearsals": "node scripts/run-e2e-rehearsals.mjs",
