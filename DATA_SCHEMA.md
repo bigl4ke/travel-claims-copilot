@@ -1,5 +1,50 @@
 # 数据结构设计
 
+## ClaimFacts
+
+用户自然语言经过多轮 intake 后形成的结构化事实。事件、法律适用和操作阶段必须分开：
+
+- `issueType`: `hotel_walk | airline_delay | airline_cancellation | denied_boarding | unknown`
+- `providerType`: `hotel | airline | unknown`
+- `provider`: string | null
+- `origin`, `destination`: city / airport / country / region
+- `disruptionType`, `disruptionReason`, `disruptionReasonStatus`
+- `arrivalDelayMinutes`, `isOvernight`, `deniedBoardingKind`
+- `bookingChannel`: `direct | ota | portal | travel_agent | corporate_travel | unknown`
+- `bookingProvider`: string | null
+- `journeyStage`: `pre_trip | at_airport | en_route | completed | unknown`
+- `disruptionTiming`: `planned_schedule_change | close_in_irrops | unknown`
+- `ticketType`: `cash | award | unknown`
+- `validatingCarrier`, `marketingCarrier`, `operatingCarrier`, `disruptingCarrier`
+- `awardProgram`: string | null
+- `autoRebooked`: boolean | null
+- `autoRebookedItinerary`: string | null
+- `recoveryPriorities`: (`earliest_arrival | same_date | nonstop | same_airport | same_cabin | preserve_trip_length`)[]
+- `preferredAlternatives`: string[]
+- `hasConnectionsOrReturnSegments`: boolean | null
+- `loyaltyStatus`, `expenses`, `evidence`, `userGoal`, `confidence`
+
+`journeyStage` 表示用户当前处于行程前、机场、途中还是已经结束；`disruptionTiming`
+表示应采用提前航变还是临近出发 IRROPS 的处理流程。它们都不是 incident type。
+
+## HandlingPlaybook
+
+由服务器根据 `ClaimFacts` 确定性生成的操作建议，不由 LLM 自由生成：
+
+- `status`: `actionable | needs_context`
+- `situation`: `hotel_walk | planned_schedule_change | close_in_irrops | completed_disruption | unknown`
+- `contactFirst`: role / name / reason
+- `askLadder`: string[]
+- `ticketingChecks`: string[]
+- `fallback`: string[]
+- `uncertainties`: string[]
+- `sources`: sourceType / title / url
+- `notGuaranteed`: true
+
+`sources.sourceType` 必须区分 `industry_guidance`、`community_guide` 和
+`official_policy_required`。操作指南不能替代法规或航司当前官方政策，也不能承诺改签、
+报销或补偿。
+
 ## Policy
 
 官方政策、法规、航司/酒店公开承诺。
@@ -43,7 +88,7 @@ where required, the operating carrier. It must not be inferred solely from the i
 - brand_or_airline: string
 - issue_type: string
 - location_country: string
-- booking_channel: "direct" | "ota" | "portal" | "unknown"
+- booking_channel: "direct" | "ota" | "portal" | "travel_agent" | "corporate_travel" | "unknown"
 - loyalty_status: string
 - reservation_type: "paid" | "points" | "award" | "unknown"
 - facts: string

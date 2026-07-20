@@ -91,6 +91,96 @@ describe("deterministic intake fallback", () => {
     expect(result.missingFields).toEqual(["provider"]);
     expect(result.question).toBe("是哪家酒店或酒店集团？");
   });
+
+  it("extracts a complete advance award-ticket recovery intent", async () => {
+    const result = await processIntake(
+      "My upcoming Air France flight from Paris to New York next month was cancelled. No reason was given. I booked with Flying Blue miles on the Air France website, was automatically rebooked two days later, and want a same-day nonstop flight.",
+      emptyClaimFacts(),
+      { llmClient: null }
+    );
+
+    expect(result.missingFields).toEqual([]);
+    expect(result.status).toBe("ready");
+    expect(result.facts).toMatchObject({
+      journeyStage: "pre_trip",
+      disruptionTiming: "planned_schedule_change",
+      bookingChannel: "direct",
+      ticketType: "award",
+      awardProgram: "Flying Blue",
+      validatingCarrier: "Air France",
+      autoRebooked: true
+    });
+    expect(result.facts.recoveryPriorities).toEqual(["same_date", "nonstop"]);
+  });
+
+  it("collects booking ownership and ticket type after core facts", async () => {
+    const first = await processIntake(
+      "My upcoming United flight next month from New York to Los Angeles was cancelled because of a mechanical issue.",
+      emptyClaimFacts(),
+      { llmClient: null }
+    );
+
+    expect(first.missingFields).toEqual([
+      "bookingChannel",
+      "ticketType",
+      "autoRebooked"
+    ]);
+    expect(first.question).toContain("OTA/travel agent");
+
+    const second = await processIntake(
+      "It was a paid ticket through Concur, and they haven't rebooked me.",
+      first.facts,
+      { llmClient: null }
+    );
+
+    expect(second.missingFields).toEqual([]);
+    expect(second.status).toBe("ready");
+    expect(second.facts.bookingChannel).toBe("corporate_travel");
+    expect(second.facts.bookingProvider).toBe("Concur");
+    expect(second.facts.ticketType).toBe("cash");
+    expect(second.facts.autoRebooked).toBe(false);
+  });
+
+  it("does not ask ticketing questions during an airport IRROPS", async () => {
+    const result = await processIntake(
+      "I'm at the airport. United cancelled my flight from New York to Los Angeles because the crew timed out.",
+      emptyClaimFacts(),
+      { llmClient: null }
+    );
+
+    expect(result.status).toBe("ready");
+    expect(result.facts.journeyStage).toBe("at_airport");
+    expect(result.facts.disruptionTiming).toBe("close_in_irrops");
+    expect(result.facts.bookingChannel).toBe("unknown");
+  });
+
+  it("accepts a short answer to the replacement-itinerary question", async () => {
+    const prior = normalizeClaimFacts({
+      ...emptyClaimFacts(),
+      issueType: "airline_cancellation",
+      providerType: "airline",
+      provider: "United",
+      origin: { city: "New York", airport: null, country: null, region: null },
+      destination: {
+        city: "Los Angeles",
+        airport: null,
+        country: null,
+        region: null
+      },
+      disruptionType: "cancellation",
+      disruptionReason: "mechanical",
+      disruptionReasonStatus: "reported",
+      journeyStage: "pre_trip",
+      disruptionTiming: "planned_schedule_change",
+      bookingChannel: "direct",
+      ticketType: "cash"
+    });
+
+    const result = await processIntake("No", prior, { llmClient: null });
+
+    expect(result.status).toBe("ready");
+    expect(result.facts.autoRebooked).toBe(false);
+  });
 });
 
 describe("LLM intake", () => {
@@ -258,8 +348,62 @@ describe("LLM intake", () => {
     });
 
     expect(result.extractionMode).toBe("llm");
-    expect(result.status).toBe("ready");
+    expect(result.status).toBe("needs_info");
+    expect(result.missingFields).toEqual(["journeyStage"]);
+    expect(result.question).toBe(
+      "Is the trip completed, are you at the airport or already traveling, or have you not departed yet?"
+    );
     expect(result.facts.disruptionReasonStatus).toBe("unavailable");
+  });
+
+  it("merges airline roles and recovery preferences from structured model output", async () => {
+    const client: StructuredOutputClient = {
+      generate: vi.fn().mockResolvedValue({
+        ...emptyClaimFacts(),
+        issueType: "airline_cancellation",
+        providerType: "airline",
+        provider: "Japan Airlines",
+        validatingCarrier: "Alaska Airlines",
+        marketingCarrier: "Japan Airlines",
+        operatingCarrier: "Japan Airlines",
+        disruptingCarrier: "Japan Airlines",
+        origin: {
+          city: "Tokyo",
+          airport: "HND",
+          country: "Japan",
+          region: "other"
+        },
+        destination: {
+          city: "San Francisco",
+          airport: "SFO",
+          country: "United States",
+          region: "US"
+        },
+        disruptionType: "cancellation",
+        disruptionReasonStatus: "unavailable",
+        bookingChannel: "direct",
+        journeyStage: "pre_trip",
+        disruptionTiming: "planned_schedule_change",
+        ticketType: "award",
+        awardProgram: "Alaska Mileage Plan",
+        autoRebooked: false,
+        recoveryPriorities: ["same_date", "same_cabin"],
+        preferredAlternatives: ["JL002"],
+        confidence: "high"
+      })
+    };
+
+    const result = await processIntake(
+      "JAL cancelled my award flight next month and Alaska issued the ticket. I want JL002 in the same cabin.",
+      emptyClaimFacts(),
+      { llmClient: client }
+    );
+
+    expect(result.status).toBe("ready");
+    expect(result.facts.validatingCarrier).toBe("Alaska Airlines");
+    expect(result.facts.disruptingCarrier).toBe("Japan Airlines");
+    expect(result.facts.preferredAlternatives).toEqual(["JL002"]);
+    expect(result.facts.recoveryPriorities).toEqual(["same_cabin", "same_date"]);
   });
 });
 

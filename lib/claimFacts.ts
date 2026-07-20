@@ -24,7 +24,31 @@ export type ClaimDisruptionReasonStatus =
   | "reported"
   | "unavailable";
 export type ClaimDeniedBoardingKind = "voluntary" | "involuntary" | "unknown";
-export type ClaimBookingChannel = "direct" | "ota" | "portal" | "unknown";
+export type ClaimBookingChannel =
+  | "direct"
+  | "ota"
+  | "portal"
+  | "travel_agent"
+  | "corporate_travel"
+  | "unknown";
+export type ClaimJourneyStage =
+  | "pre_trip"
+  | "at_airport"
+  | "en_route"
+  | "completed"
+  | "unknown";
+export type ClaimDisruptionTiming =
+  | "planned_schedule_change"
+  | "close_in_irrops"
+  | "unknown";
+export type ClaimTicketType = "cash" | "award" | "unknown";
+export type ClaimRecoveryPriority =
+  | "earliest_arrival"
+  | "same_date"
+  | "nonstop"
+  | "same_airport"
+  | "same_cabin"
+  | "preserve_trip_length";
 
 export type ClaimLocation = {
   city: string | null;
@@ -37,7 +61,10 @@ export type ClaimFacts = {
   issueType: ClaimIssueType;
   providerType: ClaimProviderType;
   provider: string | null;
+  validatingCarrier: string | null;
+  marketingCarrier: string | null;
   operatingCarrier: string | null;
+  disruptingCarrier: string | null;
   operatingCarrierRegion: ClaimRegion | null;
   origin: ClaimLocation;
   destination: ClaimLocation;
@@ -48,6 +75,16 @@ export type ClaimFacts = {
   isOvernight: boolean | null;
   deniedBoardingKind: ClaimDeniedBoardingKind;
   bookingChannel: ClaimBookingChannel;
+  bookingProvider: string | null;
+  journeyStage: ClaimJourneyStage;
+  disruptionTiming: ClaimDisruptionTiming;
+  ticketType: ClaimTicketType;
+  awardProgram: string | null;
+  autoRebooked: boolean | null;
+  autoRebookedItinerary: string | null;
+  recoveryPriorities: ClaimRecoveryPriority[];
+  preferredAlternatives: string[];
+  hasConnectionsOrReturnSegments: boolean | null;
   loyaltyStatus: string | null;
   expenses: string[];
   evidence: string[];
@@ -64,7 +101,14 @@ export type ClaimFactField =
   | "disruptionType"
   | "disruptionReason"
   | "arrivalDelayMinutes"
-  | "deniedBoardingKind";
+  | "deniedBoardingKind"
+  | "bookingChannel"
+  | "journeyStage"
+  | "disruptionTiming"
+  | "ticketType"
+  | "validatingCarrier"
+  | "autoRebooked"
+  | "recoveryPriorities";
 
 export type ClaimFactsParseResult =
   | { success: true; data: ClaimFacts }
@@ -105,7 +149,35 @@ const deniedBoardingKinds: ClaimDeniedBoardingKind[] = [
   "involuntary",
   "unknown"
 ];
-const bookingChannels: ClaimBookingChannel[] = ["direct", "ota", "portal", "unknown"];
+const bookingChannels: ClaimBookingChannel[] = [
+  "direct",
+  "ota",
+  "portal",
+  "travel_agent",
+  "corporate_travel",
+  "unknown"
+];
+const journeyStages: ClaimJourneyStage[] = [
+  "pre_trip",
+  "at_airport",
+  "en_route",
+  "completed",
+  "unknown"
+];
+const disruptionTimings: ClaimDisruptionTiming[] = [
+  "planned_schedule_change",
+  "close_in_irrops",
+  "unknown"
+];
+const ticketTypes: ClaimTicketType[] = ["cash", "award", "unknown"];
+const recoveryPriorities: ClaimRecoveryPriority[] = [
+  "earliest_arrival",
+  "same_date",
+  "nonstop",
+  "same_airport",
+  "same_cabin",
+  "preserve_trip_length"
+];
 const confidenceLevels: ClaimFacts["confidence"][] = ["low", "medium", "high"];
 
 const nullableStringSchema = {
@@ -130,7 +202,10 @@ export const claimFactsJsonSchema = {
     issueType: { type: "string", enum: issueTypes },
     providerType: { type: "string", enum: providerTypes },
     provider: nullableStringSchema,
+    validatingCarrier: nullableStringSchema,
+    marketingCarrier: nullableStringSchema,
     operatingCarrier: nullableStringSchema,
+    disruptingCarrier: nullableStringSchema,
     operatingCarrierRegion: {
       anyOf: [{ type: "string", enum: regions }, { type: "null" }]
     },
@@ -143,6 +218,21 @@ export const claimFactsJsonSchema = {
     isOvernight: { anyOf: [{ type: "boolean" }, { type: "null" }] },
     deniedBoardingKind: { type: "string", enum: deniedBoardingKinds },
     bookingChannel: { type: "string", enum: bookingChannels },
+    bookingProvider: nullableStringSchema,
+    journeyStage: { type: "string", enum: journeyStages },
+    disruptionTiming: { type: "string", enum: disruptionTimings },
+    ticketType: { type: "string", enum: ticketTypes },
+    awardProgram: nullableStringSchema,
+    autoRebooked: { anyOf: [{ type: "boolean" }, { type: "null" }] },
+    autoRebookedItinerary: nullableStringSchema,
+    recoveryPriorities: {
+      type: "array",
+      items: { type: "string", enum: recoveryPriorities }
+    },
+    preferredAlternatives: { type: "array", items: { type: "string" } },
+    hasConnectionsOrReturnSegments: {
+      anyOf: [{ type: "boolean" }, { type: "null" }]
+    },
     loyaltyStatus: nullableStringSchema,
     expenses: { type: "array", items: { type: "string" } },
     evidence: { type: "array", items: { type: "string" } },
@@ -153,7 +243,10 @@ export const claimFactsJsonSchema = {
     "issueType",
     "providerType",
     "provider",
+    "validatingCarrier",
+    "marketingCarrier",
     "operatingCarrier",
+    "disruptingCarrier",
     "operatingCarrierRegion",
     "origin",
     "destination",
@@ -164,6 +257,16 @@ export const claimFactsJsonSchema = {
     "isOvernight",
     "deniedBoardingKind",
     "bookingChannel",
+    "bookingProvider",
+    "journeyStage",
+    "disruptionTiming",
+    "ticketType",
+    "awardProgram",
+    "autoRebooked",
+    "autoRebookedItinerary",
+    "recoveryPriorities",
+    "preferredAlternatives",
+    "hasConnectionsOrReturnSegments",
     "loyaltyStatus",
     "expenses",
     "evidence",
@@ -181,7 +284,10 @@ export function emptyClaimFacts(): ClaimFacts {
     issueType: "unknown",
     providerType: "unknown",
     provider: null,
+    validatingCarrier: null,
+    marketingCarrier: null,
     operatingCarrier: null,
+    disruptingCarrier: null,
     operatingCarrierRegion: null,
     origin: emptyClaimLocation(),
     destination: emptyClaimLocation(),
@@ -192,6 +298,16 @@ export function emptyClaimFacts(): ClaimFacts {
     isOvernight: null,
     deniedBoardingKind: "unknown",
     bookingChannel: "unknown",
+    bookingProvider: null,
+    journeyStage: "unknown",
+    disruptionTiming: "unknown",
+    ticketType: "unknown",
+    awardProgram: null,
+    autoRebooked: null,
+    autoRebookedItinerary: null,
+    recoveryPriorities: [],
+    preferredAlternatives: [],
+    hasConnectionsOrReturnSegments: null,
     loyaltyStatus: null,
     expenses: [],
     evidence: [],
@@ -240,6 +356,50 @@ function parseStringArray(value: unknown, path: string, errors: string[]): strin
   return Array.from(new Set(value.map((item) => item.trim()).filter(Boolean)));
 }
 
+function parseOptionalNullableString(
+  value: unknown,
+  path: string,
+  errors: string[]
+): string | null {
+  return value === undefined ? null : parseNullableString(value, path, errors);
+}
+
+function parseOptionalBoolean(
+  value: unknown,
+  path: string,
+  errors: string[]
+): boolean | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  errors.push(`${path} must be a boolean or null`);
+  return null;
+}
+
+function parseRecoveryPriorities(
+  value: unknown,
+  errors: string[]
+): ClaimRecoveryPriority[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    errors.push("recoveryPriorities must be an array");
+    return [];
+  }
+
+  const parsed = value
+    .map((item, index) =>
+      parseEnum(item, recoveryPriorities, `recoveryPriorities[${index}]`, errors)
+    )
+    .filter((item): item is ClaimRecoveryPriority => Boolean(item));
+  return Array.from(new Set(parsed));
+}
+
 function parseLocation(value: unknown, path: string, errors: string[]): ClaimLocation {
   if (!isRecord(value)) {
     errors.push(`${path} must be an object`);
@@ -280,7 +440,22 @@ export function parseClaimFacts(value: unknown): ClaimFactsParseResult {
     providerType:
       parseEnum(value.providerType, providerTypes, "providerType", errors) ?? "unknown",
     provider: parseNullableString(value.provider, "provider", errors),
+    validatingCarrier: parseOptionalNullableString(
+      value.validatingCarrier,
+      "validatingCarrier",
+      errors
+    ),
+    marketingCarrier: parseOptionalNullableString(
+      value.marketingCarrier,
+      "marketingCarrier",
+      errors
+    ),
     operatingCarrier: parseNullableString(value.operatingCarrier, "operatingCarrier", errors),
+    disruptingCarrier: parseOptionalNullableString(
+      value.disruptingCarrier,
+      "disruptingCarrier",
+      errors
+    ),
     operatingCarrierRegion:
       value.operatingCarrierRegion === null
         ? null
@@ -312,6 +487,45 @@ export function parseClaimFacts(value: unknown): ClaimFactsParseResult {
       "unknown",
     bookingChannel:
       parseEnum(value.bookingChannel, bookingChannels, "bookingChannel", errors) ?? "unknown",
+    bookingProvider: parseOptionalNullableString(
+      value.bookingProvider,
+      "bookingProvider",
+      errors
+    ),
+    journeyStage:
+      value.journeyStage === undefined
+        ? "unknown"
+        : parseEnum(value.journeyStage, journeyStages, "journeyStage", errors) ?? "unknown",
+    disruptionTiming:
+      value.disruptionTiming === undefined
+        ? "unknown"
+        : parseEnum(
+            value.disruptionTiming,
+            disruptionTimings,
+            "disruptionTiming",
+            errors
+          ) ?? "unknown",
+    ticketType:
+      value.ticketType === undefined
+        ? "unknown"
+        : parseEnum(value.ticketType, ticketTypes, "ticketType", errors) ?? "unknown",
+    awardProgram: parseOptionalNullableString(value.awardProgram, "awardProgram", errors),
+    autoRebooked: parseOptionalBoolean(value.autoRebooked, "autoRebooked", errors),
+    autoRebookedItinerary: parseOptionalNullableString(
+      value.autoRebookedItinerary,
+      "autoRebookedItinerary",
+      errors
+    ),
+    recoveryPriorities: parseRecoveryPriorities(value.recoveryPriorities, errors),
+    preferredAlternatives:
+      value.preferredAlternatives === undefined
+        ? []
+        : parseStringArray(value.preferredAlternatives, "preferredAlternatives", errors),
+    hasConnectionsOrReturnSegments: parseOptionalBoolean(
+      value.hasConnectionsOrReturnSegments,
+      "hasConnectionsOrReturnSegments",
+      errors
+    ),
     loyaltyStatus: parseNullableString(value.loyaltyStatus, "loyaltyStatus", errors),
     expenses: parseStringArray(value.expenses, "expenses", errors),
     evidence: parseStringArray(value.evidence, "evidence", errors),
@@ -356,7 +570,10 @@ export function normalizeClaimFacts(facts: ClaimFacts): ClaimFacts {
     ...normalized,
     providerType,
     provider: canonicalizeProviderName(normalized.provider, providerType),
+    validatingCarrier: canonicalizeProviderName(normalized.validatingCarrier, "airline"),
+    marketingCarrier: canonicalizeProviderName(normalized.marketingCarrier, "airline"),
     operatingCarrier: canonicalizeProviderName(normalized.operatingCarrier, "airline"),
+    disruptingCarrier: canonicalizeProviderName(normalized.disruptingCarrier, "airline"),
     disruptionType,
     disruptionReasonStatus
   };
@@ -408,6 +625,49 @@ export function getMissingClaimFields(facts: ClaimFacts): ClaimFactField[] {
     if (normalized.deniedBoardingKind === "unknown") {
       missing.push("deniedBoardingKind");
     }
+  }
+
+  return missing;
+}
+
+export function getMissingIntakeFields(facts: ClaimFacts): ClaimFactField[] {
+  const requiredForAnalysis = getMissingClaimFields(facts);
+  if (requiredForAnalysis.length > 0) {
+    return requiredForAnalysis;
+  }
+
+  const normalized = normalizeClaimFacts(facts);
+  if (normalized.providerType !== "airline") {
+    return [];
+  }
+
+  if (normalized.journeyStage === "unknown") {
+    return ["journeyStage"];
+  }
+
+  if (normalized.journeyStage !== "pre_trip") {
+    return [];
+  }
+
+  const missing: ClaimFactField[] = [];
+  if (normalized.disruptionTiming === "unknown") {
+    missing.push("disruptionTiming");
+  }
+  if (normalized.bookingChannel === "unknown") {
+    missing.push("bookingChannel");
+  }
+  if (normalized.ticketType === "unknown") {
+    missing.push("ticketType");
+  }
+  if (
+    normalized.ticketType === "award" &&
+    !normalized.awardProgram &&
+    !normalized.validatingCarrier
+  ) {
+    missing.push("validatingCarrier");
+  }
+  if (normalized.autoRebooked === null) {
+    missing.push("autoRebooked");
   }
 
   return missing;

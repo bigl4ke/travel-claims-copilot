@@ -121,7 +121,7 @@ export function inferRouteLocations(text: string): {
 } {
   return {
     origin: findPlaceAfterMarker(text, ["from ", "departing ", "leaving ", "从", "由"]),
-    destination: findPlaceAfterMarker(text, ["to ", "flying to ", "到", "飞往", "前往"])
+    destination: findPlaceAfterMarker(text, ["to ", "flying to ", "到", "飞往", "前往", "飞"])
   };
 }
 
