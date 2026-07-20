@@ -149,20 +149,23 @@ IATA 的公开跨航司指南可对帖子中的部分流程作交叉核验：
 
 ### 7.1 Intake 应补充的事实字段
 
-建议后续在结构化事实中加入：
+本分支已经按 TypeScript 命名实现以下结构化事实：
 
-- `disruption_timing`: `planned_schedule_change | close_in_irrops | en_route | unknown`
-- `at_airport_or_en_route`: boolean
-- `booking_channel`: `airline_direct | ota | travel_agent | corporate_travel | unknown`
-- `ticket_type`: `cash | award | unknown`
-- `validating_carrier`
-- `marketing_carrier`
-- `operating_carrier`
-- `disrupting_carrier`
-- `award_program`
-- `auto_rebooked_itinerary`
-- `preferred_alternatives`
-- `has_connections_or_return_segments`
+- `journeyStage`: `pre_trip | at_airport | en_route | completed | unknown`
+- `disruptionTiming`: `planned_schedule_change | close_in_irrops | unknown`
+- `bookingChannel`: `direct | ota | portal | travel_agent | corporate_travel | unknown`
+- `bookingProvider`
+- `ticketType`: `cash | award | unknown`
+- `validatingCarrier`
+- `marketingCarrier`
+- `operatingCarrier`
+- `disruptingCarrier`
+- `awardProgram`
+- `autoRebooked`
+- `autoRebookedItinerary`
+- `recoveryPriorities`
+- `preferredAlternatives`
+- `hasConnectionsOrReturnSegments`
 
 对普通用户不应一次性询问这些术语。LLM 可以先从自然语言提取，再只追问会改变下一步联系人或可行方案的缺失事实，例如：
 
@@ -176,14 +179,14 @@ IATA 的公开跨航司指南可对帖子中的部分流程作交叉核验：
 
 ### 7.2 新增“行动规划”而不是扩充赔偿分类
 
-建议把这套内容放在分析结果的 `next_actions` 或 `handling_playbook` 中：
+本分支已将这套内容放入分析结果的 `handlingPlaybook`：
 
 1. `situation`: 计划性航变 / IRROPS / 未知；
-2. `contact_first`: 首要联系人及原因；
-3. `ask_ladder`: 按可执行性排序的替代方案；
-4. `ticketing_check`: 改签后必须确认的事项；
+2. `contactFirst`: 首要联系人及原因；
+3. `askLadder`: 按可执行性排序的替代方案；
+4. `ticketingChecks`: 改签后必须确认的事项；
 5. `fallback`: 被拒后的复核或升级路径；
-6. `source_basis`: 官方行业材料、航司政策或 community DP；
+6. `sources`: 官方行业材料、航司政策核验要求或 community DP；
 7. `uncertainties`: 尚缺事实和可能变化的规则。
 
 它不应该成为新的 incident type。事件仍然是 `airline_delay`、`airline_cancellation`、`denied_boarding` 等；`planned_schedule_change` 和 `close_in_irrops` 描述处理阶段，EU261 等继续描述法律适用框架。
@@ -205,12 +208,12 @@ IATA 的公开跨航司指南可对帖子中的部分流程作交叉核验：
 
 ## 8. 推荐实现顺序
 
-1. 先扩展 intake facts，识别航变发生阶段、出票渠道、票种和各航司角色；
-2. 增加确定性的 `contact_first` 决策函数；
-3. 生成具体但带条件的替代航班请求和票证核验清单；
-4. 为首批支持航司补充当前官方 schedule change policy；
-5. 单独设计 procedural guidance 数据结构，再决定是否把社区指南纳入检索；
-6. 用现金票、航司自家里程票、伙伴里程票、OTA 票和旅行中联程中断分别建立测试用例。
+1. 已扩展 intake facts，识别航变发生阶段、出票渠道、票种和各航司角色；
+2. 已增加确定性的 `contactFirst` 决策函数；
+3. 已生成带条件的请求顺序和票证核验清单；
+4. 下一步为首批支持航司补充当前官方 schedule change policy；
+5. 后续再评估是否建立可检索的 procedural guidance 数据文件；
+6. 持续用现金票、航司自家里程票、伙伴里程票、OTA 票和旅行中联程中断扩充测试。
 
 ## 9. 产品边界
 

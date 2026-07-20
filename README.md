@@ -5,6 +5,7 @@ Travel Claims Copilot is a demo web app for exploring travel disruption claims a
 The user describes a hotel or airline issue, and the app returns:
 
 - issue type
+- who to contact first and a conditional handling playbook
 - evidence coverage and unresolved applicability checks
 - relevant official policies or regulations
 - similar community datapoints
@@ -17,7 +18,7 @@ The product does **not** provide legal advice, promise compensation, or submit c
 
 ## Current Status
 
-This repo has a structured MVP plus the first LLM-assisted intake workflow.
+This repo has a structured MVP plus a multi-turn operational-intent workflow.
 
 The app currently uses:
 
@@ -27,6 +28,8 @@ The app currently uses:
 - local JSON seed data
 - optional multi-turn LLM fact extraction through OpenAI Responses or DeepSeek Chat Completions
 - strict `ClaimFacts` JSON Schema validation with incident and jurisdiction kept separate
+- operational intent for trip stage, ticket ownership, award travel, rebooking, and recovery priorities
+- deterministic contact-first and handling-playbook generation
 - deterministic local extraction when no API key is configured or a model call fails
 - explainable weighted retrieval with deterministic Top-K results
 - approved-case filtering and deterministic response generation
@@ -158,6 +161,7 @@ lib/
   jurisdiction.ts         Location, carrier, EU261, and UK261 route enrichment
   policyScope.ts          Route applicability and controllability rules
   intake.ts               Multi-turn extraction, fact merging, questions, and fallback
+  handlingPlaybook.ts     Contact-first, ask ladder, ticket checks, and escalation rules
   llm.ts                  OpenAI and DeepSeek structured-output adapters
   analyze.ts              Structured-facts and legacy-description orchestration
   classifier.ts           Structured fact extraction and issue classification
@@ -172,6 +176,7 @@ tests/
   claimFacts.test.ts      Schema, jurisdiction, and structured API tests
   intake.test.ts          LLM client, fallback, and multi-turn API tests
   intake-evals.test.ts    Colloquial and multi-turn evaluation conversations
+  handlingPlaybook.test.ts Operational workflow decision tests
   retrieval.test.ts       Five golden scenarios plus classification/retrieval guards
 ```
 
@@ -186,7 +191,8 @@ natural user message + prior ClaimFacts
   -> server validation + jurisdiction enrichment + missing-field calculation
   -> targeted follow-up question until ready
   -> POST /api/analyze with validated ClaimFacts
-  -> incident type + origin/destination regions + operating carrier + controllability
+  -> incident + jurisdiction facts and operational trip/ticket facts remain separate
+  -> deterministic contact-first and handling playbook
   -> deterministic legal-regime applicability rules
   -> scope-aware policy / case / script scoring
   -> Top-K retrieval (3 policies / 3 cases / 2 scripts)
@@ -207,7 +213,13 @@ be returned.
 The LLM is an interviewer and semantic parser, not the policy engine or retrieval database.
 It receives prior structured facts plus the latest user message and must return the strict
 four-incident `ClaimFacts` schema. The server recomputes missing fields, geographic regions,
-policy scope, and controllability.
+policy scope, controllability, and the deterministic handling playbook.
+
+For airline cases, intake also distinguishes the journey stage, advance schedule change versus
+close-in IRROPS, booking channel and provider, paid versus award ticket, airline roles, automatic
+rebooking, and user recovery priorities. Completed trips proceed to claims guidance; airport or
+en-route disruptions proceed without unnecessary ticket-owner questions; advance changes collect
+the facts needed to identify who controls the ticket.
 
 `disruptionReasonStatus` distinguishes a reason that has not been requested yet from a reason
 the user explicitly cannot obtain. An `unavailable` reason does not trigger another question;
@@ -341,6 +353,22 @@ Returns:
   evidenceChecklist: string[];
   scripts: Script[];
   cautions: string[];
+  handlingPlaybook?: {
+    status: "actionable" | "needs_context";
+    situation:
+      | "hotel_walk"
+      | "planned_schedule_change"
+      | "close_in_irrops"
+      | "completed_disruption"
+      | "unknown";
+    contactFirst: { role: string; name: string | null; reason: string };
+    askLadder: string[];
+    ticketingChecks: string[];
+    fallback: string[];
+    uncertainties: string[];
+    sources: HandlingGuidanceSource[];
+    notGuaranteed: true;
+  };
 }
 ```
 
@@ -420,15 +448,24 @@ Recommended next work:
 
 ### Phase 2: LLM-Assisted Analysis
 
-Implemented foundation:
+Implemented:
 
 - server-only OpenAI configuration
+- server-only DeepSeek configuration
 - strict structured fact extraction within the four-type allowlist
 - multi-turn fact merging and targeted clarification
 - deterministic fallback, schema validation, timeouts, and evidence-only retrieval
+- trip-stage, booking-owner, ticket-type, airline-role, and recovery-preference extraction
+- conditional `contactFirst`, ask ladder, ticketing checks, fallback, and source provenance
+- explicit separation of industry guidance, community guidance, and required official-policy checks
 
-Recommended next step: evaluate model quality on real anonymized phrasing before adding an
-LLM-written final response. Any later answer-generation model must use retrieved evidence only.
+Recommended next steps:
+
+- add current official schedule-change policies for the first supported airlines
+- evaluate real configured-model conversations for accuracy, latency, and cost
+- add outcome feedback logging before any LLM-written final response
+
+Any later answer-generation model must use retrieved evidence only.
 
 ### Phase 3: Database
 

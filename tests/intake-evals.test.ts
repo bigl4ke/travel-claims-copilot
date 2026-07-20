@@ -25,6 +25,7 @@ describe("conversational intake evaluations", () => {
       "我是万豪钛金，官网订的喜来登，到了前台说酒店超售，今晚没有房间。"
     ]);
 
+    expect(result.missingFields).toEqual([]);
     expect(result.status).toBe("ready");
     expect(result.facts).toMatchObject({
       issueType: "hotel_walk",
@@ -98,5 +99,53 @@ describe("conversational intake evaluations", () => {
     expect(result.facts.issueType).toBe("airline_cancellation");
     expect(result.facts.provider).toBe("United");
     expect(result.facts.disruptionReason).toBe("weather");
+  });
+
+  it("extracts a Chinese advance OTA recovery workflow", async () => {
+    const result = await runConversation([
+      "下个月的法航航班从巴黎飞纽约被取消了，航司没有告知原因。我通过携程买的现金票，现在还没有改签。"
+    ]);
+
+    expect(result.missingFields).toEqual([]);
+    expect(result.status).toBe("ready");
+    expect(result.facts).toMatchObject({
+      journeyStage: "pre_trip",
+      disruptionTiming: "planned_schedule_change",
+      bookingChannel: "ota",
+      bookingProvider: "Trip.com",
+      ticketType: "cash",
+      autoRebooked: false
+    });
+  });
+
+  it("asks for timing only after learning that travel has not started", async () => {
+    const first = await runConversation([
+      "United cancelled my flight from New York to Los Angeles because of a mechanical issue."
+    ]);
+
+    expect(first.missingFields).toEqual(["journeyStage"]);
+
+    const result = await runConversation([
+      "United cancelled my flight from New York to Los Angeles because of a mechanical issue.",
+      "I have not departed. I booked a paid ticket on the United website and they did not rebook me.",
+      "It was an earlier planned schedule change."
+    ]);
+
+    expect(result.missingFields).toEqual([]);
+    expect(result.status).toBe("ready");
+    expect(result.facts.disruptionTiming).toBe("planned_schedule_change");
+    expect(result.facts.validatingCarrier).toBe("United");
+  });
+
+  it("prioritizes live travel restoration during an airport disruption", async () => {
+    const result = await runConversation([
+      "我正在机场，美联航从纽约飞洛杉矶的航班因为机组问题取消了。"
+    ]);
+
+    expect(result.missingFields).toEqual([]);
+    expect(result.status).toBe("ready");
+    expect(result.facts.journeyStage).toBe("at_airport");
+    expect(result.facts.disruptionTiming).toBe("close_in_irrops");
+    expect(result.facts.bookingChannel).toBe("unknown");
   });
 });
