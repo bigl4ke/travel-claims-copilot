@@ -135,7 +135,7 @@ describe("regional policy applicability", () => {
       reason: "late_inbound_aircraft"
     });
     const assessment = result.policyAssessments.find(
-      (item) => item.policyId === "eu261_air_passenger_rights"
+      (item) => item.policyId === "eu261_regulation_261_2004"
     );
 
     expect(assessment?.status).toBe("met");

@@ -97,33 +97,6 @@
     "last_checked": "2026-07-16"
   },
   {
-    "policy_id": "eu261_air_passenger_rights",
-    "provider_type": "government",
-    "provider": "European Union",
-    "policy_name": "EU Air Passenger Rights",
-    "legal_regime": "EU261",
-    "applicability_rule": "eu261_route",
-    "incident_types": ["airline_delay", "airline_cancellation", "denied_boarding"],
-    "applicable_regions": ["EU_EEA_CH"],
-    "applicable_providers": [],
-    "required_controllability": "any",
-    "source_url": "https://europa.eu/youreurope/citizens/travel/passenger-rights/air/index_en.htm",
-    "source_type": "regulator_guidance",
-    "authority_level": "high",
-    "applicable_conditions": [
-      "Flight departing from EU",
-      "Or flight arriving in EU operated by EU carrier",
-      "Delay, cancellation, denied boarding, or missed connection under applicable conditions"
-    ],
-    "compensation_or_rights": [
-      "Care",
-      "Refund or rerouting",
-      "Potential fixed compensation depending on delay, distance, and reason"
-    ],
-    "summary": "EU air passenger rights may provide care, refund/rerouting, and fixed compensation for qualifying delays, cancellations, denied boarding, or missed connections.",
-    "last_checked": "2026-07-16"
-  },
-  {
     "policy_id": "eu261_regulation_261_2004",
     "provider_type": "government",
     "provider": "European Union",

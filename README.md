@@ -37,7 +37,7 @@ The app currently uses:
 There is no database, login, payment, scraping, email sending, or claim submission. Conversation
 state currently stays in the browser and is not persisted.
 
-The current knowledge base contains 11 policies, 55 reviewed case records (35 approved for
+The current knowledge base contains 10 policies, 55 reviewed case records (35 approved for
 retrieval), and 14 reusable scripts. The first demo publishes four incident types:
 
 - `hotel_walk`

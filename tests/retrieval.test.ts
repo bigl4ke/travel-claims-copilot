@@ -66,7 +66,7 @@ const goldenScenarios: GoldenScenario[] = [
       "My Air France flight from the EU arrived four hours late after a technical issue. I want the airline to assess EU261 eligibility.",
     expectedIssue: "airline_delay",
     expectedProvider: "Air France",
-    expectedPolicyId: "eu261_air_passenger_rights",
+    expectedPolicyId: "eu261_regulation_261_2004",
     expectedTopCaseId: "uscf_lh_eu261_claim_2022_05"
   }
 ];
@@ -210,7 +210,6 @@ describe("retrieval quality controls", () => {
 
     expect(euCancellation.query.policyRegions).toEqual(["EU_EEA_CH"]);
     expect(euCancellation.officialBasis.map((policy) => policy.policy_id)).toEqual([
-      "eu261_air_passenger_rights",
       "eu261_regulation_261_2004"
     ]);
     expect(euCancellation.scripts[0]?.script_id).toBe("eu261_claim_email_en");
