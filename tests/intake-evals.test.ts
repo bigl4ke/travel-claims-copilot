@@ -58,6 +58,18 @@ describe("conversational intake evaluations", () => {
     expect(result.facts.provider).toBe("Marriott");
   });
 
+  it("accepts a Chinese answer that the airline did not disclose a reason", async () => {
+    const result = await runConversation([
+      "我的法航航班从巴黎飞往纽约，被取消后最终晚到4小时。",
+      "航司没有告知原因，我也不知道。"
+    ]);
+
+    expect(result.missingFields).toEqual([]);
+    expect(result.status).toBe("ready");
+    expect(result.facts.disruptionReason).toBe("unknown");
+    expect(result.facts.disruptionReasonStatus).toBe("unavailable");
+  });
+
   it("lets a later answer correct denied-boarding kind", async () => {
     const result = await runConversation([
       "My Delta flight was oversold and the gate agent asked for volunteers.",

@@ -54,6 +54,32 @@ describe("deterministic intake fallback", () => {
     expect(result.facts.issueType).toBe("airline_cancellation");
   });
 
+  it("accepts an explicitly unavailable airline reason without asking again", async () => {
+    const first = await processIntake(
+      "My Air France flight from Paris to New York was cancelled and I arrived four hours late.",
+      emptyClaimFacts(),
+      { llmClient: null }
+    );
+    const second = await processIntake("I don't know the reason.", first.facts, {
+      llmClient: null
+    });
+
+    expect(first.missingFields).toEqual(["disruptionReason"]);
+    expect(second.status).toBe("ready");
+    expect(second.facts.disruptionReason).toBe("unknown");
+    expect(second.facts.disruptionReasonStatus).toBe("unavailable");
+    expect(second.missingFields).toEqual([]);
+    expect(second.question).toBeNull();
+
+    const corrected = await processIntake(
+      "Actually, the airline later said it was a mechanical problem.",
+      second.facts,
+      { llmClient: null }
+    );
+    expect(corrected.facts.disruptionReason).toBe("mechanical");
+    expect(corrected.facts.disruptionReasonStatus).toBe("reported");
+  });
+
   it("asks a hotel-specific provider question for a Chinese walk report", async () => {
     const result = await processIntake(
       "我订了酒店但是到店无房",
@@ -200,6 +226,40 @@ describe("LLM intake", () => {
     expect(second.facts.disruptionReason).toBe("late_inbound_aircraft");
     expect(second.status).toBe("ready");
     expect(second.question).toBeNull();
+  });
+
+  it("preserves an unavailable reason when the model leaves it not provided", async () => {
+    const client: StructuredOutputClient = {
+      generate: vi.fn().mockResolvedValue(emptyClaimFacts())
+    };
+    const prior = normalizeClaimFacts({
+      ...emptyClaimFacts(),
+      issueType: "airline_cancellation",
+      providerType: "airline",
+      provider: "Air France",
+      origin: {
+        city: "Paris",
+        airport: null,
+        country: "France",
+        region: "EU_EEA_CH"
+      },
+      destination: {
+        city: "New York",
+        airport: null,
+        country: "United States",
+        region: "US"
+      },
+      disruptionType: "cancellation",
+      confidence: "high"
+    });
+
+    const result = await processIntake("The airline didn't give me a reason.", prior, {
+      llmClient: client
+    });
+
+    expect(result.extractionMode).toBe("llm");
+    expect(result.status).toBe("ready");
+    expect(result.facts.disruptionReasonStatus).toBe("unavailable");
   });
 });
 

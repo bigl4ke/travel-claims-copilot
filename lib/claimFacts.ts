@@ -19,6 +19,10 @@ export type ClaimDisruptionReason =
   | "late_inbound_aircraft"
   | "other_controllable"
   | "unknown";
+export type ClaimDisruptionReasonStatus =
+  | "not_provided"
+  | "reported"
+  | "unavailable";
 export type ClaimDeniedBoardingKind = "voluntary" | "involuntary" | "unknown";
 export type ClaimBookingChannel = "direct" | "ota" | "portal" | "unknown";
 
@@ -39,6 +43,7 @@ export type ClaimFacts = {
   destination: ClaimLocation;
   disruptionType: ClaimDisruptionType;
   disruptionReason: ClaimDisruptionReason;
+  disruptionReasonStatus: ClaimDisruptionReasonStatus;
   arrivalDelayMinutes: number | null;
   isOvernight: boolean | null;
   deniedBoardingKind: ClaimDeniedBoardingKind;
@@ -90,6 +95,11 @@ const disruptionReasons: ClaimDisruptionReason[] = [
   "other_controllable",
   "unknown"
 ];
+const disruptionReasonStatuses: ClaimDisruptionReasonStatus[] = [
+  "not_provided",
+  "reported",
+  "unavailable"
+];
 const deniedBoardingKinds: ClaimDeniedBoardingKind[] = [
   "voluntary",
   "involuntary",
@@ -128,6 +138,7 @@ export const claimFactsJsonSchema = {
     destination: locationSchema,
     disruptionType: { type: "string", enum: disruptionTypes },
     disruptionReason: { type: "string", enum: disruptionReasons },
+    disruptionReasonStatus: { type: "string", enum: disruptionReasonStatuses },
     arrivalDelayMinutes: { anyOf: [{ type: "integer", minimum: 0 }, { type: "null" }] },
     isOvernight: { anyOf: [{ type: "boolean" }, { type: "null" }] },
     deniedBoardingKind: { type: "string", enum: deniedBoardingKinds },
@@ -148,6 +159,7 @@ export const claimFactsJsonSchema = {
     "destination",
     "disruptionType",
     "disruptionReason",
+    "disruptionReasonStatus",
     "arrivalDelayMinutes",
     "isOvernight",
     "deniedBoardingKind",
@@ -175,6 +187,7 @@ export function emptyClaimFacts(): ClaimFacts {
     destination: emptyClaimLocation(),
     disruptionType: "unknown",
     disruptionReason: "unknown",
+    disruptionReasonStatus: "not_provided",
     arrivalDelayMinutes: null,
     isOvernight: null,
     deniedBoardingKind: "unknown",
@@ -283,6 +296,15 @@ export function parseClaimFacts(value: unknown): ClaimFactsParseResult {
       parseEnum(value.disruptionType, disruptionTypes, "disruptionType", errors) ?? "unknown",
     disruptionReason:
       parseEnum(value.disruptionReason, disruptionReasons, "disruptionReason", errors) ?? "unknown",
+    disruptionReasonStatus:
+      value.disruptionReasonStatus === undefined
+        ? "not_provided"
+        : parseEnum(
+            value.disruptionReasonStatus,
+            disruptionReasonStatuses,
+            "disruptionReasonStatus",
+            errors
+          ) ?? "not_provided",
     arrivalDelayMinutes,
     isOvernight,
     deniedBoardingKind:
@@ -324,13 +346,19 @@ export function normalizeClaimFacts(facts: ClaimFacts): ClaimFacts {
         ? "airline"
         : "unknown"
     : normalized.providerType;
+  const disruptionReasonStatus = normalized.disruptionReason !== "unknown"
+    ? "reported"
+    : normalized.disruptionReasonStatus === "unavailable"
+      ? "unavailable"
+      : "not_provided";
 
   return {
     ...normalized,
     providerType,
     provider: canonicalizeProviderName(normalized.provider, providerType),
     operatingCarrier: canonicalizeProviderName(normalized.operatingCarrier, "airline"),
-    disruptionType
+    disruptionType,
+    disruptionReasonStatus
   };
 }
 
@@ -365,7 +393,10 @@ export function getMissingClaimFields(facts: ClaimFacts): ClaimFactField[] {
     if (normalized.issueType === "airline_delay" && normalized.arrivalDelayMinutes === null) {
       missing.push("arrivalDelayMinutes");
     }
-    if (normalized.disruptionReason === "unknown") {
+    if (
+      normalized.disruptionReason === "unknown" &&
+      normalized.disruptionReasonStatus === "not_provided"
+    ) {
       missing.push("disruptionReason");
     }
   }

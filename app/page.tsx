@@ -161,7 +161,9 @@ export default function Home() {
           id: `assistant-${Date.now()}`,
           role: "assistant",
           content:
-            "I have enough detail for the first-pass analysis. Review the extracted facts and the grounded references below."
+            intake.facts.disruptionReasonStatus === "unavailable"
+              ? "I’ll continue with the airline’s reason marked as unavailable. Cause-dependent remedies remain conditional; review the grounded references below."
+              : "I have enough detail for the first-pass analysis. Review the extracted facts and the grounded references below."
         }
       ]);
     } catch (caughtError) {
@@ -367,6 +369,9 @@ function ClaimSnapshot({
             label="Event"
             value={facts.disruptionType.replaceAll("_", " ")}
           />
+          {facts.providerType === "airline" ? (
+            <FactRow label="Reason" value={formatDisruptionReason(facts)} />
+          ) : null}
         </dl>
       ) : (
         <p className="mt-4 text-sm leading-6 text-ink/65">
@@ -396,6 +401,15 @@ function FactRow({ label, value }: { label: string; value: string }) {
 
 function formatLocation(location: ClaimFacts["origin"]): string {
   return location.airport ?? location.city ?? location.country ?? "";
+}
+
+function formatDisruptionReason(facts: ClaimFacts): string {
+  if (facts.disruptionReasonStatus === "unavailable") {
+    return "Not provided by airline";
+  }
+  return facts.disruptionReason === "unknown"
+    ? "Not provided yet"
+    : facts.disruptionReason.replaceAll("_", " ");
 }
 
 function SummaryPanel({ result }: { result: AnalysisResult | null }) {

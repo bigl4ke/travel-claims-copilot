@@ -209,6 +209,10 @@ It receives prior structured facts plus the latest user message and must return 
 four-incident `ClaimFacts` schema. The server recomputes missing fields, geographic regions,
 policy scope, and controllability.
 
+`disruptionReasonStatus` distinguishes a reason that has not been requested yet from a reason
+the user explicitly cannot obtain. An `unavailable` reason does not trigger another question;
+cause-dependent policies remain conditional instead.
+
 The OpenAI adapter requests strict JSON Schema output with `store: false`. The DeepSeek adapter
 uses Chat Completions JSON Output and includes the same schema in its system prompt. Both use a
 bounded timeout, runtime `ClaimFacts` validation, and a deterministic fallback. `/api/analyze`

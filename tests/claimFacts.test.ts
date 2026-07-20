@@ -42,6 +42,21 @@ describe("ClaimFacts schema", () => {
       "disruptionReason"
     ]);
   });
+
+  it("does not treat an explicitly unavailable disruption reason as unanswered", () => {
+    const facts = normalizeClaimFacts({
+      ...emptyClaimFacts(),
+      issueType: "airline_cancellation",
+      provider: "Air France",
+      origin: { city: "Paris", airport: null, country: null, region: null },
+      destination: { city: "New York", airport: null, country: null, region: null },
+      disruptionType: "cancellation",
+      disruptionReason: "unknown",
+      disruptionReasonStatus: "unavailable"
+    });
+
+    expect(getMissingClaimFields(facts)).toEqual([]);
+  });
 });
 
 describe("jurisdiction assessment", () => {
