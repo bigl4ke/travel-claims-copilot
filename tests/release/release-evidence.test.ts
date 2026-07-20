@@ -31,7 +31,8 @@ import {
   releaseSha
 } from "../fixtures/release-evidence";
 
-const { buildSourceReviewRecord, SOURCE_REVIEW_EXPORT_PATH } = sourceReviewProducer;
+const { buildSourceReviewRecord, checkSourceReachability, SOURCE_REVIEW_EXPORT_PATH } =
+  sourceReviewProducer;
 const { buildSecurityReviewRecord, SECURITY_REVIEW_EXPORT_PATH } = securityReviewProducer;
 
 describe("fixed release evidence contracts", () => {
@@ -338,6 +339,21 @@ describe("fixed release evidence contracts", () => {
       unreachableCount: 0
     });
     expect(validateSourceReviewRecord(record, releaseSha, releaseNow)).toEqual(record);
+  });
+
+  it("retries one transient source transport failure before recording the response", async () => {
+    let attempts = 0;
+    const result = await checkSourceReachability(
+      { id: "official-source", url: "https://official.example.test/source" },
+      async () => {
+        attempts += 1;
+        if (attempts === 1) throw new TypeError("synthetic transient disconnect");
+        return new Response(null, { status: 403 });
+      }
+    );
+
+    expect(attempts).toBe(2);
+    expect(result).toEqual({ id: "official-source", status: 403 });
   });
 
   it("builds a fixed-path security export and fails closed on high findings", () => {

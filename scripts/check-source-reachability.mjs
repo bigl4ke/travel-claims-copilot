@@ -55,6 +55,26 @@ function sourceIsReachable(result) {
   return (result.status >= 200 && result.status < 400) || [403, 405].includes(result.status);
 }
 
+export async function checkSourceReachability({ id, url }, fetcher = fetch) {
+  const request = async () => {
+    const response = await fetcher(url, {
+      method: "HEAD",
+      redirect: "follow",
+      signal: AbortSignal.timeout(10_000)
+    });
+    return { id, status: response.status };
+  };
+  try {
+    return await request();
+  } catch {
+    try {
+      return await request();
+    } catch {
+      return { id, error: true };
+    }
+  }
+}
+
 export function buildSourceReviewRecord({
   releaseSha,
   recordedAt,
@@ -131,20 +151,13 @@ export async function runSourceReachabilityReview({
       lastChecked: commitment.last_checked
     }))
   ];
-  const reachability = await Promise.all(
-    sources.map(async ({ id, url }) => {
-      try {
-        const response = await fetcher(url, {
-          method: "HEAD",
-          redirect: "follow",
-          signal: AbortSignal.timeout(10_000)
-        });
-        return { id, status: response.status };
-      } catch {
-        return { id, error: true };
-      }
-    })
-  );
+  const reachability = [];
+  // Release checks are intentionally serial so official hosts are not burst-requested.
+  // eslint-disable-next-line no-restricted-syntax
+  for (const source of sources) {
+    // eslint-disable-next-line no-await-in-loop
+    reachability.push(await checkSourceReachability(source, fetcher));
+  }
   const documentBytes = readFileSync(path.resolve(cwd, SOURCE_REVIEW_PATH));
   const record = buildSourceReviewRecord({
     releaseSha,
