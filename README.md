@@ -30,6 +30,8 @@ The app currently uses:
 - deterministic local extraction when no API key is configured or a model call fails
 - explainable weighted retrieval with deterministic Top-K results
 - approved-case filtering and deterministic response generation
+- pre-LLM safety routing for unsupported high-risk claims
+- bounded intake and analysis inputs
 - Vitest golden-scenario and quality-guard tests
 
 There is no database, login, payment, scraping, email sending, or claim submission. Conversation
@@ -228,7 +230,9 @@ Start or continue a fact-gathering conversation:
 ```
 
 The response is either `needs_info` with the accumulated `facts`, `missingFields`, and one
-targeted `question`, or `ready` with validated facts that can be sent to `/api/analyze`.
+targeted `question`; `ready` with validated facts that can be sent to `/api/analyze`; or
+`unsupported` with a professional-help safety notice. High-risk screening happens before an
+LLM call. Intake messages are limited to 4,000 characters.
 
 ### `GET /api/scenarios`
 
@@ -267,7 +271,9 @@ The preferred request uses the validated `facts` returned by `/api/intake`:
 ```
 
 The complete object must match `ClaimFacts`; incomplete valid facts receive HTTP `422` with
-`missingFields`. The following legacy inputs remain supported for compatibility.
+`missingFields`. Descriptions are limited to 12,000 characters. High-risk descriptions receive
+HTTP `422` with a safety category and do not enter classification or retrieval. The following
+legacy inputs remain supported for compatibility.
 
 Analyze by free-text description:
 

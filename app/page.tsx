@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { ClaimFacts } from "../lib/claimFacts";
 import type { IntakeExtractionMode, IntakeResult } from "../lib/intake";
+import type { SafetyAssessment } from "../lib/safety";
 import type {
   AnalysisResult,
   Case,
@@ -64,6 +65,7 @@ export default function Home() {
   const [facts, setFacts] = useState<ClaimFacts | null>(null);
   const [extractionMode, setExtractionMode] = useState<IntakeExtractionMode | null>(null);
   const [intakeWarning, setIntakeWarning] = useState<IntakeResult["warning"]>();
+  const [safetyNotice, setSafetyNotice] = useState<SafetyAssessment | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -86,6 +88,7 @@ export default function Home() {
     setDraft("");
     setIsLoading(true);
     setError("");
+    setSafetyNotice(null);
     setCopiedScriptId(null);
     setResult(null);
 
@@ -106,6 +109,21 @@ export default function Home() {
       setFacts(intake.facts);
       setExtractionMode(intake.extractionMode);
       setIntakeWarning(intake.warning);
+      setSafetyNotice(intake.safety ?? null);
+
+      if (intake.status === "unsupported") {
+        setMessages([
+          ...nextMessages,
+          {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content:
+              intake.safety?.message ??
+              "This request is outside the supported scope of the demo."
+          }
+        ]);
+        return;
+      }
 
       if (intake.status === "needs_info") {
         setMessages([
@@ -160,6 +178,7 @@ export default function Home() {
     setFacts(null);
     setExtractionMode(null);
     setIntakeWarning(undefined);
+    setSafetyNotice(null);
     setResult(null);
     setError("");
     setCopiedScriptId(null);
@@ -254,6 +273,16 @@ export default function Home() {
           {error ? (
             <div className="rounded-lg border border-coral/30 bg-white px-4 py-3 text-sm font-medium text-coral">
               {error}
+            </div>
+          ) : null}
+          {safetyNotice ? (
+            <div
+              className="rounded-lg border border-coral/30 bg-coral/5 px-4 py-3 text-sm leading-6 text-ink"
+              role="alert"
+            >
+              <p className="font-semibold text-coral">Professional-help boundary</p>
+              <p className="mt-1">{safetyNotice.message}</p>
+              <p className="mt-1 text-xs text-ink/55">This is not legal advice.</p>
             </div>
           ) : null}
         </div>

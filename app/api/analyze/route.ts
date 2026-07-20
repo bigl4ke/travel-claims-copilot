@@ -5,10 +5,19 @@ import policies from "../../../data/policies.json";
 import scripts from "../../../data/scripts.json";
 import { buildAnalysisFromFacts, buildAnalysisResult } from "../../../lib/analyze";
 import { getMissingClaimFields, parseClaimFacts } from "../../../lib/claimFacts";
+import {
+  MAX_ANALYZE_DESCRIPTION_LENGTH,
+  requestBodyExceedsLimit
+} from "../../../lib/inputLimits";
 import { normalizeIssueType } from "../../../lib/issueTaxonomy";
+import { assessHighRiskClaim } from "../../../lib/safety";
 import type { Case, Policy, Script } from "../../../lib/types";
 
 export async function POST(request: Request) {
+  if (requestBodyExceedsLimit(request)) {
+    return NextResponse.json({ error: "Request body is too large." }, { status: 413 });
+  }
+
   const body = (await request.json().catch(() => null)) as {
     caseId?: unknown;
     description?: unknown;
@@ -19,6 +28,23 @@ export async function POST(request: Request) {
   const description = typeof body?.description === "string" ? body.description.trim() : "";
   const caseId = typeof body?.caseId === "string" ? body.caseId.trim() : "";
   const issueType = normalizeIssueType(body?.issueType ?? body?.selectedIssueType);
+
+  if (description.length > MAX_ANALYZE_DESCRIPTION_LENGTH) {
+    return NextResponse.json(
+      {
+        error: `Description must be ${MAX_ANALYZE_DESCRIPTION_LENGTH} characters or fewer.`
+      },
+      { status: 413 }
+    );
+  }
+
+  const safety = assessHighRiskClaim(description);
+  if (safety) {
+    return NextResponse.json(
+      { error: safety.message, safety },
+      { status: 422 }
+    );
+  }
 
   if (body?.facts !== undefined) {
     const parsedFacts = parseClaimFacts(body.facts);

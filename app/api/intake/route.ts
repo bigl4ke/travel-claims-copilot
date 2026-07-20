@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 
 import { emptyClaimFacts, parseClaimFacts } from "../../../lib/claimFacts";
+import {
+  MAX_INTAKE_MESSAGE_LENGTH,
+  requestBodyExceedsLimit
+} from "../../../lib/inputLimits";
 import { processIntake } from "../../../lib/intake";
 
 export async function POST(request: Request) {
+  if (requestBodyExceedsLimit(request)) {
+    return NextResponse.json({ error: "Request body is too large." }, { status: 413 });
+  }
+
   const body = (await request.json().catch(() => null)) as {
     message?: unknown;
     facts?: unknown;
@@ -12,6 +20,12 @@ export async function POST(request: Request) {
 
   if (!message) {
     return NextResponse.json({ error: "Please provide a message." }, { status: 400 });
+  }
+  if (message.length > MAX_INTAKE_MESSAGE_LENGTH) {
+    return NextResponse.json(
+      { error: `Message must be ${MAX_INTAKE_MESSAGE_LENGTH} characters or fewer.` },
+      { status: 413 }
+    );
   }
 
   let currentFacts = emptyClaimFacts();
@@ -28,4 +42,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json(await processIntake(message, currentFacts));
 }
-
