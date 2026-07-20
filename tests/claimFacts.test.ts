@@ -61,6 +61,7 @@ describe("ClaimFacts schema", () => {
       "validatingCarrier",
       "marketingCarrier",
       "disruptingCarrier",
+      "bookingProvider",
       "journeyStage",
       "disruptionTiming",
       "ticketType",
@@ -197,6 +198,8 @@ describe("structured analyze API", () => {
       disruptionType: "cancellation",
       disruptionReason: "mechanical",
       arrivalDelayMinutes: 240,
+      journeyStage: "completed",
+      disruptionTiming: "close_in_irrops",
       confidence: "high"
     });
     const request = new Request("http://localhost/api/analyze", {
@@ -221,6 +224,13 @@ describe("structured analyze API", () => {
     expect(result.suggestedAsks.aggressive).toContain(
       "Fixed EU261 compensation if eligibility is met"
     );
+    expect(result.handlingPlaybook).toMatchObject({
+      situation: "completed_disruption",
+      contactFirst: {
+        role: "airline_customer_relations",
+        name: "Air France"
+      }
+    });
   });
 
   it("returns the primary EU261 regulation for a Paris departure", async () => {

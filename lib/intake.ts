@@ -48,7 +48,7 @@ Rules:
 - Set disruptionReasonStatus to reported whenever disruptionReason is a specific value other than unknown.
 - journeyStage describes the user's current trip state: pre_trip, at_airport, en_route, or completed. An account that says the user reached the final destination is completed.
 - disruptionTiming describes when the disruption was handled: planned_schedule_change for an advance change, close_in_irrops for a disruption on or close to travel, or unknown. Do not infer an exact boundary unless the message supplies timing.
-- Distinguish the validating/ticketing carrier, marketing carrier, operating carrier, and carrier that caused the disruption. Keep a role null when it is not stated or safely implied.
+- Distinguish the booking provider, validating/ticketing carrier, marketing carrier, operating carrier, and carrier that caused the disruption. Keep a role null when it is not stated or safely implied.
 - ticketType is award only when miles, points, or a frequent-flyer program issued the airline ticket. Otherwise use cash only when paid travel is clear.
 - autoRebooked records whether the airline or ticketing agent already supplied a replacement itinerary. Preserve the itinerary text when stated.
 - recoveryPriorities may only contain preferences explicitly expressed by the user. preferredAlternatives contains specific flights, dates, routes, or airports the user asks for.
@@ -230,6 +230,21 @@ function inferBookingChannel(text: string): ClaimFacts["bookingChannel"] {
   return "unknown";
 }
 
+function inferBookingProvider(text: string): string | null {
+  const providers: Array<[string, RegExp]> = [
+    ["Concur", /\bconcur\b/],
+    ["Expedia", /\bexpedia\b/],
+    ["Priceline", /\bpriceline\b/],
+    ["Orbitz", /\borbitz\b/],
+    ["Trip.com", /\btrip\.com\b|携程/],
+    ["Booking.com", /\bbooking\.com\b/],
+    ["Amex Travel", /\bamex travel\b/],
+    ["Chase Travel", /\bchase travel\b/],
+    ["Capital One Travel", /\bcapital one travel\b/]
+  ];
+  return providers.find(([, pattern]) => pattern.test(text.toLowerCase()))?.[0] ?? null;
+}
+
 function inferTicketType(text: string): ClaimFacts["ticketType"] {
   const normalized = text.toLowerCase();
   if (
@@ -358,6 +373,7 @@ function mergeDeterministicFacts(message: string, current: ClaimFacts): ClaimFac
     inferredJourneyStage === "unknown" ? current.journeyStage : inferredJourneyStage;
   const inferredDisruptionTiming = inferDisruptionTiming(message, journeyStage);
   const inferredBookingChannel = inferBookingChannel(message);
+  const detectedBookingProvider = inferBookingProvider(message);
   const bookingChannel =
     inferredBookingChannel !== "unknown"
       ? inferredBookingChannel
@@ -388,6 +404,9 @@ function mergeDeterministicFacts(message: string, current: ClaimFacts): ClaimFac
   const inferredValidatingCarrier =
     carrierForAwardProgram(awardProgram) ??
     (providerType === "airline" && bookingChannel === "direct" ? provider : null);
+  const bookingProvider =
+    detectedBookingProvider ??
+    (bookingChannel === "direct" ? provider : current.bookingProvider);
 
   return normalizeClaimFacts({
     ...current,
@@ -419,6 +438,7 @@ function mergeDeterministicFacts(message: string, current: ClaimFacts): ClaimFac
         ? extracted.deniedBoardingKind
         : current.deniedBoardingKind,
     bookingChannel,
+    bookingProvider,
     journeyStage,
     disruptionTiming:
       inferredDisruptionTiming === "unknown"
@@ -503,6 +523,10 @@ function mergeLlmFactsWithDeterministic(
       llmFacts.bookingChannel === "unknown"
         ? deterministicFacts.bookingChannel
         : llmFacts.bookingChannel,
+    bookingProvider:
+      deterministicFacts.bookingProvider !== currentFacts.bookingProvider
+        ? deterministicFacts.bookingProvider
+        : llmFacts.bookingProvider ?? deterministicFacts.bookingProvider,
     journeyStage:
       deterministicFacts.journeyStage !== currentFacts.journeyStage ||
       llmFacts.journeyStage === "unknown"

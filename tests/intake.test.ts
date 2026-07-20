@@ -136,6 +136,7 @@ describe("deterministic intake fallback", () => {
     expect(second.missingFields).toEqual([]);
     expect(second.status).toBe("ready");
     expect(second.facts.bookingChannel).toBe("corporate_travel");
+    expect(second.facts.bookingProvider).toBe("Concur");
     expect(second.facts.ticketType).toBe("cash");
     expect(second.facts.autoRebooked).toBe(false);
   });

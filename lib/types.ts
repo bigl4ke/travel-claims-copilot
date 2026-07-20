@@ -269,6 +269,43 @@ export type SuggestedAsks = {
   aggressive: string[];
 };
 
+export type HandlingContactRole =
+  | "hotel_front_desk"
+  | "hotel_customer_care"
+  | "ticketing_airline"
+  | "ticketing_agent"
+  | "frequent_flyer_program"
+  | "disrupting_airline"
+  | "airline_customer_relations"
+  | "unknown";
+
+export type HandlingGuidanceSource = {
+  sourceType: "industry_guidance" | "community_guide" | "official_policy_required";
+  title: string;
+  url: string | null;
+};
+
+export type HandlingPlaybook = {
+  status: "actionable" | "needs_context";
+  situation:
+    | "hotel_walk"
+    | "planned_schedule_change"
+    | "close_in_irrops"
+    | "completed_disruption"
+    | "unknown";
+  contactFirst: {
+    role: HandlingContactRole;
+    name: string | null;
+    reason: string;
+  };
+  askLadder: string[];
+  ticketingChecks: string[];
+  fallback: string[];
+  uncertainties: string[];
+  sources: HandlingGuidanceSource[];
+  notGuaranteed: true;
+};
+
 export type AnalysisResult = {
   issueType: IssueType;
   policyRegions: PolicyRegion[];
@@ -283,6 +320,7 @@ export type AnalysisResult = {
   evidenceChecklist: string[];
   scripts: Script[];
   cautions: string[];
+  handlingPlaybook?: HandlingPlaybook;
 };
 
 export type ScenarioSummary = {

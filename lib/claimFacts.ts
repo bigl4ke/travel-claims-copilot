@@ -75,6 +75,7 @@ export type ClaimFacts = {
   isOvernight: boolean | null;
   deniedBoardingKind: ClaimDeniedBoardingKind;
   bookingChannel: ClaimBookingChannel;
+  bookingProvider: string | null;
   journeyStage: ClaimJourneyStage;
   disruptionTiming: ClaimDisruptionTiming;
   ticketType: ClaimTicketType;
@@ -217,6 +218,7 @@ export const claimFactsJsonSchema = {
     isOvernight: { anyOf: [{ type: "boolean" }, { type: "null" }] },
     deniedBoardingKind: { type: "string", enum: deniedBoardingKinds },
     bookingChannel: { type: "string", enum: bookingChannels },
+    bookingProvider: nullableStringSchema,
     journeyStage: { type: "string", enum: journeyStages },
     disruptionTiming: { type: "string", enum: disruptionTimings },
     ticketType: { type: "string", enum: ticketTypes },
@@ -255,6 +257,7 @@ export const claimFactsJsonSchema = {
     "isOvernight",
     "deniedBoardingKind",
     "bookingChannel",
+    "bookingProvider",
     "journeyStage",
     "disruptionTiming",
     "ticketType",
@@ -295,6 +298,7 @@ export function emptyClaimFacts(): ClaimFacts {
     isOvernight: null,
     deniedBoardingKind: "unknown",
     bookingChannel: "unknown",
+    bookingProvider: null,
     journeyStage: "unknown",
     disruptionTiming: "unknown",
     ticketType: "unknown",
@@ -483,6 +487,11 @@ export function parseClaimFacts(value: unknown): ClaimFactsParseResult {
       "unknown",
     bookingChannel:
       parseEnum(value.bookingChannel, bookingChannels, "bookingChannel", errors) ?? "unknown",
+    bookingProvider: parseOptionalNullableString(
+      value.bookingProvider,
+      "bookingProvider",
+      errors
+    ),
     journeyStage:
       value.journeyStage === undefined
         ? "unknown"
