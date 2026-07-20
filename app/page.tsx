@@ -15,9 +15,6 @@ import type {
   SuggestedAsks
 } from "../lib/types";
 
-const exampleText =
-  "My Air France flight from Paris was cancelled. I was rerouted and arrived at my final destination four hours late.";
-
 type ConversationMessage = {
   id: string;
   role: "assistant" | "user";
@@ -61,7 +58,7 @@ const evidenceCoverageStyles: Record<
 };
 
 export default function Home() {
-  const [draft, setDraft] = useState(exampleText);
+  const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ConversationMessage[]>(initialMessages);
   const [facts, setFacts] = useState<ClaimFacts | null>(null);
   const [extractionMode, setExtractionMode] = useState<IntakeExtractionMode | null>(null);
