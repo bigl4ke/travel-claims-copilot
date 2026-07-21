@@ -97,6 +97,35 @@ function unresolvedPolicyConditions(analysis: ActionPlanAnalysis): string[] {
   );
 }
 
+function evidenceForCurrentStage(
+  facts: ClaimFacts,
+  analysis: ActionPlanAnalysis,
+  playbook: HandlingPlaybook
+): string[] {
+  if (facts.issueType === "denied_boarding" || playbook.situation === "hotel_walk") {
+    return analysis.evidenceChecklist;
+  }
+  if (playbook.situation === "close_in_irrops") {
+    return [
+      "Current ticket or boarding pass and the original itinerary",
+      "Cancellation or delay notice, including a screenshot with the time",
+      "Any replacement itinerary offered and whether it is confirmed or waitlisted",
+      "Agent name, contact time, and case number",
+      "Receipts for necessary meals, lodging, and ground transportation"
+    ];
+  }
+  if (playbook.situation === "planned_schedule_change") {
+    return [
+      "Original itinerary and ticket receipt",
+      "Schedule-change notice and the replacement itinerary offered",
+      "Specific alternative flights you want the agent to check",
+      "Written confirmation and case number for any accepted change",
+      "Proof that unaffected onward and return segments remain confirmed"
+    ];
+  }
+  return analysis.evidenceChecklist;
+}
+
 export function buildActionPlan(
   facts: ClaimFacts,
   analysis: ActionPlanAnalysis,
@@ -115,7 +144,10 @@ export function buildActionPlan(
     contactNow: playbook.contactFirst,
     primaryAsk,
     askNext: askNext.slice(0, 3),
-    evidenceNow: unique(analysis.evidenceChecklist).slice(0, MAX_EVIDENCE_ITEMS),
+    evidenceNow: unique(evidenceForCurrentStage(facts, analysis, playbook)).slice(
+      0,
+      MAX_EVIDENCE_ITEMS
+    ),
     ifTheySayNo: unique(playbook.fallback).slice(0, 3),
     uncertainties: unique([
       ...playbook.uncertainties,

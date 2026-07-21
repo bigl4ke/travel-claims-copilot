@@ -116,6 +116,16 @@ describe("provider feedback loop", () => {
     expect(result.nextAction.uncertainties[0]).toContain("not given a usable reason");
   });
 
+  it("treats an explicit 'no reason' response as unavailable", async () => {
+    const result = await analyzeProviderFeedback({
+      feedback: "We cannot rebook you and gave no reason.",
+      currentAction: actionPlan()
+    });
+
+    expect(result.signals.reason).toBeNull();
+    expect(result.nextAction.uncertainties[0]).toContain("not given a usable reason");
+  });
+
   it("uses LLM extraction only for signals and chooses the next action in code", async () => {
     const result = await analyzeProviderFeedback({
       feedback: "We can move you to tomorrow morning.",

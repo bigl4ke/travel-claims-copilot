@@ -4,7 +4,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 describe("home page composition", () => {
-  it("keeps the established guided-intake UI as the public page", () => {
+  it("uses the action-first guided intake as the public page", () => {
     const pagePath = join(process.cwd(), "app/page.tsx");
     const pageSource = readFileSync(pagePath, "utf8");
     const compiled = ts.transpileModule(pageSource, {
@@ -21,9 +21,11 @@ describe("home page composition", () => {
       .map(({ messageText }) => ts.flattenDiagnosticMessageText(messageText, "\n"));
 
     expect(errors).toEqual([]);
-    expect(compiled.outputText).toContain("Build the case file before making the ask.");
+    expect(compiled.outputText).toContain("Move the trip forward.");
     expect(pageSource).toContain('"use client"');
     expect(pageSource).toContain('const [draft, setDraft] = useState("")');
-    expect(pageSource).not.toContain("ClaimWorkspace");
+    expect(pageSource).toContain("ActionWorkspace");
+    expect(pageSource).not.toContain("SuggestedAsksPanel");
+    expect(pageSource).not.toContain("PolicySection");
   });
 });

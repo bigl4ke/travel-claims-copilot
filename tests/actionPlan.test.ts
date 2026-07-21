@@ -42,6 +42,10 @@ describe("action plan", () => {
     });
     expect(result.actionPlan?.headline).toContain("restore your trip");
     expect(result.actionPlan?.primaryAsk).toContain("earliest reasonable onward itinerary");
+    expect(result.actionPlan?.evidenceNow).toContain(
+      "Any replacement itinerary offered and whether it is confirmed or waitlisted"
+    );
+    expect(result.actionPlan?.evidenceNow).not.toContain("Original payment method");
     expect(result.actionPlan?.sourceIds).not.toContain("eu261_regulation_261_2004");
     expect(result.actionPlan?.references.every((reference) => reference.url)).toBe(true);
   });

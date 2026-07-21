@@ -222,11 +222,17 @@ function deterministicScriptText(
     ].join(channel === "email" || channel === "corporate_escalation" ? "\n\n" : " ");
   }
 
+  const fallbackAsk = plan.askNext[0];
+  const fallbackLine = fallbackAsk
+    ? /^if\b/i.test(fallbackAsk)
+      ? fallbackAsk
+      : `If that is not possible, ${fallbackAsk}`
+    : "";
   return [
     "Hello, I need help resolving this travel disruption.",
     plan.primaryAsk ??
       "Please confirm who can handle this request and what information is missing.",
-    plan.askNext[0] ? `If that is not possible, ${plan.askNext[0]}` : "",
+    fallbackLine,
     "Please confirm the outcome in writing and provide a case number. Thank you."
   ]
     .filter(Boolean)
@@ -324,6 +330,10 @@ function deterministicFeedbackExtraction(feedback: string): FeedbackExtraction {
     feedback,
     /\b(?:because|due to|reason)\b|(?:因为|由于|原因)/i
   );
+  const reasonUnavailable =
+    /\b(?:no reason|reason (?:was |is )?not (?:given|provided)|did not (?:give|provide) (?:a )?reason)\b|(?:没有|未|没)(?:给出|提供|说明)?(?:任何)?原因/i.test(
+      feedback
+    );
   const caseNumberMatch = feedback.match(
     /(?:case|reference|confirmation|案件|工单|参考)(?:\s*(?:number|no\.?|号))?\s*(?:is|[:#：-])?\s*([A-Z-]*\d[A-Z0-9-]{2,29})/i
   );
@@ -351,7 +361,7 @@ function deterministicFeedbackExtraction(feedback: string): FeedbackExtraction {
     summary: summaryByStatus[responseStatus],
     responseStatus,
     acknowledgedProblem,
-    reason: compact(reasonSentence),
+    reason: reasonUnavailable ? null : compact(reasonSentence),
     offer: compact(offerSentence),
     caseNumber: compact(caseNumberMatch?.[1] ?? null),
     unanswered

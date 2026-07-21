@@ -2,17 +2,16 @@
 
 import { useState } from "react";
 
+import { ActionWorkspace, type FeedbackHistoryItem } from "../components/action-workspace";
 import type { ClaimFacts } from "../lib/claimFacts";
 import type { IntakeExtractionMode, IntakeResult } from "../lib/intake";
 import type { SafetyAssessment } from "../lib/safety";
 import type {
+  ActionPlan,
+  ActionScriptChannel,
   AnalysisResult,
-  Case,
-  HandlingPlaybook,
-  Policy,
-  PolicyApplicabilityAssessment,
-  Script,
-  SuggestedAsks
+  GeneratedActionScript,
+  ProviderFeedbackResult
 } from "../lib/types";
 
 type ConversationMessage = {
@@ -26,36 +25,43 @@ const initialMessages: ConversationMessage[] = [
     id: "intake-welcome",
     role: "assistant",
     content:
-      "Tell me what happened in your own words. I’ll ask only for details that change the policy, case search, or next action."
+      "Tell me what happened in your own words. I’ll ask only for details that change who to contact or what to do next."
   }
 ];
 
-const issueLabels: Partial<Record<AnalysisResult["issueType"], string>> = {
+const issueLabels: Partial<Record<ClaimFacts["issueType"], string>> = {
   hotel_walk: "Hotel walk",
   airline_cancellation: "Airline cancellation",
   airline_delay: "Airline delay",
-  denied_boarding: "Denied boarding or voluntary bump",
-  baggage_delay: "Baggage delay",
-  airline_delay_trip_insurance: "Airline delay and trip insurance",
-  airline_baggage_not_checked: "Baggage not accepted at check-in",
-  airline_rebooking_mixed_carrier_delay: "Mixed-carrier rebooking delay",
-  hotel_billing_dispute: "Hotel billing dispute",
-  hotel_service_issue: "Hotel service issue",
-  hotel_property_loss: "Hotel property loss",
-  hotel_relocation_before_opening: "Hotel relocation before opening",
-  hotel_room_feature_mismatch: "Hotel room feature mismatch",
-  hotel_elite_benefit_closure: "Hotel elite benefit closure",
-  unknown: "Needs more detail"
+  denied_boarding: "Denied boarding",
+  unknown: "Collecting facts"
 };
 
-const evidenceCoverageStyles: Record<
-  AnalysisResult["evidenceCoverage"]["officialBasisStatus"],
-  string
-> = {
-  scope_confirmed: "bg-mint text-white",
-  conditional: "bg-coral text-white",
-  not_found: "bg-ink text-white"
-};
+function preferredLanguage(messages: ConversationMessage[]): "en" | "zh" {
+  const userText = messages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content)
+    .join(" ");
+  return /[\u3400-\u9fff]/.test(userText) ? "zh" : "en";
+}
+
+function formatLocation(location: ClaimFacts["origin"]): string {
+  return location.airport ?? location.city ?? location.country ?? "";
+}
+
+function factSummary(facts: ClaimFacts): string[] {
+  const route = [formatLocation(facts.origin), formatLocation(facts.destination)]
+    .filter(Boolean)
+    .join(" → ");
+  return [
+    issueLabels[facts.issueType],
+    facts.provider ?? facts.operatingCarrier,
+    route || null,
+    facts.providerType === "airline" && facts.disruptionReasonStatus === "unavailable"
+      ? "Reason unavailable"
+      : null
+  ].filter((item): item is string => Boolean(item));
+}
 
 export default function Home() {
   const [draft, setDraft] = useState("");
@@ -64,17 +70,21 @@ export default function Home() {
   const [extractionMode, setExtractionMode] = useState<IntakeExtractionMode | null>(null);
   const [intakeWarning, setIntakeWarning] = useState<IntakeResult["warning"]>();
   const [safetyNotice, setSafetyNotice] = useState<SafetyAssessment | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
+  const [actionMode, setActionMode] = useState<"script" | "feedback" | null>(null);
+  const [actionError, setActionError] = useState("");
+  const [generatedScript, setGeneratedScript] = useState<GeneratedActionScript | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [feedbackDraft, setFeedbackDraft] = useState("");
+  const [feedbackResult, setFeedbackResult] = useState<ProviderFeedbackResult | null>(null);
+  const [feedbackHistory, setFeedbackHistory] = useState<FeedbackHistoryItem[]>([]);
 
   async function submitIntake(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const message = draft.trim();
-    if (!message || isLoading) {
-      return;
-    }
+    if (!message || isLoading) return;
 
     const userMessage: ConversationMessage = {
       id: `user-${Date.now()}`,
@@ -87,22 +97,19 @@ export default function Home() {
     setIsLoading(true);
     setError("");
     setSafetyNotice(null);
-    setCopiedScriptId(null);
-    setResult(null);
+    setActionPlan(null);
+    setGeneratedScript(null);
+    setFeedbackResult(null);
+    setFeedbackHistory([]);
 
     try {
       const intakeResponse = await fetch("/api/intake", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, facts })
       });
       const intake = (await intakeResponse.json()) as IntakeResult & { error?: string };
-
-      if (!intakeResponse.ok) {
-        throw new Error(intake.error ?? "Intake failed.");
-      }
+      if (!intakeResponse.ok) throw new Error(intake.error ?? "Intake failed.");
 
       setFacts(intake.facts);
       setExtractionMode(intake.extractionMode);
@@ -128,7 +135,7 @@ export default function Home() {
           {
             id: `assistant-${Date.now()}`,
             role: "assistant",
-            content: intake.question ?? "Please add a little more detail."
+            content: intake.question ?? "Please add one more detail."
           }
         ]);
         return;
@@ -140,18 +147,14 @@ export default function Home() {
         .join("\n");
       const analyzeResponse = await fetch("/api/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description, facts: intake.facts })
       });
       const analysis = (await analyzeResponse.json()) as AnalysisResult & { error?: string };
+      if (!analyzeResponse.ok) throw new Error(analysis.error ?? "Action planning failed.");
+      if (!analysis.actionPlan) throw new Error("No grounded next action is available yet.");
 
-      if (!analyzeResponse.ok) {
-        throw new Error(analysis.error ?? "Analysis failed.");
-      }
-
-      setResult(analysis);
+      setActionPlan(analysis.actionPlan);
       setMessages([
         ...nextMessages,
         {
@@ -159,16 +162,94 @@ export default function Home() {
           role: "assistant",
           content:
             intake.facts.disruptionReasonStatus === "unavailable"
-              ? "I’ll continue with the airline’s reason marked as unavailable. Cause-dependent remedies remain conditional; review the grounded references below."
-              : "I have enough detail for the first-pass analysis. Review the extracted facts and the grounded references below."
+              ? "I’ll continue with the reason marked unavailable. Your immediate action does not need to wait for it."
+              : "I have enough to choose the next move. Start with the action card."
         }
       ]);
     } catch (caughtError) {
-      setResult(null);
-      setError(caughtError instanceof Error ? caughtError.message : "Analysis failed.");
+      setActionPlan(null);
+      setError(caughtError instanceof Error ? caughtError.message : "Action planning failed.");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function requestScript(channel: ActionScriptChannel) {
+    if (!facts || !actionPlan || actionMode) return;
+    setActionMode("script");
+    setActionError("");
+    setCopied(false);
+    try {
+      const response = await fetch("/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "script",
+          facts,
+          currentAction: actionPlan,
+          channel,
+          language: preferredLanguage(messages),
+          tone: "polite_firm"
+        })
+      });
+      const body = (await response.json()) as GeneratedActionScript & { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Script generation failed.");
+      setGeneratedScript(body);
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error ? caughtError.message : "Script generation failed."
+      );
+    } finally {
+      setActionMode(null);
+    }
+  }
+
+  async function submitProviderFeedback() {
+    const feedback = feedbackDraft.trim();
+    if (!facts || !actionPlan || !feedback || actionMode) return;
+    setActionMode("feedback");
+    setActionError("");
+    try {
+      const response = await fetch("/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "provider_feedback",
+          facts,
+          currentAction: actionPlan,
+          feedback
+        })
+      });
+      const body = (await response.json()) as ProviderFeedbackResult & { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Provider response analysis failed.");
+
+      setFeedbackResult(body);
+      setFeedbackHistory((current) => [
+        ...current,
+        {
+          id: `feedback-${Date.now()}`,
+          response: feedback,
+          summary: body.summary,
+          status: body.signals.responseStatus
+        }
+      ]);
+      setActionPlan(body.nextAction);
+      setGeneratedScript(null);
+      setFeedbackDraft("");
+      setCopied(false);
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error ? caughtError.message : "Provider response analysis failed."
+      );
+    } finally {
+      setActionMode(null);
+    }
+  }
+
+  async function copyScript() {
+    if (!generatedScript) return;
+    await navigator.clipboard.writeText(generatedScript.text);
+    setCopied(true);
   }
 
   function resetClaim() {
@@ -178,791 +259,202 @@ export default function Home() {
     setExtractionMode(null);
     setIntakeWarning(undefined);
     setSafetyNotice(null);
-    setResult(null);
+    setActionPlan(null);
     setError("");
-    setCopiedScriptId(null);
-  }
-
-  async function copyScript(script: Script) {
-    await navigator.clipboard.writeText(script.template);
-    setCopiedScriptId(script.script_id);
+    setActionMode(null);
+    setActionError("");
+    setGeneratedScript(null);
+    setCopied(false);
+    setFeedbackDraft("");
+    setFeedbackResult(null);
+    setFeedbackHistory([]);
   }
 
   return (
-    <main className="min-h-screen">
-      <section className="border-b border-ink/10 bg-paper">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 md:px-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-mint">
-                Travel Claims Copilot · Guided intake
-              </p>
-              <h1 className="max-w-3xl text-3xl font-semibold leading-tight text-ink md:text-5xl">
-                Build the case file before making the ask.
-              </h1>
-              <p className="max-w-2xl text-sm leading-6 text-ink/65 md:text-base">
-                Describe the disruption naturally. The intake will identify missing facts before
-                selecting who to contact, then searching official sources, reviewed cases, and
-                reusable scripts.
+    <main className="min-h-screen bg-paper">
+      <header className="border-b border-ink/10 bg-paper">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 md:px-8">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white">
+              TC
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-ink">Travel Claims Copilot</p>
+              <p className="text-[11px] uppercase tracking-[0.12em] text-ink/40">
+                Real-time disruption guidance
               </p>
             </div>
-            <button
-              className="w-fit rounded-full border border-ink/15 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink/65 transition hover:border-coral hover:text-coral"
-              type="button"
-              onClick={resetClaim}
-            >
-              New claim
-            </button>
           </div>
+          <button
+            className="rounded-full border border-ink/15 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink/60 transition hover:border-coral hover:text-coral"
+            type="button"
+            onClick={resetClaim}
+          >
+            New case
+          </button>
+        </div>
+      </header>
 
-          <div className="overflow-hidden rounded-xl border border-ink/10 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-ink/10 bg-ink px-5 py-3 text-white">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em]">Intake transcript</p>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium">
-                {isLoading ? "Reviewing details" : result ? "Analysis ready" : "Collecting facts"}
-              </span>
+      <div className="mx-auto w-full max-w-6xl px-5 pb-12 pt-8 md:px-8 md:pt-12">
+        <div className="mb-8 max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-mint">
+            One clear next move
+          </p>
+          <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-[-0.03em] text-ink md:text-6xl">
+            Move the trip forward.
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-ink/60 md:text-lg">
+            Tell us what changed. We’ll identify who can act, what to ask for now, and how to
+            respond when the provider answers.
+          </p>
+        </div>
+
+        <div className="grid items-start gap-6 lg:grid-cols-[0.76fr_1.24fr]">
+          <section className="overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-[0_20px_60px_-48px_rgba(23,32,42,0.5)]">
+            <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-ink/40">
+                  Case conversation
+                </p>
+                <p className="mt-1 text-sm font-medium text-ink">
+                  {isLoading
+                    ? "Checking one detail…"
+                    : actionPlan
+                      ? "Action ready"
+                      : "Tell us what happened"}
+                </p>
+              </div>
+              {extractionMode ? (
+                <span className="rounded-full bg-paper px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/45">
+                  {extractionMode === "llm" ? "LLM intake" : "Local intake"}
+                </span>
+              ) : null}
             </div>
 
-            <div
-              className="max-h-96 space-y-4 overflow-y-auto px-5 py-5 md:px-7"
-              aria-live="polite"
-            >
-              {messages.map((item, index) => (
-                <article className="grid gap-2 md:grid-cols-[92px_1fr]" key={item.id}>
-                  <p className="pt-1 text-xs font-semibold uppercase tracking-[0.12em] text-ink/45">
-                    {index + 1}. {item.role === "assistant" ? "Copilot" : "You"}
+            <div className="max-h-[410px] space-y-4 overflow-y-auto p-5" aria-live="polite">
+              {messages.map((message) => (
+                <article
+                  className={`max-w-[92%] ${message.role === "user" ? "ml-auto" : "mr-auto"}`}
+                  key={message.id}
+                >
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/35">
+                    {message.role === "assistant" ? "Copilot" : "You"}
                   </p>
                   <p
-                    className={`rounded-lg border px-4 py-3 text-sm leading-6 md:text-base ${
-                      item.role === "assistant"
-                        ? "border-mint/20 bg-mint/5 text-ink/75"
-                        : "border-ink/10 bg-paper text-ink"
+                    className={`rounded-xl px-4 py-3 text-sm leading-6 ${
+                      message.role === "assistant"
+                        ? "rounded-tl-sm bg-mint/[0.075] text-ink/70"
+                        : "rounded-tr-sm bg-ink text-white/90"
                     }`}
                   >
-                    {item.content}
+                    {message.content}
                   </p>
                 </article>
               ))}
             </div>
 
-            <form
-              className="grid gap-3 border-t border-ink/10 bg-paper/70 p-4 md:grid-cols-[1fr_auto] md:items-end md:p-5"
-              onSubmit={submitIntake}
-            >
+            {facts ? (
+              <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-ink/10 bg-paper/55 px-5 py-3 text-[11px] font-medium text-ink/45">
+                {factSummary(facts).map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+              </div>
+            ) : null}
+
+            <form className="border-t border-ink/10 p-4" onSubmit={submitIntake}>
               <label className="flex flex-col gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-ink/55">
-                  Your answer
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/40">
+                  Your message
                 </span>
                 <textarea
-                  className="min-h-28 w-full resize-y rounded-lg border border-ink/15 bg-white p-4 text-base leading-7 text-ink shadow-sm outline-none transition focus:border-mint focus:ring-4 focus:ring-mint/15"
+                  className="min-h-28 resize-y rounded-xl border border-ink/15 bg-paper/40 p-4 text-sm leading-6 text-ink outline-none transition placeholder:text-ink/35 focus:border-mint focus:bg-white focus:ring-4 focus:ring-mint/10"
+                  placeholder={
+                    actionPlan
+                      ? "Add a correction if any case fact is wrong."
+                      : "Describe what happened, or answer the follow-up question."
+                  }
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder="Describe what happened, or answer the follow-up question."
                 />
               </label>
               <button
-                className="h-12 rounded-lg bg-ink px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-mint disabled:cursor-not-allowed disabled:bg-ink/40 md:w-36"
-                type="submit"
+                className="mt-3 h-11 w-full rounded-xl bg-ink text-sm font-semibold text-white transition hover:bg-mint disabled:cursor-not-allowed disabled:bg-ink/30"
                 disabled={isLoading || !draft.trim()}
+                type="submit"
               >
-                {isLoading ? "Reviewing" : facts ? "Continue" : "Start intake"}
+                {isLoading ? "Checking…" : facts ? "Continue" : "Start"}
               </button>
             </form>
-          </div>
 
-          {error ? (
-            <div className="rounded-lg border border-coral/30 bg-white px-4 py-3 text-sm font-medium text-coral">
-              {error}
-            </div>
-          ) : null}
-          {safetyNotice ? (
-            <div
-              className="rounded-lg border border-coral/30 bg-coral/5 px-4 py-3 text-sm leading-6 text-ink"
-              role="alert"
-            >
-              <p className="font-semibold text-coral">Professional-help boundary</p>
-              <p className="mt-1">{safetyNotice.message}</p>
-              <p className="mt-1 text-xs text-ink/55">This is not legal advice.</p>
-            </div>
-          ) : null}
-        </div>
-      </section>
+            {intakeWarning ? (
+              <p className="border-t border-coral/15 bg-coral/[0.035] px-5 py-3 text-xs leading-5 text-coral">
+                {intakeWarning === "llm_not_configured"
+                  ? "Using the local intake fallback because no LLM key is configured."
+                  : "The model response failed validation, so this turn used the local fallback."}
+              </p>
+            ) : null}
+          </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-6 md:px-8 lg:grid-cols-[320px_1fr]">
-        <aside className="flex flex-col gap-4">
-          <ClaimSnapshot facts={facts} extractionMode={extractionMode} warning={intakeWarning} />
-          <SummaryPanel result={result} />
-          {result ? <SuggestedAsksPanel asks={result.suggestedAsks} /> : null}
-        </aside>
-
-        <div className="flex flex-col gap-5">
-          {!result ? (
-            <EmptyState />
+          {actionPlan && facts ? (
+            <ActionWorkspace
+              actionError={actionError}
+              actionMode={actionMode}
+              copied={copied}
+              facts={facts}
+              feedbackDraft={feedbackDraft}
+              feedbackHistory={feedbackHistory}
+              feedbackResult={feedbackResult}
+              plan={actionPlan}
+              script={generatedScript}
+              onCopyScript={copyScript}
+              onFeedbackDraftChange={setFeedbackDraft}
+              onRequestScript={requestScript}
+              onSubmitFeedback={submitProviderFeedback}
+            />
           ) : (
-            <>
-              {result.handlingPlaybook ? (
-                <HandlingPlaybookSection playbook={result.handlingPlaybook} />
-              ) : null}
-              <PolicySection
-                policies={result.officialBasis}
-                assessments={result.policyAssessments}
-              />
-              <CaseSection cases={result.similarCases} />
-              <Checklist title="Evidence checklist" items={result.evidenceChecklist} />
-              <ScriptSection
-                scripts={result.scripts}
-                copiedScriptId={copiedScriptId}
-                onCopy={copyScript}
-              />
-              <Checklist title="Cautions" items={result.cautions} />
-            </>
-          )}
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="rounded-lg border border-dashed border-ink/20 bg-white p-8 text-center text-ink/65">
-      Complete the guided intake to retrieve official references, reviewed cases, and scripts.
-    </div>
-  );
-}
-
-function ClaimSnapshot({
-  facts,
-  extractionMode,
-  warning
-}: {
-  facts: ClaimFacts | null;
-  extractionMode: IntakeExtractionMode | null;
-  warning?: IntakeResult["warning"];
-}) {
-  const route = facts
-    ? [formatLocation(facts.origin), formatLocation(facts.destination)].filter(Boolean).join(" → ")
-    : "";
-
-  return (
-    <div className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink/60">Case file</h2>
-        {extractionMode ? (
-          <span className="rounded-full bg-paper px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/55">
-            {extractionMode === "llm" ? "LLM" : "Local"}
-          </span>
-        ) : null}
-      </div>
-
-      {facts ? (
-        <dl className="mt-4 space-y-3 text-sm">
-          <FactRow label="Issue" value={issueLabels[facts.issueType] ?? "Needs more detail"} />
-          <FactRow label="Provider" value={facts.provider ?? facts.operatingCarrier ?? "Unknown"} />
-          <FactRow label="Route" value={route || "Unknown"} />
-          <FactRow label="Event" value={facts.disruptionType.replaceAll("_", " ")} />
-          {facts.providerType === "airline" ? (
-            <FactRow label="Reason" value={formatDisruptionReason(facts)} />
-          ) : null}
-          {facts.providerType === "airline" && facts.journeyStage !== "unknown" ? (
-            <FactRow label="Stage" value={facts.journeyStage.replaceAll("_", " ")} />
-          ) : null}
-          {facts.providerType === "airline" && facts.disruptionTiming !== "unknown" ? (
-            <FactRow label="Timing" value={facts.disruptionTiming.replaceAll("_", " ")} />
-          ) : null}
-          {facts.providerType === "airline" && facts.ticketType !== "unknown" ? (
-            <FactRow label="Ticket" value={formatTicket(facts)} />
-          ) : null}
-        </dl>
-      ) : (
-        <p className="mt-4 text-sm leading-6 text-ink/65">
-          Facts will appear here as the conversation becomes specific enough to search.
-        </p>
-      )}
-
-      {warning ? (
-        <p className="mt-4 border-l-2 border-coral/50 pl-3 text-xs leading-5 text-ink/60">
-          {warning === "llm_not_configured"
-            ? "Using the local fallback because no server-side LLM key is configured."
-            : "The LLM response failed validation, so this turn used the local fallback."}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function FactRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[72px_1fr] gap-3 border-b border-ink/5 pb-3 last:border-0 last:pb-0">
-      <dt className="text-ink/45">{label}</dt>
-      <dd className="font-medium capitalize text-ink">{value}</dd>
-    </div>
-  );
-}
-
-function formatLocation(location: ClaimFacts["origin"]): string {
-  return location.airport ?? location.city ?? location.country ?? "";
-}
-
-function formatDisruptionReason(facts: ClaimFacts): string {
-  if (facts.disruptionReasonStatus === "unavailable") {
-    return "Not provided by airline";
-  }
-  return facts.disruptionReason === "unknown"
-    ? "Not provided yet"
-    : facts.disruptionReason.replaceAll("_", " ");
-}
-
-function formatTicket(facts: ClaimFacts): string {
-  const issuer = facts.awardProgram ?? facts.bookingProvider ?? facts.validatingCarrier;
-  return issuer ? `${facts.ticketType} · ${issuer}` : facts.ticketType;
-}
-
-function SummaryPanel({ result }: { result: AnalysisResult | null }) {
-  return (
-    <div className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink/60">Result</h2>
-      {result ? (
-        <div className="mt-4 flex flex-col gap-4">
-          <div>
-            <p className="text-sm text-ink/60">Issue type</p>
-            <p className="mt-1 text-xl font-semibold text-ink">
-              {issueLabels[result.issueType] ?? result.issueType.replaceAll("_", " ")}
-            </p>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-ink/60">Evidence coverage</span>
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${evidenceCoverageStyles[result.evidenceCoverage.officialBasisStatus]}`}
-            >
-              {result.evidenceCoverage.officialBasisStatus.replaceAll("_", " ")}
-            </span>
-          </div>
-          <p className="text-xs leading-5 text-ink/55">
-            This describes source coverage and unresolved checks—not the likelihood of a payout.
-          </p>
-          <div className="grid gap-2 border-t border-ink/5 pt-3 text-sm">
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-ink/60">Official sources</span>
-              <span className="font-medium text-ink">
-                {result.evidenceCoverage.officialSourceCount}
-              </span>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-ink/60">Reported cases</span>
-              <span className="font-medium text-ink">
-                {result.evidenceCoverage.reportedCaseCount}
-              </span>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-ink/60">Synthetic examples</span>
-              <span className="font-medium text-ink">
-                {result.evidenceCoverage.syntheticCaseCount}
-              </span>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-ink/60">Unresolved checks</span>
-              <span className="font-medium text-ink">
-                {result.evidenceCoverage.unresolvedConditionCount}
-              </span>
-            </div>
-            {result.evidenceCoverage.unmetRemedyConditionCount > 0 ? (
-              <div className="flex items-start justify-between gap-3">
-                <span className="text-ink/60">Unmet remedy checks</span>
-                <span className="font-medium text-ink">
-                  {result.evidenceCoverage.unmetRemedyConditionCount}
-                </span>
-              </div>
-            ) : null}
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-ink/60">Route regions</span>
-              <span className="text-right font-medium text-ink">
-                {result.policyRegions.length > 0
-                  ? result.policyRegions.join(", ").replaceAll("_", " ")
-                  : "Unresolved"}
-              </span>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-ink/60">Legal regimes</span>
-              <span className="text-right font-medium text-ink">
-                {result.legalRegimes.length > 0
-                  ? result.legalRegimes.join(", ").replaceAll("_", " ")
-                  : "Unresolved"}
-              </span>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-ink/60">Controllability</span>
-              <span className="font-medium capitalize text-ink">{result.controllability}</span>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <p className="mt-4 text-sm leading-6 text-ink/65">
-          The classification and retrieval results will appear here.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function SuggestedAsksPanel({ asks }: { asks: SuggestedAsks }) {
-  const tiers = [
-    ["Conservative", asks.conservative],
-    ["Standard", asks.standard],
-    ["Aggressive", asks.aggressive]
-  ] as const;
-
-  return (
-    <div className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink/60">
-        Suggested asks
-      </h2>
-      <div className="mt-4 flex flex-col gap-4">
-        {tiers.map(([label, items]) => (
-          <div key={label}>
-            <h3 className="text-sm font-semibold text-ink">{label}</h3>
-            <ul className="mt-2 space-y-2 text-sm leading-6 text-ink/70">
-              {items.map((item) => (
-                <li className="border-l-2 border-mint/40 pl-3" key={item}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const handlingSourceLabels: Record<HandlingPlaybook["sources"][number]["sourceType"], string> = {
-  industry_guidance: "Industry guidance",
-  community_guide: "Community guide",
-  official_policy_required: "Official policy check required"
-};
-
-function HandlingPlaybookSection({ playbook }: { playbook: HandlingPlaybook }) {
-  return (
-    <Section title="What to do now">
-      <div className="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm">
-        <div className="grid gap-4 border-b border-ink/10 bg-ink p-5 text-white md:grid-cols-[180px_1fr]">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
-              Contact first
-            </p>
-            <p className="mt-2 text-lg font-semibold">
-              {playbook.contactFirst.name ?? playbook.contactFirst.role.replaceAll("_", " ")}
-            </p>
-            <p className="mt-1 text-xs capitalize text-white/60">
-              {playbook.contactFirst.role.replaceAll("_", " ")}
-            </p>
-          </div>
-          <p className="text-sm leading-6 text-white/75">{playbook.contactFirst.reason}</p>
-        </div>
-
-        <div className="grid gap-6 p-5 lg:grid-cols-2">
-          <div>
-            <h3 className="text-sm font-semibold text-ink">Ask in this order</h3>
-            {playbook.askLadder.length > 0 ? (
-              <ol className="mt-3 space-y-3">
-                {playbook.askLadder.map((item, index) => (
-                  <li className="flex gap-3 text-sm leading-6 text-ink/75" key={item}>
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mint/10 text-xs font-semibold text-mint">
-                      {index + 1}
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mt-3 text-sm leading-6 text-ink/60">
-                More trip context is needed before suggesting a request order.
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-5">
-            {playbook.ticketingChecks.length > 0 ? (
-              <div>
-                <h3 className="text-sm font-semibold text-ink">After any rebooking</h3>
-                <ul className="mt-3 space-y-2">
-                  {playbook.ticketingChecks.map((item) => (
-                    <li className="flex gap-3 text-sm leading-6 text-ink/70" key={item}>
-                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-mint" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {playbook.fallback.length > 0 ? (
-              <div>
-                <h3 className="text-sm font-semibold text-ink">If the first request fails</h3>
-                <ul className="mt-3 space-y-2">
-                  {playbook.fallback.map((item) => (
-                    <li
-                      className="border-l-2 border-coral/40 pl-3 text-sm leading-6 text-ink/70"
-                      key={item}
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        {playbook.uncertainties.length > 0 ? (
-          <div className="border-t border-coral/15 bg-coral/5 px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-coral">
-              Still uncertain
-            </p>
-            <ul className="mt-2 grid gap-1 text-sm leading-6 text-ink/70">
-              {playbook.uncertainties.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 bg-paper/70 px-5 py-4">
-          <span className="mr-1 text-xs font-semibold uppercase tracking-[0.1em] text-ink/45">
-            Guidance basis
-          </span>
-          {playbook.sources.map((source) =>
-            source.url ? (
-              <a
-                className="rounded-full border border-ink/10 bg-white px-3 py-1 text-xs font-medium text-ink/65 transition hover:border-mint hover:text-mint"
-                href={source.url}
-                key={`${source.sourceType}-${source.title}`}
-                rel="noreferrer"
-                target="_blank"
-                title={source.title}
-              >
-                {handlingSourceLabels[source.sourceType]} ↗
-              </a>
-            ) : (
-              <span
-                className="rounded-full border border-coral/20 bg-coral/5 px-3 py-1 text-xs font-medium text-coral"
-                key={`${source.sourceType}-${source.title}`}
-                title={source.title}
-              >
-                {handlingSourceLabels[source.sourceType]}
-              </span>
-            )
-          )}
-          <span className="w-full text-xs leading-5 text-ink/50">
-            Procedural guidance is not a guarantee of rebooking, reimbursement, or compensation.
-          </span>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-const policySourceLabels: Record<Policy["source_type"], string> = {
-  official_policy: "Official policy",
-  government_regulation: "Government regulation",
-  regulator_guidance: "Regulator guidance",
-  official_dashboard: "Official dashboard",
-  terms: "Official terms"
-};
-
-const caseSourceLabels: Record<Case["source_type"], string> = {
-  community_dp: "Community report",
-  user_submitted: "User submitted",
-  synthetic_example: "Synthetic example"
-};
-
-const applicabilityStyles: Record<PolicyApplicabilityAssessment["status"], string> = {
-  met: "border-mint/25 bg-mint/10 text-mint",
-  unknown: "border-coral/25 bg-coral/10 text-coral",
-  not_met: "border-ink/15 bg-paper text-ink/55"
-};
-
-function Badge({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <span
-      className={`rounded-full border border-ink/10 bg-paper px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink/60 ${className}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-function PolicyAssessment({
-  assessment
-}: {
-  assessment: PolicyApplicabilityAssessment | undefined;
-}) {
-  if (!assessment) {
-    return null;
-  }
-
-  return (
-    <div className="mt-4 rounded-lg border border-ink/10 bg-paper/70 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-ink/55">
-          Applicability checks
-        </h4>
-        <Badge className={applicabilityStyles[assessment.status]}>
-          {assessment.status.replaceAll("_", " ")}
-        </Badge>
-      </div>
-      <ul className="mt-3 grid gap-2">
-        {assessment.conditions.map((item) => (
-          <li className="grid gap-1 text-sm md:grid-cols-[128px_1fr]" key={item.code}>
-            <span className="flex items-center gap-2 font-semibold text-ink">
-              <span
-                aria-hidden="true"
-                className={`h-2 w-2 rounded-full ${
-                  item.status === "met"
-                    ? "bg-mint"
-                    : item.status === "unknown"
-                      ? "bg-coral"
-                      : "bg-ink/30"
-                }`}
-              />
-              {item.status.replaceAll("_", " ")}
-            </span>
-            <span className="leading-6 text-ink/70">
-              <span className="font-medium text-ink/85">{item.label}:</span> {item.detail}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function PolicySection({
-  policies,
-  assessments
-}: {
-  policies: Policy[];
-  assessments: PolicyApplicabilityAssessment[];
-}) {
-  const assessmentsByPolicy = new Map(
-    assessments.map((assessment) => [assessment.policyId, assessment])
-  );
-
-  return (
-    <Section title="Official basis">
-      {policies.length === 0 ? (
-        <FallbackText>No matching official policy found in local demo data.</FallbackText>
-      ) : (
-        <div className="grid gap-3">
-          {policies.map((policy) => (
-            <article
-              className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
-              key={policy.policy_id}
-            >
-              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-lg font-semibold text-ink">{policy.policy_name}</h3>
-                  <p className="text-sm text-ink/60">
-                    {policy.provider} · {policy.legal_regime.replaceAll("_", " ")}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge>{policySourceLabels[policy.source_type]}</Badge>
-                    <Badge>{policy.authority_level} authority</Badge>
-                    <Badge>Checked {policy.last_checked}</Badge>
-                  </div>
-                </div>
-                <a
-                  className="text-sm font-semibold text-mint hover:text-coral"
-                  href={policy.source_url}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  Open official source ↗
-                </a>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-ink/75">{policy.summary}</p>
-              <PolicyAssessment assessment={assessmentsByPolicy.get(policy.policy_id)} />
-              <div className="mt-4">
-                <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-ink/55">
-                  Source conditions to verify
-                </h4>
-                <ul className="mt-2 grid gap-1 text-sm leading-6 text-ink/70">
-                  {policy.applicable_conditions.map((item) => (
-                    <li className="border-l-2 border-ink/10 pl-3" key={item}>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <TagList items={policy.compensation_or_rights} />
-            </article>
-          ))}
-        </div>
-      )}
-    </Section>
-  );
-}
-
-function CaseSection({ cases }: { cases: Case[] }) {
-  return (
-    <Section title="Similar cases">
-      {cases.length === 0 ? (
-        <FallbackText>No similar local case found yet.</FallbackText>
-      ) : (
-        <div className="grid gap-3">
-          {cases.map((item) => (
-            <article
-              className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
-              key={item.case_id}
-            >
-              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-lg font-semibold text-ink">{item.brand_or_airline}</h3>
-                  <p className="text-sm text-ink/60">
-                    {item.provider} · {item.booking_channel} · {item.confidence} record confidence
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge
-                      className={
-                        item.source_type === "synthetic_example"
-                          ? "border-coral/25 bg-coral/10 text-coral"
-                          : ""
-                      }
-                    >
-                      {caseSourceLabels[item.source_type]}
-                    </Badge>
-                    <Badge>{item.source_name}</Badge>
-                  </div>
-                </div>
-                {item.source_url ? (
-                  <a
-                    className="text-sm font-semibold text-mint hover:text-coral"
-                    href={item.source_url}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    Open case source ↗
-                  </a>
-                ) : null}
-              </div>
-              {item.source_type === "synthetic_example" ? (
-                <p className="mt-3 rounded-lg border border-coral/20 bg-coral/5 px-3 py-2 text-xs leading-5 text-ink/65">
-                  Illustrative demo record—not a reported traveler outcome or official policy.
+            <section className="overflow-hidden rounded-2xl border border-dashed border-ink/20 bg-white/55">
+              <div className="bg-ink px-6 py-7 text-white md:px-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-mint">
+                  Your next move
                 </p>
-              ) : null}
-              <p className="mt-3 text-sm leading-6 text-ink/75">{item.facts}</p>
-              <p className="mt-3 text-sm leading-6 text-ink">
-                <span className="font-semibold">
-                  {item.source_type === "synthetic_example"
-                    ? "Illustrative outcome:"
-                    : /outcome (?:was )?not|not fully reported/i.test(item.actual_outcome)
-                      ? "Reported status:"
-                      : "Reported outcome:"}
-                </span>{" "}
-                {item.actual_outcome}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-ink/75">{item.reusable_lesson}</p>
-            </article>
-          ))}
-        </div>
-      )}
-    </Section>
-  );
-}
-
-function ScriptSection({
-  scripts,
-  copiedScriptId,
-  onCopy
-}: {
-  scripts: Script[];
-  copiedScriptId: string | null;
-  onCopy: (script: Script) => Promise<void>;
-}) {
-  return (
-    <Section title="Scripts">
-      {scripts.length === 0 ? (
-        <FallbackText>No matching script found in local demo data.</FallbackText>
-      ) : (
-        <div className="grid gap-3">
-          {scripts.map((script) => (
-            <article
-              className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm"
-              key={script.script_id}
-            >
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold capitalize text-ink">
-                    {script.channel.replaceAll("_", " ")}
-                  </h3>
-                  <p className="text-sm text-ink/60">
-                    {script.tone.replaceAll("_", " ")} · {script.when_to_use}
-                  </p>
-                </div>
-                <button
-                  className="h-10 rounded-lg border border-ink/15 px-4 text-sm font-semibold text-ink transition hover:border-mint hover:text-mint"
-                  type="button"
-                  onClick={() => onCopy(script)}
-                >
-                  {copiedScriptId === script.script_id ? "Copied" : "Copy"}
-                </button>
+                <h2 className="mt-4 text-2xl font-semibold leading-tight md:text-4xl">
+                  No report to read. One action to take.
+                </h2>
               </div>
-              <p className="mt-4 rounded-lg bg-paper p-4 text-sm leading-6 text-ink/80">
-                {script.template}
-              </p>
-            </article>
-          ))}
+              <div className="grid gap-5 p-6 md:grid-cols-3 md:p-8">
+                {[
+                  ["01", "Who can act"],
+                  ["02", "What to ask"],
+                  ["03", "What to save"]
+                ].map(([number, label]) => (
+                  <div key={number}>
+                    <p className="text-xs font-semibold text-coral">{number}</p>
+                    <p className="mt-2 text-sm font-semibold text-ink">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
-      )}
-    </Section>
-  );
-}
 
-function Checklist({ title, items }: { title: string; items: string[] }) {
-  return (
-    <Section title={title}>
-      <div className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm">
-        <ul className="grid gap-3 md:grid-cols-2">
-          {items.map((item) => (
-            <li className="flex gap-3 text-sm leading-6 text-ink/75" key={item}>
-              <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-coral" />
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
+        {error ? (
+          <p
+            className="mt-5 rounded-xl border border-coral/25 bg-white px-4 py-3 text-sm font-medium text-coral"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
+        {safetyNotice ? (
+          <div
+            className="mt-5 rounded-xl border border-coral/25 bg-coral/[0.04] px-4 py-3 text-sm leading-6 text-ink"
+            role="alert"
+          >
+            <span className="font-semibold text-coral">Professional-help boundary: </span>
+            {safetyNotice.message} This is not legal advice.
+          </div>
+        ) : null}
       </div>
-    </Section>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink/60">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function TagList({ items }: { items: string[] }) {
-  return (
-    <div className="mt-4 flex flex-wrap gap-2">
-      {items.map((item) => (
-        <span
-          className="rounded-full bg-mint/10 px-3 py-1 text-xs font-medium text-mint"
-          key={item}
-        >
-          {item}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function FallbackText({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-dashed border-ink/20 bg-white p-5 text-sm text-ink/65">
-      {children}
-    </div>
+    </main>
   );
 }

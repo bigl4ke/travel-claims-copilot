@@ -53,6 +53,30 @@ describe("action API", () => {
     expect(body.nextAction.headline).toContain("denial in writing");
   });
 
+  it("continues from a prior server action while rebuilding source provenance", async () => {
+    const firstResponse = await POST(
+      request({ kind: "provider_feedback", facts, feedback: "We cannot rebook you." })
+    );
+    const first = await firstResponse.json();
+    const scriptResponse = await POST(
+      request({
+        kind: "script",
+        facts,
+        currentAction: {
+          ...first.nextAction,
+          sourceIds: ["client-injected-source"],
+          references: []
+        },
+        channel: "chat",
+        language: "en"
+      })
+    );
+    const script = await scriptResponse.json();
+
+    expect(script.text).toContain("denial");
+    expect(script.sourceIds).not.toContain("client-injected-source");
+  });
+
   it("rejects non-JSON requests", async () => {
     const response = await POST(request({}, "text/plain"));
     expect(response.status).toBe(415);

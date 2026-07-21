@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Travel Claims Copilot",
-  description: "A local demo for travel dispute claim analysis."
+  description: "Know who to contact, what to ask, and what to do after a travel disruption."
 };
 
 export default function RootLayout({

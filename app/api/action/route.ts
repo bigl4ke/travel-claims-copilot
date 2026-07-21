@@ -9,7 +9,14 @@ import { parseClaimFacts } from "../../../lib/claimFacts";
 import { MAX_REQUEST_BODY_BYTES } from "../../../lib/inputLimits";
 import { createStructuredOutputClientFromEnv } from "../../../lib/llm";
 import { assessHighRiskClaim } from "../../../lib/safety";
-import type { ActionScriptChannel, Case, Policy, Script } from "../../../lib/types";
+import type {
+  ActionPlan,
+  ActionScriptChannel,
+  Case,
+  HandlingContactRole,
+  Policy,
+  Script
+} from "../../../lib/types";
 
 const scriptChannels: ActionScriptChannel[] = [
   "front_desk",
@@ -18,6 +25,16 @@ const scriptChannels: ActionScriptChannel[] = [
   "chat",
   "email",
   "corporate_escalation"
+];
+const contactRoles: HandlingContactRole[] = [
+  "hotel_front_desk",
+  "hotel_customer_care",
+  "ticketing_airline",
+  "ticketing_agent",
+  "frequent_flyer_program",
+  "disrupting_airline",
+  "airline_customer_relations",
+  "unknown"
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -28,6 +45,65 @@ function noStoreJson(body: unknown, init?: ResponseInit): Response {
   const response = NextResponse.json(body, init);
   response.headers.set("Cache-Control", "no-store");
   return response;
+}
+
+function boundedString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized && normalized.length <= maxLength ? normalized : null;
+}
+
+function boundedStrings(value: unknown, maxItems: number): string[] | null {
+  if (!Array.isArray(value) || value.length > maxItems) return null;
+  const strings = value.map((item) => boundedString(item, 1_000));
+  return strings.every((item): item is string => item !== null) ? strings : null;
+}
+
+function resolveCurrentAction(candidate: unknown, base: ActionPlan): ActionPlan {
+  if (!isRecord(candidate) || candidate.notGuaranteed !== true) return base;
+  const headline = boundedString(candidate.headline, 500);
+  const primaryAsk =
+    candidate.primaryAsk === null ? null : boundedString(candidate.primaryAsk, 1_000);
+  const askNext = boundedStrings(candidate.askNext, 5);
+  const evidenceNow = boundedStrings(candidate.evidenceNow, 8);
+  const ifTheySayNo = boundedStrings(candidate.ifTheySayNo, 5);
+  const uncertainties = boundedStrings(candidate.uncertainties, 5);
+  const providerFeedbackPrompt = boundedString(candidate.providerFeedbackPrompt, 500);
+  const contact = isRecord(candidate.contactNow) ? candidate.contactNow : null;
+  const role = contactRoles.find((item) => item === contact?.role);
+  const contactReason = boundedString(contact?.reason, 1_000);
+  const contactName = contact?.name === null ? null : boundedString(contact?.name, 200);
+
+  if (
+    !headline ||
+    (candidate.primaryAsk !== null && !primaryAsk) ||
+    !askNext ||
+    !evidenceNow ||
+    !ifTheySayNo ||
+    !uncertainties ||
+    !providerFeedbackPrompt ||
+    !role ||
+    !contactReason ||
+    (contact?.name !== null && !contactName)
+  ) {
+    return base;
+  }
+
+  return {
+    ...base,
+    headline,
+    contactNow: { role, name: contactName, reason: contactReason },
+    primaryAsk,
+    askNext,
+    evidenceNow,
+    ifTheySayNo,
+    uncertainties,
+    providerFeedbackPrompt,
+    // Source provenance is always rebuilt from server-owned retrieval data.
+    references: base.references,
+    sourceIds: base.sourceIds,
+    notGuaranteed: true
+  };
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -63,6 +139,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!analysis.actionPlan) {
     return noStoreJson({ error: "No action plan is available." }, { status: 422 });
   }
+  const currentAction = resolveCurrentAction(body.currentAction, analysis.actionPlan);
   const client = createStructuredOutputClientFromEnv();
 
   if (body.kind === "script") {
@@ -76,7 +153,7 @@ export async function POST(request: Request): Promise<Response> {
     }
     const result = await generateActionScript({
       facts: parsedFacts.data,
-      actionPlan: analysis.actionPlan,
+      actionPlan: currentAction,
       channel,
       language,
       tone,
@@ -99,7 +176,7 @@ export async function POST(request: Request): Promise<Response> {
     }
     const result = await analyzeProviderFeedback({
       feedback,
-      currentAction: analysis.actionPlan,
+      currentAction,
       client
     });
     return noStoreJson(result);
