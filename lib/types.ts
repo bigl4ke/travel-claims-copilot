@@ -291,6 +291,74 @@ export type HandlingPlaybook = {
   notGuaranteed: true;
 };
 
+export type ActionReference = {
+  id: string;
+  title: string;
+  url: string;
+  kind: "official" | "community";
+  note: string;
+};
+
+/**
+ * The compact, deterministic product output shown to a traveler.
+ * Retrieval records remain available in AnalysisResult for audit/debug views,
+ * while the public UI leads with this single action-oriented contract.
+ */
+export type ActionPlan = {
+  status: "actionable" | "needs_context";
+  situation: HandlingPlaybook["situation"];
+  headline: string;
+  contactNow: HandlingPlaybook["contactFirst"];
+  primaryAsk: string | null;
+  askNext: string[];
+  evidenceNow: string[];
+  ifTheySayNo: string[];
+  uncertainties: string[];
+  references: ActionReference[];
+  sourceIds: string[];
+  providerFeedbackPrompt: string;
+  notGuaranteed: true;
+};
+
+export type ActionScriptChannel = Extract<
+  Script["channel"],
+  "front_desk" | "airport_counter" | "phone" | "chat" | "email" | "corporate_escalation"
+>;
+
+export type GeneratedActionScript = {
+  channel: ActionScriptChannel;
+  tone: Script["tone"];
+  language: Script["language"];
+  text: string;
+  sourceIds: string[];
+  generatedBy: "llm" | "deterministic";
+  disclaimer: string;
+};
+
+export type ProviderResponseStatus =
+  | "approved"
+  | "partial_offer"
+  | "denied"
+  | "needs_clarification"
+  | "no_decision";
+
+export type ProviderFeedbackSignals = {
+  responseStatus: ProviderResponseStatus;
+  acknowledgedProblem: boolean;
+  reason: string | null;
+  offer: string | null;
+  caseNumber: string | null;
+  unanswered: string[];
+};
+
+export type ProviderFeedbackResult = {
+  summary: string;
+  signals: ProviderFeedbackSignals;
+  nextAction: ActionPlan;
+  extractionMode: "llm" | "deterministic";
+  warning?: string;
+};
+
 export type AnalysisResult = {
   issueType: IssueType;
   policyRegions: PolicyRegion[];
@@ -306,6 +374,7 @@ export type AnalysisResult = {
   scripts: Script[];
   cautions: string[];
   handlingPlaybook?: HandlingPlaybook;
+  actionPlan?: ActionPlan;
 };
 
 export type ScenarioSummary = {

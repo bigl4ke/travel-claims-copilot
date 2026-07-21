@@ -45,6 +45,60 @@
 `official_policy_required`。操作指南不能替代法规或航司当前官方政策，也不能承诺改签、
 报销或补偿。
 
+`HandlingPlaybook` 是内部程序化处理知识。它不会直接作为完整报告展示给用户，而是
+与检索结果一起转换为更紧凑的 `ActionPlan`。
+
+## ActionPlan
+
+服务器根据 `ClaimFacts`、`HandlingPlaybook` 和已经检索验证的来源确定性生成：
+
+- `status`: `actionable | needs_context`
+- `situation`: 与 `HandlingPlaybook.situation` 相同
+- `headline`: 当前行动的一句话摘要
+- `contactNow`: role / name / reason
+- `primaryAsk`: 当前首要诉求，缺失上下文时为 `null`
+- `askNext`: 主要诉求不可行时按顺序提出的备选诉求
+- `evidenceNow`: 当前阶段最重要的 3–5 项证据
+- `ifTheySayNo`: 第一次请求失败后的确定性路径
+- `uncertainties`: 仍会改变权益结论的未知事实
+- `references`: `official | community`，每条包含真实 ID、标题、URL 和用途说明
+- `sourceIds`: 生成话术时允许引用的官方 policy ID
+- `providerFeedbackPrompt`: 邀请用户粘贴对方回复的下一轮提示
+- `notGuaranteed`: 固定为 `true`
+
+`ActionPlan` 是公开 UI 的主要输出。完整 `Policy`、`Case`、适用性条件和检索排名仍保留
+在 `AnalysisResult`，但只用于审计、测试或显式展开的参考信息。
+
+## GeneratedActionScript
+
+用户明确选择沟通渠道后按需生成：
+
+- `channel`: `front_desk | airport_counter | phone | chat | email | corporate_escalation`
+- `tone`: `polite | polite_firm | firm`
+- `language`: `en | zh`
+- `text`: 可复制话术
+- `sourceIds`: 必须是当前 `ActionPlan.sourceIds` 的子集
+- `generatedBy`: `llm | deterministic`
+- `disclaimer`: 不保证结果的简洁提示
+
+LLM 只能调整表达，不得改变 `contactNow`、诉求顺序、引用来源或引入未确认事实、金额
+和权益。模型调用失败时使用确定性模板。
+
+## ProviderFeedbackResult
+
+用户粘贴酒店或航司回复后生成：
+
+- `summary`: 对方回复的简洁事实性摘要
+- `signals.responseStatus`: `approved | partial_offer | denied | needs_clarification | no_decision`
+- `signals.acknowledgedProblem`: boolean
+- `signals.reason`, `signals.offer`, `signals.caseNumber`: string | null
+- `signals.unanswered`: string[]
+- `nextAction`: 根据这些信号确定性生成的新 `ActionPlan`
+- `extractionMode`: `llm | deterministic`
+- `warning`: 模型失败或信号置信不足时的可选提示
+
+LLM 只提取 provider response 信号；是否接受、追问、升级或结束由规则系统决定。
+
 ## Policy
 
 官方政策、法规、航司/酒店公开承诺。
