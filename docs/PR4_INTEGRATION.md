@@ -10,12 +10,14 @@ This document records how PR #4 was integrated on top of the current product bra
 - EU261 eligibility is derived from route and carrier facts rather than from the incident label.
 - Unknown airline causes are recorded as unavailable instead of triggering the same question again.
 - The policy dataset contains one EU261 authority record: `eu261_regulation_261_2004`.
+- Policy IDs shared by both branches use the `origin/main` project-owner record. Teammate-only,
+  non-duplicate records may be added from PR #4; the second EU261 guidance record was excluded as a
+  semantic duplicate.
 
 ## Integrated from PR #4
 
 - A canonical structured analysis contract is available alongside the existing API request format.
-- Carrier commitments, reviewed source metadata, source identifiers on scripts, and stronger
-  separation between regulator context and carrier commitments were added.
+- Carrier commitments, reviewed source metadata, and source identifiers on scripts were added.
 - Privacy redaction, safe telemetry, request limits, demo access controls, health metadata,
   offline verification, evaluation fixtures, CI, formatting, and secret scanning were added.
 - The reviewed domain evaluators are retained without adding a second public interface.

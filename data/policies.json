@@ -52,11 +52,18 @@
     "source_type": "official_dashboard",
     "authority_level": "high",
     "applicable_conditions": [
-      "The dashboard provides regulator context for airline-published commitments",
-      "Carrier-specific eligibility and remedies require a separately reviewed carrier record"
+      "US airline disruption",
+      "Controllable delay or cancellation",
+      "Airline commitment listed on DOT dashboard"
     ],
-    "compensation_or_rights": [],
-    "summary": "The DOT dashboard is regulator context only. It does not by itself establish any carrier-specific meal, hotel, transport, or rerouting commitment.",
+    "compensation_or_rights": [
+      "Rebooking",
+      "Meal voucher",
+      "Hotel accommodation",
+      "Ground transportation",
+      "Travel credit or miles in some cases"
+    ],
+    "summary": "The DOT dashboard summarizes airline commitments for controllable cancellations and delays, such as meals, hotels, transportation, and rebooking.",
     "last_checked": "2026-07-19"
   },
   {
@@ -83,10 +90,11 @@
       "Airline must seek volunteers before involuntarily denying boarding for oversales",
       "Volunteers may negotiate and must be told material voucher restrictions",
       "Involuntarily bumped passengers must receive a written statement of rights",
-      "Eligible involuntarily bumped passengers may receive denied boarding compensation"
+      "Eligible involuntarily bumped passengers may receive denied boarding compensation",
+      "Confirmed alternate transportation"
     ],
     "summary": "US DOT guidance distinguishes voluntary offers from involuntary denied boarding caused by oversales. Eligibility and compensation depend on the passenger meeting applicable deadlines, the reason for denial, and the delay in reaching the destination.",
-    "last_checked": "2026-07-19"
+    "last_checked": "2026-07-16"
   },
   {
     "policy_id": "eu261_regulation_261_2004",
@@ -105,7 +113,6 @@
     "applicable_conditions": [
       "Flight departing from an airport in an EU Member State",
       "Or flight arriving from a non-EU country when operated by a qualifying Community carrier, subject to Article 3 conditions",
-      "EU passenger-rights scope also extends to Iceland, Norway, and Switzerland under the applicable EEA and bilateral arrangements",
       "Confirmed reservation and other scope requirements under Article 3",
       "Cancellation or long delay under the applicable provisions"
     ],
@@ -115,13 +122,13 @@
       "Potential compensation under Articles 5 and 7, subject to eligibility requirements and defenses"
     ],
     "summary": "The primary EU legal text establishes minimum passenger rights for denied boarding, cancellation, and long delay. Route scope, timing, notice, operating carrier, and extraordinary circumstances can change which remedies apply.",
-    "last_checked": "2026-07-19"
+    "last_checked": "2026-07-16"
   },
   {
     "policy_id": "uk261_assimilated_regulation_261_2004",
     "provider_type": "government",
-    "provider": "legislation.gov.uk / The National Archives",
-    "policy_name": "Regulation (EC) No 261/2004 (UK version; UK261)",
+    "provider": "UK Civil Aviation Authority",
+    "policy_name": "UK Regulation (EU) No 261/2004 (UK261)",
     "legal_regime": "UK261",
     "applicability_rule": "uk261_route",
     "incident_types": ["airline_delay", "airline_cancellation", "denied_boarding"],
@@ -134,7 +141,6 @@
     "applicable_conditions": [
       "Flight departing from a UK airport",
       "Or flight arriving in the UK on a qualifying UK or EU operating carrier",
-      "Or a flight arriving in an EU Member State on a UK air carrier, subject to the applicable third-country-rights exception",
       "Confirmed reservation and applicable check-in requirements",
       "Fixed compensation can depend on arrival delay, cancellation notice, rerouting, and extraordinary circumstances"
     ],
@@ -145,7 +151,7 @@
       "Written rights and remedies for qualifying involuntary denied boarding"
     ],
     "summary": "UK261 provides route-dependent rights for qualifying delays, cancellations, and denied boarding. Care, refund or rerouting, and fixed compensation have different triggers and defenses.",
-    "last_checked": "2026-07-19"
+    "last_checked": "2026-07-16"
   },
   {
     "policy_id": "ca_appr_sor_2019_150",
@@ -175,7 +181,7 @@
       "Denied-boarding protections"
     ],
     "summary": "Canada's APPR applies to flights to, from, and within Canada. The available assistance, rebooking, refund, or compensation depends on cause, timing, arrival delay, and carrier size.",
-    "last_checked": "2026-07-19"
+    "last_checked": "2026-07-16"
   },
   {
     "policy_id": "us_dot_automatic_ticket_refunds",
@@ -194,7 +200,7 @@
     "applicable_conditions": [
       "Scheduled flight to, from, or within the United States",
       "The airline cancels or significantly changes the flight",
-      "No alternative is offered, or the passenger does not accept the alternative transportation, credit, voucher, or other compensation offered",
+      "The passenger does not accept the alternative transportation, credit, voucher, or other compensation offered",
       "Refund timing and method requirements apply when a refund is owed"
     ],
     "compensation_or_rights": [
@@ -203,8 +209,8 @@
       "Refund of the unused ticket amount and applicable fees",
       "Notice of the right to a refund before an alternative is offered"
     ],
-    "summary": "US DOT rules require prompt automatic refunds for qualifying cancellations or significant changes on flights to, from, or within the United States when no alternative is offered or the passenger does not accept one. This is separate from airline meal and hotel commitments.",
-    "last_checked": "2026-07-19"
+    "summary": "US DOT rules require prompt automatic refunds for qualifying cancellations or significant changes on flights to, from, or within the United States when the passenger does not accept an alternative. This is separate from airline meal and hotel commitments.",
+    "last_checked": "2026-07-16"
   },
   {
     "policy_id": "au_accc_travel_delays_consumer_guarantees",
@@ -232,12 +238,12 @@
       "Airline compensation policies cannot remove applicable consumer-guarantee rights"
     ],
     "summary": "Australian Consumer Law uses a context-specific reasonable-time standard rather than an EU-style fixed compensation table. A replacement, refund, or some consequential reimbursement may apply depending on the circumstances.",
-    "last_checked": "2026-07-19"
+    "last_checked": "2026-07-16"
   },
   {
     "policy_id": "cn_flight_normality_regulation_2016",
     "provider_type": "government",
-    "provider": "Ministry of Transport of the People's Republic of China",
+    "provider": "Civil Aviation Administration of China",
     "policy_name": "Provisions on the Management of Flight Regularity (2016 Order No. 56)",
     "legal_regime": "CN_FLIGHT_REGULATION",
     "applicability_rule": "china_flight_regulation",
@@ -259,15 +265,15 @@
       "Refund or ticket change according to applicable conditions",
       "Meals or accommodation for carrier-caused delay or cancellation at the origin",
       "Meals or accommodation for domestic-flight delay at a stopover or diversion point regardless of cause",
-      "On-board water and food after passengers have remained on the aircraft for at least 2 hours"
+      "On-board water and food after a qualifying tarmac delay"
     ],
     "summary": "China's flight-regularity regulation sets information, refund or change, care, and complaint duties. At the origin, carrier-caused disruptions receive stronger meal and accommodation duties than non-carrier causes.",
-    "last_checked": "2026-07-19"
+    "last_checked": "2026-07-16"
   },
   {
     "policy_id": "cn_public_air_transport_passenger_service_2021",
     "provider_type": "government",
-    "provider": "Ministry of Transport of the People's Republic of China",
+    "provider": "Civil Aviation Administration of China",
     "policy_name": "Public Air Transport Passenger Service Provisions (2021 Order No. 3)",
     "legal_regime": "CN_FLIGHT_REGULATION",
     "applicability_rule": "china_flight_regulation",
@@ -289,9 +295,9 @@
       "No refund fee for an involuntary refund",
       "Assistance completing a qualifying connecting itinerary",
       "Oversales volunteer process, documented carrier standards, and compensation or service under those standards",
-      "Written proof of voluntary surrender or denied boarding caused by oversales on passenger request"
+      "Written proof of voluntary surrender or denied boarding caused by oversales"
     ],
     "summary": "China's passenger-service regulation covers involuntary ticket changes and refunds, connecting itineraries, and oversales procedures. It requires carriers to publish their denied-boarding compensation and service standards rather than imposing one national fixed amount.",
-    "last_checked": "2026-07-19"
+    "last_checked": "2026-07-16"
   }
 ]

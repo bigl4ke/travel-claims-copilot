@@ -213,7 +213,7 @@ function parsePolicies(value: unknown, asOfEpoch: number): Policy[] {
     );
     stringValue(record.provider, `${label}.provider`);
     stringValue(record.policy_name, `${label}.policy_name`);
-    const legalRegime = enumValue(record.legal_regime, LEGAL_REGIMES, `${label}.legal_regime`);
+    enumValue(record.legal_regime, LEGAL_REGIMES, `${label}.legal_regime`);
     const rule = enumValue(
       record.applicability_rule,
       APPLICABILITY_RULES,
@@ -240,15 +240,10 @@ function parsePolicies(value: unknown, asOfEpoch: number): Policy[] {
     enumValue(record.source_type, POLICY_SOURCE_TYPES, `${label}.source_type`);
     enumValue(record.authority_level, ["high", "medium", "low"], `${label}.authority_level`);
     stringArray(record.applicable_conditions, `${label}.applicable_conditions`);
-    const rights = stringArray(record.compensation_or_rights, `${label}.compensation_or_rights`);
+    stringArray(record.compensation_or_rights, `${label}.compensation_or_rights`);
     stringValue(record.summary, `${label}.summary`);
     validateCheckedDate(record.last_checked, `${label}.last_checked`, asOfEpoch, true);
 
-    if (legalRegime === "US_AIRLINE_COMMITMENT" && rights.length > 0) {
-      throw new Error(
-        `${label} is regulator context only; carrier remedies require a carrier record.`
-      );
-    }
     return structuredClone(record) as Policy;
   });
 }

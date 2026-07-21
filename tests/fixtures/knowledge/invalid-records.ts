@@ -253,46 +253,6 @@ export const invalidKnowledgeFixtures = [
     snapshot.cases[0].facts =
       "Synthetic data generated for testing, but never a synthetic fixture.";
   }),
-  invalidFixture("umbrella dashboard remedies", /regulator context only/i, (snapshot) => {
-    snapshot.policies[0] = {
-      ...snapshot.policies[0],
-      policy_id: "dot_airline_cancellation_delay_dashboard",
-      legal_regime: "US_AIRLINE_COMMITMENT",
-      source_type: "official_dashboard",
-      applicable_providers: ["United"],
-      compensation_or_rights: ["Hotel accommodation"]
-    };
-  }),
-  invalidFixture("renamed umbrella carrier remedies", /regulator context only/i, (snapshot) => {
-    snapshot.policies[0] = {
-      ...snapshot.policies[0],
-      policy_id: "renamed_airline_commitment_context",
-      legal_regime: "US_AIRLINE_COMMITMENT",
-      source_type: "official_dashboard",
-      compensation_or_rights: ["Meal voucher"]
-    };
-    snapshot.scripts[0].source_ids = [
-      "renamed_airline_commitment_context",
-      "policy_outside_display_top_k"
-    ];
-  }),
-  invalidFixture(
-    "renamed umbrella carrier-care synonyms",
-    /regulator context only/i,
-    (snapshot) => {
-      snapshot.policies[0] = {
-        ...snapshot.policies[0],
-        policy_id: "renamed_airline_commitment_synonym_context",
-        legal_regime: "US_AIRLINE_COMMITMENT",
-        source_type: "official_dashboard",
-        compensation_or_rights: ["Complimentary lodging and airport transfer"]
-      };
-      snapshot.scripts[0].source_ids = [
-        "renamed_airline_commitment_synonym_context",
-        "policy_outside_display_top_k"
-      ];
-    }
-  ),
   invalidFixture("unknown carrier", /unknown canonical carrier/i, (snapshot) => {
     snapshot.carrierCommitments[0].normalized_carrier = "Example Air";
   }),

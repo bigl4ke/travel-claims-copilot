@@ -14,7 +14,7 @@ import {
 const AS_OF = "2026-07-19";
 
 describe("production knowledge", () => {
-  it("preserves corrections from the reviewed official source pages", () => {
+  it("preserves the project-owner version of policies shared by both branches", () => {
     const policyById = (policyId: string) =>
       policiesJson.find((policy) => policy.policy_id === policyId);
     const bumping = policyById("dot_bumping_oversales");
@@ -25,22 +25,22 @@ describe("production knowledge", () => {
     const ukRegulation = policyById("uk261_assimilated_regulation_261_2004");
     const dashboardContext = policyById("dot_airline_cancellation_delay_dashboard");
 
-    expect(dashboardContext?.compensation_or_rights).toEqual([]);
-    expect(bumping?.compensation_or_rights).not.toContain("Confirmed alternate transportation");
-    expect(refunds?.applicable_conditions.join(" ")).toContain("No alternative is offered");
-    expect(flightNormality?.provider).toBe(
-      "Ministry of Transport of the People's Republic of China"
+    expect(dashboardContext?.compensation_or_rights).toContain("Hotel accommodation");
+    expect(bumping?.compensation_or_rights).toContain("Confirmed alternate transportation");
+    expect(refunds?.applicable_conditions.join(" ")).not.toContain("No alternative is offered");
+    expect(flightNormality?.provider).toBe("Civil Aviation Administration of China");
+    expect(passengerService?.provider).toBe("Civil Aviation Administration of China");
+    expect(flightNormality?.compensation_or_rights).toContain(
+      "On-board water and food after a qualifying tarmac delay"
     );
-    expect(passengerService?.provider).toBe(
-      "Ministry of Transport of the People's Republic of China"
+    expect(passengerService?.compensation_or_rights.join(" ")).not.toContain(
+      "on passenger request"
     );
-    expect(flightNormality?.compensation_or_rights.join(" ")).toContain("at least 2 hours");
-    expect(passengerService?.compensation_or_rights.join(" ")).toContain("on passenger request");
-    expect(euRegulation?.applicable_conditions.join(" ")).toContain(
+    expect(euRegulation?.applicable_conditions.join(" ")).not.toContain(
       "Iceland, Norway, and Switzerland"
     );
-    expect(ukRegulation?.provider).toBe("legislation.gov.uk / The National Archives");
-    expect(ukRegulation?.applicable_conditions.join(" ")).toContain(
+    expect(ukRegulation?.provider).toBe("UK Civil Aviation Authority");
+    expect(ukRegulation?.applicable_conditions.join(" ")).not.toContain(
       "arriving in an EU Member State on a UK air carrier"
     );
   });

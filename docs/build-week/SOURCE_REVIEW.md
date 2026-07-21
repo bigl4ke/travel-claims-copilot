@@ -9,6 +9,9 @@
 - Reviewer: Codex official-source audit, authorized by the project owner.
 - Human content confirmation: **pending**. The automated and Codex review is complete, but the
   project owner has not yet signed off on the source-to-product mappings below.
+- Integration disposition: policy IDs shared with `origin/main` retain the project owner's version.
+  The teammate audit findings below are preserved for later review and are not automatic edits to
+  those shared production records. A semantically duplicate second EU261 record remains excluded.
 - Formal release reachability: **pending**. `scripts/check-source-reachability.mjs` is reserved for a
   separately approved check within 48 hours of release.
 
@@ -37,7 +40,11 @@ faithfully represents the cited page and does not turn a conditional statement i
 6. Change “Human content confirmation” above to **confirmed**, add the reviewer and date, and record
    any rejected wording before a public demo.
 
-## Critical policy sources
+## Critical policy sources and audit findings
+
+The “Verified scope or correction” column records the teammate audit finding. Where it differs from
+`data/policies.json`, the production dataset intentionally follows the project-owner version until a
+later explicit content decision.
 
 | Source ID | Exact page title and publisher | Canonical URL | Regime / authority | Review time | Verified scope or correction | Grounded scripts | Reachability observation |
 |---|---|---|---|---|---|---|---|
