@@ -18,8 +18,7 @@ This document records how PR #4 was integrated on top of the current product bra
   separation between regulator context and carrier commitments were added.
 - Privacy redaction, safe telemetry, request limits, demo access controls, health metadata,
   offline verification, evaluation fixtures, CI, formatting, and secret scanning were added.
-- The reviewed domain evaluators and the alternative workspace components are retained for
-  compatibility and later product review.
+- The reviewed domain evaluators are retained without adding a second public interface.
 
 ## Compatibility decisions
 
@@ -30,16 +29,14 @@ This document records how PR #4 was integrated on top of the current product bra
 - The canonical public GPT mode remains pinned to OpenAI and protected by its reviewed release
   controls. Extending that mode to DeepSeek is a separate product and security decision.
 - Supported Node.js versions are `>=22.14 <26`; CI and `.nvmrc` continue to use Node 22.
-- The default Playwright suite exercises the retained public UI. PR #4's alternative workspace
-  tests remain in the repository but are not part of the default browser run.
+- The default Playwright suite exercises the retained public UI. PR #4's unused alternative
+  workspace components, client state layer, and UI-only tests were removed after product review.
 
 ## Product review still requested
 
 1. Decide whether the canonical public GPT mode should remain OpenAI-only or gain a reviewed
    DeepSeek runtime with equivalent output limits, access controls, and privacy behavior.
-2. Decide whether to remove the inactive alternative workspace UI and its browser tests after the
-   team has finished comparing it with the retained interface.
-3. Review the source judgments in `docs/build-week/SOURCE_REVIEW.md`, especially the distinction
+2. Review the source judgments in `docs/build-week/SOURCE_REVIEW.md`, especially the distinction
    between DOT regulator context and United's carrier commitments, before a public demo.
 
 ## Verification at integration
