@@ -52,6 +52,69 @@ EU261, UK261, Canada APPR, US DOT, Australian Consumer Law, Chinese civil-aviati
 and provider commitments are policy scopes selected from route direction, operating carrier,
 provider, and controllability. They are not incident types.
 
+## How Codex Accelerated Development
+
+Codex was used as an engineering collaborator, while the team retained ownership of product,
+safety, release, and submission decisions. It accelerated the work by:
+
+- auditing the existing repository and turning the approved four-scenario direction into a
+  [frozen architecture and safety design](docs/superpowers/specs/2026-07-18-four-scenario-trustworthy-build-week-design.md);
+- decomposing that design into small, ordered work packages with explicit acceptance checks in the
+  [execution index](docs/superpowers/plans/2026-07-18-four-scenario-execution-index.md);
+- supporting test-first implementation and review through small commits, including the
+  [public scenario freeze](https://github.com/WeiqiZhou2002/travel-claims-copilot/commit/70900ab0062e8e1511b1c008846f0ed065e594b6),
+  [per-remedy assessment](https://github.com/WeiqiZhou2002/travel-claims-copilot/commit/18bc3e49ef878640af85f244ab8176ffd9f8d126),
+  [privacy-safe model boundary](https://github.com/WeiqiZhou2002/travel-claims-copilot/commit/306f0157c8fb0729e13e23fffdd5a9c49b3bbae5),
+  and [four-journey browser coverage](https://github.com/WeiqiZhou2002/travel-claims-copilot/commit/84ca92b63f3289f46454d3d1bc67f0a7e26abf7d);
+- making verification repeatable through the repository's lint, typecheck, offline test, security,
+  and build commands documented in [`package.json`](package.json).
+
+The linked design, tests, and Git history are the evidence for these claims. Codex did not choose
+the competition scope, make legal or eligibility judgments, provide credentials, authorize live
+model calls or deployments, or submit the project on the team's behalf.
+
+## Where GPT-5.6 Is Used
+
+GPT-5.6 Luna is the primary OpenAI model for the demo. Its role is deliberately narrow:
+
+- The public OpenAI intake path uses the Responses API to convert the latest traveler message into
+  an allowlisted, sparse `RawFactPatch`. Strict JSON Schema output is validated again on the server;
+  see [`OpenAIRawFactExtractor`](lib/model/raw-fact-extractor.ts) and the
+  [public runtime contract test](tests/model/public-openai-runtime.test.ts).
+- In the OpenAI demo configuration, the model can rewrite an already-approved deterministic
+  `ActionPlan` into a short channel-specific script and extract explicit signals from a provider's
+  reply. Those outputs are schema-validated and checked for ungrounded details in
+  [`lib/actionAssistant.ts`](lib/actionAssistant.ts).
+- Requests use `store: false`, bounded input and output sizes, a limited outbound payload, and
+  controlled access. The relevant guarantees are covered by
+  [model-output tests](tests/model/openai-output-limits.test.ts),
+  [outbound-privacy tests](tests/privacy/outbound-payload.test.ts), and
+  [GPT request-guard tests](tests/limits/gpt-route-guard.test.ts).
+
+GPT-5.6 does **not** decide the incident scope, jurisdiction, controllability, policy
+applicability, remedy status, evidence ranking, source selection, or compensation. Those decisions
+remain deterministic and server-owned. If no OpenAI key is configured or an eligible model failure
+occurs, the workflow falls back to local extraction and deterministic scripts. DeepSeek remains in
+the repository as compatibility code, but it is not the primary model or the core Devpost story.
+
+## Key Human Decisions
+
+The team explicitly approved the following boundaries, recorded in the
+[Build Week design](docs/superpowers/specs/2026-07-18-four-scenario-trustworthy-build-week-design.md):
+
+- Freeze the public competition scope to four canonical journeys: hotel walk, US airline
+  disruption, EU/UK airline disruption, and US denied boarding.
+- Use GPT-5.6 Luna as the default and primary demonstration model; retain DeepSeek only for
+  compatibility.
+- Keep legal-regime applicability, remedy assessment, ranking, evidence provenance, and the next
+  action deterministic rather than delegating them to a model.
+- Harden the existing Next.js and local-JSON vertical slice instead of adding a database, login,
+  payment, vector store, autonomous filing, or persistent storage of raw traveler narratives.
+- Keep secrets and private eligibility/testing data out of the repository. Live external calls,
+  deployment, publication, and final submission require explicit human authorization.
+- Permit additional scope only after the frozen release gate, if time and verification capacity
+  allow it.
+
 ## How To Run
 
 Install dependencies:
@@ -425,6 +488,10 @@ The app should clearly separate:
 - community datapoint
 - goodwill request
 - synthetic demo data
+
+## License
+
+This project is available under the [MIT License](LICENSE).
 
 ## Roadmap
 
