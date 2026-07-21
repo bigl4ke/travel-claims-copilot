@@ -1,4 +1,5 @@
 import { deterministicFactExtractor } from "./classifier";
+import { buildActionPlan } from "./actionPlan";
 import { generateAnalysis } from "./generator";
 import { buildHandlingPlaybook } from "./handlingPlaybook";
 import { controllabilityFromReason } from "./policyScope";
@@ -103,9 +104,12 @@ export function buildAnalysisFromFacts(
 ): AnalysisResult {
   const extractedFacts = claimFactsToExtractedFacts(facts, description);
   const retrieval = retrieveKnowledge(extractedFacts, policies, cases, scripts);
+  const analysis = generateAnalysis(retrieval.facts, retrieval);
+  const handlingPlaybook = buildHandlingPlaybook(facts);
 
   return {
-    ...generateAnalysis(retrieval.facts, retrieval),
-    handlingPlaybook: buildHandlingPlaybook(facts)
+    ...analysis,
+    handlingPlaybook,
+    actionPlan: buildActionPlan(facts, analysis, handlingPlaybook)
   };
 }

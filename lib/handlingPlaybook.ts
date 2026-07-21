@@ -212,8 +212,8 @@ export function buildHandlingPlaybook(facts: ClaimFacts): HandlingPlaybook {
           "The property should first document the confirmed reservation and arrange immediate relocation or another on-property solution."
       },
       askLadder: [
-        "Ask the property to document that it cannot honor the confirmed reservation.",
         "Ask for a comparable nearby room and necessary transportation before discussing goodwill.",
+        "Ask the property to document that it cannot honor the confirmed reservation.",
         "Ask the hotel group to apply any verified reservation guarantee or elite commitment that matches the booking."
       ],
       ticketingChecks: [],

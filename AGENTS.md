@@ -2,7 +2,7 @@
 
 ## Project
 
-This repo implements Travel Claims Copilot: a travel disruption claims intelligence assistant.
+This repo implements Travel Claims Copilot: a travel disruption resolution and communication assistant.
 
 Read these files before making product or architecture decisions:
 - PROJECT_BRIEF.md
@@ -11,14 +11,15 @@ Read these files before making product or architecture decisions:
 
 ## Product Goal
 
-Build a demo web app where a user describes a hotel or airline disruption, and the app returns:
-- issue type
-- relevant official policies / regulations
-- similar community cases
-- conservative / standard / aggressive asks
-- evidence checklist
-- reusable communication scripts
-- cautions and uncertainty
+Build a demo web app where a user describes a hotel or airline disruption, and the app tells them:
+- who to contact now
+- what to ask for first and what fallback to use
+- what evidence to preserve now
+- what remains uncertain, with compact source links
+- what to do after the provider replies
+
+Communication scripts are generated on demand from a deterministic ActionPlan. Full policy and case
+analysis remains an internal evidence layer instead of the primary consumer UI.
 
 ## Important Product Boundaries
 
@@ -41,8 +42,10 @@ Initial workflow:
 1. Extract structured facts from user input.
 2. Classify provider_type, provider, and issue_type.
 3. Search policies and cases.
-4. Generate a structured response using retrieved data.
-5. Allow user feedback / outcome logging.
+4. Deterministically generate a compact ActionPlan using retrieved data.
+5. Let an LLM verbalize that plan or generate a channel-specific script without adding claims.
+6. Analyze provider feedback and deterministically select the next action.
+7. Allow outcome logging.
 
 Start with local JSON files if faster. Later migrate to Supabase Postgres and pgvector.
 
@@ -92,11 +95,11 @@ Home page:
 - "Analyze" button
 
 Result page:
-- issue type
-- case strength
-- official basis
-- similar cases
-- suggested asks
-- evidence checklist
-- scripts with copy buttons
-- feedback section
+- one primary "What to do now" action card
+- contact, primary ask, fallback, immediate evidence, and uncertainty
+- compact official/community source links
+- on-demand script controls
+- provider-response input that returns the next action
+
+Detailed policy applicability, case rankings, and retrieval metadata may remain available only in a
+debug or explicitly expanded evidence view.
